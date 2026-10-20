@@ -1,4 +1,4 @@
-.PHONY: setup test lint fmt exp baseline upstream clean
+.PHONY: setup test lint fmt exp baseline check upstream clean
 
 setup:
 	uv sync --frozen --python 3.12 --extra dev
@@ -6,9 +6,13 @@ setup:
 test:
 	uv run pytest -q
 
+# The credit clearing file is excluded from the format check until upstream merges PR #104 (E11):
+# reformatting it here would conflict with that merge.
+LINT_FORMAT_EXCLUDE = macromodel/markets/credit_market/func/clearing.py
+
 lint:
 	uv run ruff check macromodel macro_data experiments tests
-	uv run ruff format --check macromodel macro_data experiments tests
+	uv run ruff format --check --exclude $(LINT_FORMAT_EXCLUDE) macromodel macro_data experiments tests
 
 fmt:
 	uv run ruff format macromodel macro_data experiments tests
@@ -24,6 +28,9 @@ exp:
 # Reference run: default model, France 2014-Q1, scored against data. ~15 s.
 baseline:
 	uv run python experiments/exp001_baseline.py
+
+# Everything to run before committing a change to model behaviour
+check: test lint baseline
 
 # What upstream (INET-Complexity) has that we don't: open branches ahead of main.
 upstream:

@@ -23,22 +23,11 @@ import logging
 import warnings
 
 import pandas as pd
-from exp002_paper_ablation import CHI_K, growth_expectations
 from provenance import record_run
 from scoring import COUNTRY, ROOT, START, load_data, observed, scorecard, simulate
+from settings import CHI_K, capital_constraint, growth_expectations
 
 from macromodel.configurations import CountryConfiguration
-
-
-def capital_constraint(c: CountryConfiguration, weight: float) -> None:
-    p = c.firms.functions.target_production.parameters
-    c.firms.functions.target_production.parameters = {
-        **p,
-        "intermediate_inputs_target_considers_capital_inputs": weight,
-        "capital_inputs_target_considers_capital_inputs": weight,
-    }
-    d = c.firms.functions.desired_labour.parameters
-    c.firms.functions.desired_labour.parameters = {**d, "consider_capital_inputs": weight}
 
 
 def configure(growth: bool, chi_k: float, forecast_noise: bool) -> CountryConfiguration:

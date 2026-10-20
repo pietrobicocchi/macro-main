@@ -10,146 +10,126 @@ of the IIASA/Poledna model. The code behind the original paper is not available;
 everything is built from this code. The work is to make its dynamics economically
 credible, then run the experiments the referees asked for, for a rewritten paper.
 
-Modelling choices follow economic reasoning, guided by the paper and the referee
-reports, never by what makes the fit look better. Every choice gets a row in
-PROJECT.md "Modelling decisions", with its reason written before seeing the result.
-New mechanisms are new behaviour classes selectable in config (keep the old one),
-so each one can be switched off for the ablation experiments.
-
 Optimise, in this order: **correctness → readability → reproducibility → simplicity.**
 
-Current scientific state, open questions and next steps live in [PROJECT.md](PROJECT.md).
-Every known problem has an ID in its **Issue register**: check it before starting work,
-add a row for anything new you find, update the row's status when you fix it, and start
-commit subjects with the ID (`G1: ...`).
+## Where things are recorded
+
+[PROJECT.md](PROJECT.md) is the living state. Read it before starting work:
+- **Issue register**: every known problem has an ID. Add a row for anything new you
+  find, update its status when you fix it, and start commit subjects with the ID (`G1: ...`).
+- **Roadmap**: the six phases and their "done when" criteria. Work in phase order.
+- **Modelling decisions**: one row per modelling choice, with the economic reason
+  written *before* seeing the result. Choices follow economic reasoning, guided by
+  the paper and the referee reports, never by what makes the fit look better.
+- **Baseline scorecard history**: one row per change to default behaviour.
 
 ## Structure
 
 ```
-macro_data/    raw data -> calibrated initial state (DataWrapper)
+macro_data/    raw data -> initial state (DataWrapper)
   readers/       one reader per source (OECD, Eurostat, ICIO, HFCS, Compustat, IMF, ...)
   processing/    synthetic_* builders: population, firms, banks, markets, ROW
 macromodel/    the simulation engine
   simulation.py  Simulation: owns countries, ROW, goods market, exchange rates
   country/       Country: one economy; wires agents and markets together
-  agents/        firms, households, individuals, banks, central_bank,
-                 central_government, government_entities
+  agents/        firms, households, individuals, banks, central_bank, governments
   markets/       goods, labour, credit, housing
-  economy/       national-accounts aggregates (GDP, CPI/PPI, unemployment)
+  economy/       national-accounts aggregates and the AR(1) growth/inflation forecasts
   configurations/  pydantic configs; select behaviours and parameters
 macrocalib/    NPE calibration (sbi/torch, optional extra `calibration`)
-experiments/   entrypoints: one question per file, writes only to outputs/<exp>/
-outputs/       generated results (gitignored)
-tests/         unit tests (incl. sample raw data at tests/test_macro_data/unit/sample_raw_data)
+experiments/   expNNN_*.py entrypoints, plus scoring.py (shared metric),
+               settings.py (named config changes), provenance.py (run records)
+outputs/       generated results, one directory per experiment (gitignored)
+extra/         local reference material, never published (gitignored)
 ```
 
-**Behaviour is pluggable.** Each agent/market has `<name>.py` (state + step
-methods), `<name>_ts.py` (recorded time series) and `func/<behaviour>.py`
-(alternative rule classes). The class used is selected by name in
-`configurations/<name>_configuration.py` (e.g. `CentralBankPolicy.name =
-"ConstantPolicyRate" | "PolednaPolicyRate"`), loaded by
-`macromodel/util/function_mapping.get_functions`. To change a rule, add a class
-in `func/`, add its name to the `Literal`, select it in config. Do not branch on
-flags inside the step methods.
+**Behaviour is pluggable.** Each agent/market has a module with state and step methods,
+a time-series module and `func/<behaviour>.py` with alternative rule classes, selected
+by name in `configurations/<name>_configuration.py` and loaded by
+`macromodel/util/function_mapping.get_functions`. To add a rule: a new class in `func/`,
+its name in the config `Literal`, select it in config. **Keep the old rule**: every new
+mechanism must be switchable, so it can be ablated. Do not branch on flags in step methods.
 
 **One period** (`Simulation.iterate`): per country initialisation → estimation →
-target setting → labour market → planning metrics → housing market → credit
-market → prepare goods market; then ROW planning; then a single global goods
-market clears; then per country realised metrics and population update.
-Default period is a quarter (`time_unit` 4).
+target setting → labour market → planning metrics → housing market → credit market →
+prepare goods market; then ROW planning; one global goods market clears; then per
+country realised metrics and population update. One period is a quarter.
 
-**Reading results:** `sim.countries["FRA"].shallow_output()` (DataFrame of key
-aggregates) or `country.economy.ts.get_aggregate("<series>")` for anything in
-`economy/economy_ts.py`.
+**Reading results:** `country.shallow_output()` or
+`country.economy.ts.get_aggregate("<series>")` (series in `economy/economy_ts.py`).
 
 ## Data
 
-Only the bundled sample data is on this machine: real public sources plus
-**spoofed** HFCS (households) and Compustat (firms/banks). Results on it are
-for diagnosing mechanisms, not for claims in the paper. Default `scale=10_000`
-(≈2.9k households, 1 bank for France); scale is not the cause of noise or drift
-(exp001).
+Only the test sample data is on this machine: France-relevant public data for 2014 plus
+**spoofed** HFCS (households) and Compustat (firms, banks). It is for diagnosing
+mechanisms, not for claims in the paper (D1). Defaults: scale 10,000 (≈2.9k households,
+1 bank) and **one firm per industry**; use `scoring.load_data(many_firms=True)` for
+business-demography counts.
 
 ## Experiments
 
-- One experiment answers one question, stated in its docstring.
-- `experiments/expNNN_short_name.py` writes only to `outputs/expNNN_short_name/`
-  and calls `provenance.record_run(out_dir, ...)` before writing results.
-- Score against data with `experiments/scoring.py` (`load_data`, `simulate`,
-  `observed`, `scorecard`, `plot`), so every experiment uses the same metric.
-- Never edit a generated output by hand. Record the conclusion in PROJECT.md.
-- Run with `make exp EXP=exp001 ARGS="..."`. `make baseline` is the reference
-  check after any change to model behaviour.
+- One question per experiment, stated in its docstring; it writes only to
+  `outputs/expNNN_short_name/` and calls `provenance.record_run(out_dir, ...)` first.
+- Score with `scoring.py`; take config changes from `settings.py`. Experiments never
+  import each other.
+- Never edit generated outputs. Record the conclusion in PROJECT.md.
+- `make exp EXP=exp004 ARGS="--seeds 5"`; `make baseline` after any behaviour change.
 
 ## Validation
 
-**Passing tests do not mean sane dynamics.** The suite passed while every
-housing ID was silently set to -1. A behavioural change is validated by
-`make baseline` (or a dedicated experiment) and its scorecard, not by `make test`.
-
-Tests: risk-weighted. Test where a silent error would invalidate a conclusion:
-accounting identities (stock-flow consistency, GDP output = expenditure),
-unit/frequency conversions, initial-state consistency, determinism per seed.
+**Passing tests do not mean sane dynamics.** The suite passed while every housing ID
+was −1 and while a rent bug doubled GDP. Validate behaviour with `make baseline` or an
+experiment. Until the accounting checks exist (S1), a matching GDP is not evidence of
+consistency. Tests are risk-weighted: accounting identities, unit conversions,
+initial-state consistency, determinism per seed; add a regression test for every bug fixed.
 
 ## Known traps
 
-- pandas 3 (Copy-on-Write) is installed: chained assignment
-  `df["a"][mask] = x` silently does nothing. Use `df.loc[mask, "a"] = x`.
-  Watch for `ChainedAssignmentError` warnings in test output.
-- Annual vs quarterly units: rates and flows from data are often annual;
-  check every conversion against `time_unit`.
-- `economy.compute_gdp(always_adjust=True)` forces expenditure GDP to equal
-  output GDP by adjusting imports/exports; a GDP match is not evidence of
-  consistency.
-- `macromodel/util/` and `macromodel/utils/` both exist; check both.
-- Calibration tests (`tests/test_macrocalib`) are excluded by default.
+- **Firm settings that change initial stocks** (utilisation rates, inventory target)
+  must be built into the data with matching values (`scoring.load_data(...)`).
+  Otherwise `Simulation.from_datawrapper` re-runs the financial initialisation,
+  which double-counts bank deposits and diverges (S3).
+- `default_data_configuration` ignores its `single_firm_per_industry` argument (G5).
+- Realised inflation equals the AR(1) price forecast (P2); forecast noise is on by
+  default (`assume_zero_noise=False`).
+- `economy.compute_gdp(always_adjust=True)` forces GDP to balance via imports/exports (S6).
+- pandas 3 (Copy-on-Write): chained assignment `df["a"][mask] = x` silently does
+  nothing; use `df.loc[mask, "a"] = x`.
+- Annual vs quarterly units: check every conversion from data.
+- `macromodel/util/` and `macromodel/utils/` both exist. `tests/test_macrocalib` is skipped.
 
 ## Git
 
-- `origin` = pietrobicocchi/macro-main (this fork). `upstream` = INET-Complexity/macro-main.
-- Before fixing a model bug, run `make upstream` and check open upstream PRs:
-  many known bugs already have unmerged fixes there.
-- Work directly on `main` of the fork (single contributor); no feature branches.
-- Bring upstream fixes in with `git merge upstream/<branch>` (not cherry-pick), so
-  history stays shared when upstream merges the same PR. One merge per commit,
-  with its `make baseline` effect in PROJECT.md.
-- The only exception is a fix meant for upstream: branch from `upstream/main` and
-  keep overlay files (AGENTS.md, CLAUDE.md, PROJECT.md, experiments/, Makefile)
-  out of the PR.
+- `origin` = pietrobicocchi/macro-main (this fork, public); `upstream` = INET-Complexity/macro-main.
+- Work and commit directly on `main`; no feature branches. Push to `origin`.
+- Before fixing a bug, `make upstream`: an unmerged upstream PR may already fix it.
+  Bring those in with `git merge upstream/<branch>` (not cherry-pick), one per commit.
+- A fix meant for upstream: branch from `upstream/main`, without the overlay files
+  (AGENTS.md, CLAUDE.md, PROJECT.md, experiments/, Makefile).
 
 ## Code preferences
 
-Match the surrounding code. Prefer modifying a file over creating one; a
-function over a class; duplication over a premature abstraction. Delete
-obsolete code rather than preserve compatibility, unless upstream needs it.
-Do not create new markdown files: update README.md, AGENTS.md or PROJECT.md.
-Ruff, line length 120: `make fmt`, `make lint`.
+Match the surrounding code. Prefer modifying a file over creating one; a function over
+a class; duplication over a premature abstraction. Do not create new markdown files:
+update README.md, AGENTS.md or PROJECT.md. Ruff, line length 120: `make fmt`.
 
-## Two modes
-
-**EXPLORE**: the question is open. Work in `experiments/`; throwaway code is
-fine. Do not refactor `macromodel/` or `macro_data/`.
-
-**CONSOLIDATE**: something worked. Move it into the package, delete the
-exploratory copy, add a test for the invariant that matters.
+**EXPLORE** (question open): work in `experiments/`, throwaway code is fine.
+**CONSOLIDATE** (it worked): move it into the package as a switchable behaviour, delete
+the exploratory copy, add a test for the invariant that matters.
 
 ## Decide freely / ask first
 
-Without asking: read code, run tests and experiments, write targeted tests,
-fix lint, produce plots, add experiments, fix clear bugs on a branch.
+Without asking: read code, run tests and experiments, add experiments and tests, fix
+lint, fix clear bugs, commit and push to `main`.
 
-Stop and ask before: changing a model equation or default behaviour;
-changing a metric definition or the success metric in PROJECT.md; merging
-upstream branches; changing data processing that affects the initial state;
-adding a major dependency; deleting experiment results; anything that touches
-the paper's claims.
+Stop and ask before: changing a default behaviour or a model equation; changing the
+success metric or gates in PROJECT.md; merging upstream branches; changing data
+processing that affects the initial state; adding a major dependency; deleting
+experiment results; publishing anything new (the fork is public).
 
 ## Finishing a substantial change
 
-Run `make test`, `make lint`, `make baseline`. Update PROJECT.md (experiments
-table, what we have learned, open threads). Then report briefly:
-
-**Changed**: one line per file: what and why
-**Effect**: baseline scorecard before → after
-**Assumptions**: anything decided that should be verified
-**Run**: the exact command to reproduce it
+`make check` (tests, lint, baseline). Update PROJECT.md: register status, scorecard
+history if defaults changed, a modelling-decision row if a choice was made, and the
+experiments table. Then report: **Changed** (one line per file), **Effect** (scorecard
+before → after), **Assumptions** (to verify), **Run** (exact command).

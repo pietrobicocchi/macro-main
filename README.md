@@ -1,5 +1,12 @@
 # Macromodel
 
+> **This fork** (pietrobicocchi/macro-main) is working towards credible dynamics and
+> the experiments for the revised Wiese et al. paper. Start with
+> [PROJECT.md](PROJECT.md) (goal, roadmap, issue register, modelling decisions,
+> results) and [AGENTS.md](AGENTS.md) (how to work in the repo, for people and AI
+> agents). `make baseline` scores the default model against data; `make check` runs
+> tests, lint and the baseline.
+
 ## Introduction
 
 This repository contains a comprehensive macroeconomic simulation framework consisting of two main packages:

@@ -1,14 +1,12 @@
 """exp002: How much of the gap to the paper is the configuration, not the code?
 
-Starting from today's defaults, switches on the paper's settings one at a time
+Starting from the defaults as they were with 5% price noise, switches on the paper's settings one at a time
 (cumulatively) and scores each step with the exp001 scorecard. Paper values are
 from the submitted manuscript: Table `table:prior` (NPE posterior, Austria),
 eqs. `firm_exp_demand_main`, `firm_target_production_main`, `firm_prices`, and the
 bank parameters in the appendix.
 
-Mapping caveat: the paper caps *target production* by chi^H, chi^M, chi^K. The code
-instead caps labour demand and intermediate/capital purchases separately, so the
-same chi values are applied to each of those targets.
+The settings themselves live in settings.py (see there for the chi mapping caveat).
 
 Usage:
     uv run python experiments/exp002_paper_ablation.py [--seeds 5] [--quarters 12]
@@ -25,74 +23,21 @@ import numpy as np
 import pandas as pd
 from provenance import record_run
 from scoring import COUNTRY, ROOT, START, load_data, observed, plot, scorecard, simulate
+from settings import (
+    growth_expectations,
+    input_constraints,
+    inventory,
+    no_price_noise,
+    old_price_noise,
+    paper_bank_limits,
+    taylor_rule,
+)
 
 from macromodel.configurations import CountryConfiguration
 
-# Paper posterior (Table table:prior) and appendix bank parameters
-PHI_STY, CHI_H, CHI_M, CHI_K = 0.10, 0.53, 0.03, 0.18
-
-
-def growth_expectations(c: CountryConfiguration) -> None:
-    # Q_f = (1 + gamma_s) (1 + phi^Q_F gamma_f) Q_f(t-1), with phi^Q_F = 0
-    c.firms.functions.demand_estimator.parameters = {
-        "firm_growth_adjustment_speed": 0.0,
-        "sectoral_growth_adjustment_speed": 1.0,
-    }
-
-
-def inventory(c: CountryConfiguration) -> None:
-    # Y_hat = Q_f + phi^StY Y_f(t-1) - S_f(t-1)
-    p = c.firms.functions.target_production.parameters
-    c.firms.functions.target_production.parameters = {
-        **p,
-        "existing_inventory_fraction": 1.0,
-        "target_inventory_to_production_fraction": PHI_STY,
-    }
-
-
-def input_constraints(c: CountryConfiguration) -> None:
-    p = c.firms.functions.target_production.parameters
-    c.firms.functions.target_production.parameters = {
-        **p,
-        **{
-            f"{target}_target_considers_{inputs}": weight
-            for target in ["intermediate_inputs", "capital_inputs"]
-            for inputs, weight in [("labour_inputs", CHI_H), ("intermediate_inputs", CHI_M), ("capital_inputs", CHI_K)]
-        },
-    }
-    c.firms.functions.desired_labour.parameters = {
-        "consider_intermediate_inputs": CHI_M,
-        "consider_capital_inputs": CHI_K,
-    }
-
-
-def old_price_noise(c: CountryConfiguration) -> None:
-    # The default before 2026-10-20, kept as the ablation's starting point
-    p = c.firms.functions.prices.parameters
-    c.firms.functions.prices.parameters = {**p, "price_setting_noise_std": 0.05}
-
-
-def no_price_noise(c: CountryConfiguration) -> None:
-    # eq. firm_prices has no noise term
-    p = c.firms.functions.prices.parameters
-    c.firms.functions.prices.parameters = {**p, "price_setting_noise_std": 0.0}
-
-
-def paper_bank_limits(c: CountryConfiguration) -> None:
-    b = c.banks.parameters
-    b.firm_loans_debt_to_equity_ratio = 1.0
-    b.firm_loans_return_on_equity_ratio = 0.15
-    b.firm_loans_return_on_assets_ratio = 0.05
-    b.household_consumption_loans_loan_to_income_ratio = 0.36
-
-
-def taylor_rule(c: CountryConfiguration) -> None:
-    c.central_bank.functions.policy_rate.name = "PolednaPolicyRate"
-
-
 # (label, config change, needs many-firm data); applied cumulatively
-# Inventory goes last: with initial inventories of about one quarter of output, the paper's rule
-# (subtract all inventory) collapses production in quarter 1 and the run diverges.
+# Inventory goes last. This experiment builds data with default settings, so the inventory step takes the broken
+# re-initialisation path (S3) and diverges; exp004 builds matching data instead.
 STEPS = [
     ("defaults with old 5% price noise", old_price_noise, False),
     ("+ growth expectations", growth_expectations, False),

@@ -20,30 +20,18 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from exp002_paper_ablation import growth_expectations, input_constraints, inventory
 from provenance import record_run
 from scoring import COUNTRY, ROOT, START, load_data, observed, plot, scorecard, simulate
+from settings import (
+    growth_expectations,
+    input_constraints,
+    inventory,
+    no_forecast_noise,
+    spare_capacity,
+    stock_top_up,
+)
 
 from macromodel.configurations import CountryConfiguration
-
-OMEGA, PHI_STOCK = 0.85, 1.0  # paper appendix: initial utilisation rates, stock top-up weights
-
-
-def spare_capacity(c: CountryConfiguration) -> None:
-    c.firms.parameters.capital_inputs_utilisation_rate = OMEGA
-    c.firms.parameters.intermediate_inputs_utilisation_rate = OMEGA
-
-
-def stock_top_up(c: CountryConfiguration) -> None:
-    k = c.firms.functions.target_capital_inputs.parameters
-    c.firms.functions.target_capital_inputs.parameters = {**k, "target_capital_inputs_fraction": PHI_STOCK}
-    m = c.firms.functions.target_intermediate_inputs.parameters
-    c.firms.functions.target_intermediate_inputs.parameters = {**m, "target_intermediate_inputs_fraction": PHI_STOCK}
-
-
-def no_forecast_noise(c: CountryConfiguration) -> None:
-    c.assume_zero_noise = True
-
 
 # (label, config change, needs many-firm data); applied cumulatively
 STEPS = [

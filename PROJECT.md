@@ -45,6 +45,7 @@ France) for the five aggregates. Gates, in order:
 | --- | --- | --- | --- |
 | Sample raw data | canonical (for now) | `tests/test_macro_data/unit/sample_raw_data` | Real OECD/Eurostat/ICIO/IMF; **spoofed** HFCS and Compustat |
 | Real HFCS / Compustat | needed for paper claims | not on this machine | confidential |
+| Full raw data, 2010–2017, 38 countries | needed from roadmap phase 5 | not on this machine (D1) | `~/Documents/dev/phd/datasets` is empty |
 
 ## Parameters in use
 
@@ -101,9 +102,11 @@ mean quarterly real GDP growth (data: +0.64%) and the median unemployment rate a
 
 ## What we have learned
 
-### Is today's code the paper's model?
+### Why we build from this code, not the paper's
 
-**No.** The code that produced the paper's results is not in this repository.
+The code that produced the submitted paper's results is not in this repository and is
+not obtainable (R1). This matters for the rewritten paper: the model it describes will
+differ from the submitted one.
 - Sam's calibration scripts (`extra/sam_calibration/`, local only and gitignored; dated
   Apr–Sep 2024, so later than any model code in this history) ran on a server
   against three separate repositories: `/data1/sam/inet-macro-model`,
@@ -117,15 +120,12 @@ mean quarterly real GDP growth (data: +0.64%) and the median unemployment rate a
 - Here, Wiese's own commits end in Oct 2023 (`9939831`). That snapshot has neither the
   paper's χ nor its price rule (it uses `CANVASPriceSetter`). Today's code descends
   from it through about 1,450 later commits.
-- Missing artefacts needed to reproduce the paper exactly: `configs/inet.yaml`, the
-  per-run `baseline_config.yaml` / `prior.yaml` / `samples.txt` (posterior samples),
-  and the processed data directory.
 - The paper's pipeline calibrates on 3 years (e.g. 2010-Q1–2013-Q1) per country with
   NPE and NRE on moments of real GDP, nominal GDP, the GDP deflator, real household
   consumption, real government consumption and real GFCF, then forecasts 3 years
   ahead. The paper-figure notebook path suggests a fourth repo, `inet-macro-dev`.
 
-### Where today's defaults differ from the paper (exp002, 5 seeds, 12 quarters)
+### Where the defaults differed from the paper (exp002, before MD1; 5 seeds, 12 quarters)
 
 Paper settings added cumulatively to the defaults as they were with 5% price noise
 (`sim / AR(1)` RMSE ratios):
@@ -173,7 +173,7 @@ Paper settings added cumulatively to the defaults as they were with 5% price noi
   cannot see the 2014–16 disinflation. Without the draw, CPI `sim / AR(1)` drops from
   about 1.8 to **0.95** and government consumption from 2.0 to about 1.35 (exp003).
   This is the "embedded AR(1)" concern of referee R2.4.
-- **Growth is blocked at capital capacity.** With today's defaults all 18 firms produce
+- **Growth is blocked at capital capacity.** With the current defaults all 18 firms produce
   exactly at capital capacity every quarter, headcount does not move and
   unemployment stays at 10.29%. Two reasons:
   - Initial stocks are sized for full utilisation (ω = 1.0; the paper uses 0.85).
@@ -191,41 +191,19 @@ Paper settings added cumulatively to the defaults as they were with 5% price noi
   goods, hence output, hence the target stock. Later exp004 steps inherit the explosion
   and say nothing about χ, inventory or many firms.
 
-### Bugs and model state on `main`
+### Current state of `main`
 
-- **Current state (default price noise 0.0005, 10 seeds, 12 quarters):** unemployment
-  passes the sanity gate (10.5% after 12 quarters vs ~9.4–10%). Growth still fails:
-  - Real GDP about −0.04%/quarter vs +0.64% in the data, and investment about 0% vs
-    +0.8%. There is no growth engine.
-  - CPI inflation about 0.5%/quarter (≈2%/yr) vs about 0.1% in the data.
-  - Every `sim / AR(1)` ratio is still above 1 (best: GDP and investment, both 1.14).
-- **Simulations modified their input data:** when the simulation's firm settings
-  differed from the data config, `Simulation.from_datawrapper` reset the caller's
-  datawrapper in place, so later runs inherited it. Fixed (it now deep-copies).
-- **The re-initialisation path is broken (open):** that reset re-runs the whole financial
-  initialisation (`reset_firm_function_dependent` → `set_wealth_and_credit`) on data that
-  is already initialised. Bank deposits go from −1.17e12 to +1.18e14 and bank
-  liabilities to 1.65e16 (4,000× the normal path), and the run diverges.
-  Experiments avoid it by building the data with matching settings
-  (`scoring.load_data(utilisation_rate=..., inventory_fraction=...)`). Even the normal
-  path's negative bank deposits look wrong.
-- **Initial demand includes inventory:** `firm_tools.py:487` sets Demand = Production +
-  Inventory (comment: "I am not sure about this"), so any inventory target starts firms
-  expecting more demand than they sell. Left as is; changes initialisation.
-- **Rent-regression bugs (ours, not fixed upstream):**
-  `HousingMarket.compute_observed_fraction_rent_value` fitted value on rent (arguments
-  swapped) and fitted a line through a single rental. After #104 vacated houses were
-  listed at 35–72% of their value per quarter and output GDP doubled. Fixed with tests.
-- **The rental market is nearly dead:** 0–1 rentals per quarter vs 400–500 sales.
-  Some initial houses have quarterly rent above their value (rent/value up to 2.8).
-- **Too few agents is not the cause** of noise or drift (scale 10,000 vs 1,000).
-- **Taylor rule:** the rate hits zero by quarter 3. The default is `ConstantPolicyRate`.
-- **Initial state is not a steady state:** aggregate firm profits are negative at t=0
-  (also with many firms), and consumer credit decays towards 0 even after #104.
-- **The data target may be wrong:** macro_data's "Real GDP" is GDP deflated by PPI
-  (+2.6%/yr for France 2014–16; official ~1%/yr). The paper used a GDP deflator.
-- Runs are deterministic per seed. A 12-quarter France run takes about 1 s with 18
-  firms and about 10 s with 408.
+Default settings (price noise 0.0005), 10 seeds, 12 quarters, France 2014:
+- **Unemployment passes the sanity gate**: 10.5% after 12 quarters vs ~9.4–10%.
+- **Growth fails**: real GDP about −0.04%/quarter vs +0.64% in the data, investment
+  about 0% vs +0.8%. There is no growth engine (G1–G3).
+- **Inflation is too high**: about 0.5%/quarter vs about 0.1% (P2, P3).
+- Every `sim / AR(1)` ratio is still above 1 (best: GDP and investment, both 1.14).
+- Too few agents is not the cause of noise or drift (scale 10,000 vs 1,000; E6).
+- Runs are deterministic per seed: about 1 s per 12 quarters with 18 firms, about 10 s
+  with 408, mostly in the housing market (E12).
+
+Every known problem, fixed or open, is in the Issue register below.
 
 ## Issue register
 
@@ -323,7 +301,7 @@ commit messages (e.g. `G1:`).
 | E8 | Agent-level reporting; visualising the synthetic population | Gap | CB7 | — | open | P3 |
 | E9 | Report our fixes upstream: rent regression, many-firm crash, data mutation, inventory mapping | Infra | ours | — | open | P3 |
 | E10 | New-user induction; AI workflows not standardised | Infra | CB7 | partial: AGENTS.md, PROJECT.md | partial | P3 |
-| E11 | `make lint` fails on the file merged from #104 | Infra | ours | `credit_market/func/clearing.py` | wait for upstream | P3 |
+| E11 | The file merged from #104 is not ruff-formatted | Infra | ours | `credit_market/func/clearing.py` | workaround: excluded from the format check in the Makefile until upstream merges #104 | P3 |
 | E12 | Housing market takes 92% of run time (row-wise pandas loops); blocks finer scales | Infra | ours | profile, 408 firms, 8 quarters: 8.2 of 8.9 s | open | P2 |
 | E13 | Plugging in behaviour means editing closed `Literal` lists and hard-wired argument passing in `country.py`; god objects (`firms.py` 2,256 lines, 196 time series) | Infra | ours | 54 behaviour slots, 27 with alternatives; 3 files use hooks | open | P3 |
 | E14 | Data and simulation configs duplicate firm settings, reconciled by a compatibility check and a re-initialisation path | Infra | ours | G5, S3, S8 all came from this | open | P2 |
