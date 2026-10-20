@@ -258,7 +258,7 @@ commit messages (e.g. `G1:`).
 
 | ID | Problem | Kind | Source | Evidence | Status | Pri |
 | --- | --- | --- | --- | --- | --- | --- |
-| S1 | Stock-flow consistency is not verified; no accounting test | Gap | both | CB7: Tom's review | open | P1 |
+| S1 | Stock-flow consistency is not verified; no accounting test, no balance-sheet or transaction-flow matrix in the code | Gap | both | CB7: Tom's review; only GDP's three approaches are computed, and forced to agree (S6) | open | P1 |
 | S2 | Aggregate firm profits are negative at t=0 and stay negative | Question | ours | probes; also with 408 firms | open | P1 |
 | S3 | The re-initialisation path double-counts bank deposits (liabilities 1.65e16) | Bug | ours | exp004 | workaround: build data with matching settings | P2 |
 | S4 | Bank deposits are negative on the normal path (−1.17e12) | Question | ours | probe | open | P2 |
@@ -304,6 +304,9 @@ commit messages (e.g. `G1:`).
 | E9 | Report our fixes upstream: rent regression, many-firm crash, data mutation, inventory mapping | Infra | ours | — | open | P3 |
 | E10 | New-user induction; AI workflows not standardised | Infra | CB7 | partial: AGENTS.md, PROJECT.md | partial | P3 |
 | E11 | `make lint` fails on the file merged from #104 | Infra | ours | `credit_market/func/clearing.py` | wait for upstream | P3 |
+| E12 | Housing market takes 92% of run time (row-wise pandas loops); blocks finer scales | Infra | ours | profile, 408 firms, 8 quarters: 8.2 of 8.9 s | open | P2 |
+| E13 | Plugging in behaviour means editing closed `Literal` lists and hard-wired argument passing in `country.py`; god objects (`firms.py` 2,256 lines, 196 time series) | Infra | ours | 54 behaviour slots, 27 with alternatives; 3 files use hooks | open | P3 |
+| E14 | Data and simulation configs duplicate firm settings, reconciled by a compatibility check and a re-initialisation path | Infra | ours | G5, S3, S8 all came from this | open | P2 |
 
 ### D. Data
 
