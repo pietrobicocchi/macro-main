@@ -227,3 +227,49 @@ def test_swap_sales_do_not_clear_new_inhabitant_from_previous_residence():
     assert properties["Corresponding Owner Household ID"].tolist() == [1, 0]
     assert household_states["Corresponding Inhabited House ID"].tolist() == [1, 0]
     assert market.ts.total_number_of_houses_unoccupied == [[0]]
+
+
+def test_observed_fraction_rent_value_is_rent_on_value():
+    """Regression: the coefficients price new rentals as rent = slope * value + intercept.
+
+    With the arguments swapped the fit returned value-on-rent, so new rentals were
+    offered at a large fraction of the property value per period.
+    """
+    market = HousingMarket.from_pickled_market(
+        synthetic_housing_market=SimpleNamespace(housing_market_data=_housing_data()),
+        housing_market_configuration=HousingMarketConfiguration(),
+        scale=1,
+        country_name="FRA",
+    )
+    market.states["current_sales"] = pd.DataFrame(
+        {
+            "sales_types": ["Rental", "Rental", "Rental", "Sell"],
+            "property_value": [100.0, 200.0, 400.0, 300.0],
+            "price_or_rent": [1.5, 2.5, 4.5, 310.0],
+        }
+    )
+
+    slope, intercept = market.compute_observed_fraction_rent_value()
+
+    assert np.isclose(slope, 0.01)
+    assert np.isclose(intercept, 0.5)
+
+
+def test_observed_fraction_rent_value_keeps_previous_fit_for_a_single_rental():
+    """Regression: one rental cannot identify a line; the previous coefficients are kept.
+
+    A degenerate one-point fit returned an arbitrary slope that then priced every new
+    rental for the rest of the run.
+    """
+    market = HousingMarket.from_pickled_market(
+        synthetic_housing_market=SimpleNamespace(housing_market_data=_housing_data()),
+        housing_market_configuration=HousingMarketConfiguration(),
+        scale=1,
+        country_name="FRA",
+    )
+    previous = market.ts.current("observed_fraction_rent_value")
+    market.states["current_sales"] = pd.DataFrame(
+        {"sales_types": ["Rental"], "property_value": [100.0], "price_or_rent": [150.0]}
+    )
+
+    np.testing.assert_array_equal(market.compute_observed_fraction_rent_value(), previous)

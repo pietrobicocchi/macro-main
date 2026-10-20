@@ -408,7 +408,8 @@ class HousingMarket:
         Returns:
             np.ndarray: Regression coefficients [slope, intercept] representing
                 the relationship between property values and sale prices.
-                Returns current ratio if no sales occurred.
+                Returns current ratio if fewer than two distinct property values were sold,
+                since a line cannot be identified from a single point.
 
         Note:
             The ratio helps track market efficiency and price discovery,
@@ -421,7 +422,7 @@ class HousingMarket:
                 None,
             )
         )
-        if len(current_sells) == 0:
+        if current_sells["property_value"].nunique() < 2:
             return self.ts.current("observed_fraction_value_price")
         return self._perform_linear_regression(
             current_sells["property_value"].values,
@@ -438,7 +439,8 @@ class HousingMarket:
         Returns:
             np.ndarray: Regression coefficients [slope, intercept] representing
                 the relationship between property values and rental rates.
-                Returns current ratio if no rentals occurred.
+                Returns current ratio if fewer than two distinct property values were rented,
+                since a line cannot be identified from a single point.
 
         Note:
             The ratio helps track rental market efficiency and yield rates,
@@ -451,11 +453,11 @@ class HousingMarket:
                 None,
             )
         )
-        if len(current_rentals) == 0:
+        if current_rentals["property_value"].nunique() < 2:
             return self.ts.current("observed_fraction_rent_value")
         return self._perform_linear_regression(
-            current_rentals["price_or_rent"].values,
             current_rentals["property_value"].values,
+            current_rentals["price_or_rent"].values,
         )
 
     def process_housing_market_clearing(
