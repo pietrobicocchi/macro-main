@@ -98,9 +98,13 @@ unit/frequency conversions, initial-state consistency, determinism per seed.
 - `origin` = pietrobicocchi/macro-main (this fork). `upstream` = INET-Complexity/macro-main.
 - Before fixing a model bug, run `make upstream` and check open upstream PRs:
   many known bugs already have unmerged fixes there.
-- Work on a branch, never directly on `main`. Commit or push only when asked.
-- Fixes meant for upstream: branch from `upstream/main` and keep overlay files
-  (AGENTS.md, CLAUDE.md, PROJECT.md, experiments/, Makefile) out of the PR.
+- Work directly on `main` of the fork (single contributor); no feature branches.
+- Bring upstream fixes in with `git merge upstream/<branch>` (not cherry-pick), so
+  history stays shared when upstream merges the same PR. One merge per commit,
+  with its `make baseline` effect in PROJECT.md.
+- The only exception is a fix meant for upstream: branch from `upstream/main` and
+  keep overlay files (AGENTS.md, CLAUDE.md, PROJECT.md, experiments/, Makefile)
+  out of the PR.
 
 ## Code preferences
 
