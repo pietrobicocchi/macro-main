@@ -1324,7 +1324,7 @@ class Country:
                 central_bank_policy_rate=self.central_bank.ts.current("policy_rate"),
             )
         )
-        self.banks.ts.profits.append(self.banks.compute_profits())
+        self.banks.ts.profits.append(self.banks.compute_profits(loan_losses=self.credit_market.take_loan_losses()))
         self.banks.ts.profits_histogram.append(get_histogram(self.banks.ts.current("profits"), self.scale))
 
         # G3. BANK BALANCE SHEETS
@@ -1395,6 +1395,7 @@ class Country:
                     "nominal_amount_spent_in_lcu"
                 ),
                 government_interest_rates=self.central_bank.ts.current("policy_rate")[0],
+                bank_equity_injection=self.central_government.ts.current("bank_equity_injection")[0],
             )
         )
         self.central_government.ts.debt.append(self.central_government.compute_debt())

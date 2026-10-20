@@ -68,6 +68,9 @@ looking at the result. This is the raw material for the rewritten model section.
 | # | Decision | Economic reason | Alternative considered | Evidence | Paper impact |
 | --- | --- | --- | --- | --- | --- |
 | MD1 | Price noise 0.0005 per quarter (was 0.05) | A 5% random price shock per firm per quarter is far larger than observed price changes; the paper's price equation has none | 0 (exactly the paper) | exp002, `60948b7` | none (matches paper) |
+| MD2 | Loan write-offs are losses of the lending bank, charged against profit before tax | Standard bank accounting; without it a default turns the borrower's debt into free money | charge equity directly, after tax | Phase 1 accounting | rewritten paper: describe bank losses |
+| MD3 | A failing bank is recapitalised by the government (the injection is government spending); its loans and deposits stay | Borrowers still owe what they borrowed and depositors keep their money; deleting them created money | bail-in of depositors | Phase 1 accounting | describe bank resolution |
+| MD4 | The credit market holds all household mortgages, on the main residence and on other properties | They are real debts, already recorded by banks and households | — | Phase 1 accounting | none |
 
 ## Baselines
 
@@ -98,7 +101,8 @@ mean quarterly real GDP growth (data: +0.64%) and the median unemployment rate a
 | + PR #93 housing IDs | 1.68 | 4.03 | 8.83 | 1.99 | 3.67 | −0.62% | — |
 | + PR #104 credit units | 7.00 | 3.37 | 8.32 | 2.06 | 3.78 | explodes | 15.8% |
 | + rent-regression fixes (ours) | 1.46 | 3.54 | 8.40 | 1.88 | 3.73 | −0.34% | 15.0% |
-| + price noise 0.05 → 0.0005 (default) | **1.14** | **2.47** | **1.99** | **1.14** | **1.72** | −0.04% | 10.5% |
+| + price noise 0.05 → 0.0005 (default) | 1.14 | 2.47 | 1.99 | 1.14 | 1.72 | −0.04% | 10.5% |
+| + Phase 1 accounting fixes (S15–S20) | **1.13** | **2.45** | 2.11 | **1.09** | 1.82 | −0.01% | 10.4% |
 
 ## What we have learned
 
@@ -198,7 +202,10 @@ Default settings (price noise 0.0005), 10 seeds, 12 quarters, France 2014:
 - **Growth fails**: real GDP about −0.04%/quarter vs +0.64% in the data, investment
   about 0% vs +0.8%. There is no growth engine (G1–G3).
 - **Inflation is too high**: about 0.5%/quarter vs about 0.1% (P2, P3).
-- Every `sim / AR(1)` ratio is still above 1 (best: GDP and investment, both 1.14).
+- Every `sim / AR(1)` ratio is still above 1 (best: investment 1.09, GDP 1.13).
+- **Accounts (Phase 1)**: every loan and deposit ledger agrees exactly; money is conserved to
+  within ±3% of GDP for 8 quarters and drifts to 12% by quarter 10, through flows that have no
+  counterpart (S9–S13).
 - Too few agents is not the cause of noise or drift (scale 10,000 vs 1,000; E6).
 - Runs are deterministic per seed: about 1 s per 12 quarters with 18 firms, about 10 s
   with 408, mostly in the housing market (E12).
@@ -256,14 +263,27 @@ commit messages (e.g. `G1:`).
 
 | ID | Problem | Kind | Source | Evidence | Status | Pri |
 | --- | --- | --- | --- | --- | --- | --- |
-| S1 | Stock-flow consistency is not verified; no accounting test, no balance-sheet or transaction-flow matrix in the code | Gap | both | CB7: Tom's review; only GDP's three approaches are computed, and forced to agree (S6) | open | P1 |
+| S1 | Stock-flow consistency: `macromodel/accounting.py` checks every quarter that the loan and deposit ledgers agree, bank equity and government debt move only by their flows, and money changes only by the deficit plus net exports | Gap | both | exp001 `accounts.csv`: all ledgers exact; money within ±3% of GDP for 8 quarters, up to 12% by quarter 10 (S9–S13) | partial | P1 |
 | S2 | Aggregate firm profits are negative at t=0 and stay negative | Question | ours | probes; also with 408 firms | open | P1 |
 | S3 | The re-initialisation path double-counts bank deposits (liabilities 1.65e16) | Bug | ours | exp004 | workaround: build data with matching settings | P2 |
 | S4 | Bank deposits are negative on the normal path (−1.17e12) | Question | ours | probe | open | P2 |
 | S5 | Initial Demand = Production + Inventory | Question | ours | `firm_tools.py:487` | open | P3 |
-| S6 | GDP is forced to balance by adjusting imports/exports, which can hide inconsistencies | Spec | ours | `economy.compute_gdp(always_adjust=True)` | open | P2 |
+| S6 | GDP is forced to balance by adjusting imports/exports, which can hide inconsistencies | Spec | ours | `gdp.trade_adjustment` check: the adjustment is 0 in single-country runs | not active for one country; check in multi-country runs | P3 |
 | S7 | Simulations modified their input data | Bug | ours | — | done `62d29d3` | — |
 | S8 | Initial inventory read from the wrong parameter | Bug | ours | — | done `62d29d3` | — |
+| S9 | Households receive income on "other financial assets" (about 19% of quarterly GDP) that nobody pays: money from nowhere | Spec | ours | Phase 1 decomposition | open: needs an issuer (F2) | P1 |
+| S10 | Saving into "other financial assets" (about 13% of GDP per quarter) pays no one: money destroyed | Spec | ours | Phase 1 decomposition | open: needs an issuer (F2) | P1 |
+| S11 | Firms receive about 18–35 bn/q more for sales than buyers pay (goods market, product taxes) | Question | ours | Phase 1 decomposition | open | P2 |
+| S12 | Firms pay about 30 bn/q more in wages than workers and the government receive | Question | ours | Phase 1 decomposition | open | P2 |
+| S13 | Interest on government debt is added to the deficit but paid to no one | Spec | ours | about 4 bn/q | open: needs a bondholder (F3) | P3 |
+| S14 | Firms' cash is charged for inputs used, not inputs bought; differs as soon as stocks change (Phase 2) | Bug | ours | `firms.compute_deposits` | open: fix before Phase 2 | P1 |
+| S15 | House sales charged buyers but never credited sellers: about 1 trillion destroyed per quarter | Bug | ours | — | done (Phase 1 commit) | — |
+| S16 | Dissaving wiped households' overdrafts (`min(deposits, ...)` on a negative balance): 450–800 bn/q created | Bug | ours | — | done (Phase 1 commit), with test | — |
+| S17 | Written-off household and firm loans cost the banks nothing | Bug | ours | — | done: losses reduce bank profits before tax (MD2), with test | — |
+| S18 | Credit market omitted mortgages on other properties (543 bn at t=0) that banks and households record | Bug | ours | — | done (MD4) | — |
+| S19 | A failing bank's whole loan book was deleted and its reserves zeroed; the government's injection was not in the deficit | Bug | ours | — | done (MD3) | — |
+| S20 | Households' debt records kept loans after they were written off | Bug | ours | — | done | — |
+| S21 | With a single bank there are no healthy banks to average over, so a failing bank is never recapitalised | Spec | ours | `DefaultBankDemography` | open: decide recapitalisation rule | P2 |
 
 ### M. Markets and trade
 
@@ -277,6 +297,8 @@ commit messages (e.g. `G1:`).
 | M6 | Housing IDs set to −1 at initialisation | Bug | upstream | — | done: #93 merged `80d8b3d` | — |
 | M7 | Credit-supply units bug | Bug | upstream | — | done: #104 merged `a6dca3c` | — |
 | M8 | Rent-value regression swapped and fitted through one point | Bug | ours | — | done `21f1f2b`; report upstream (E9) | — |
+| M9 | Houses change hands far too often: about 12% of the stock per quarter (real: about 1%), 800–1,400 bn of sales per quarter | Spec | ours | Phase 1 decomposition | open | P2 |
+| M10 | Interest on existing loans is an annual rate charged every quarter (4×): mortgages 7.3%/yr, consumer loans 21%/yr; drives defaults and bank losses | Bug | ours | `loan_data.py:114`; fix in upstream #83/#85 | open: merge upstream (ask) | P1 |
 
 ### F. Government and finance
 

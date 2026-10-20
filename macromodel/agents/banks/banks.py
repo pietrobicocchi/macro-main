@@ -16,7 +16,7 @@ The banks operate by:
 - Tracking market shares
 """
 
-from typing import Any
+from typing import Any, Optional
 
 import h5py
 import numpy as np
@@ -338,17 +338,24 @@ class Banks(Agent):
             * np.maximum(0, self.ts.current("deposits_from_households"))
         )
 
-    def compute_profits(self) -> np.ndarray:
+    def compute_profits(self, loan_losses: Optional[np.ndarray] = None) -> np.ndarray:
         """Calculate total bank profits.
 
         Combines:
         - Interest received on loans
         - Net interest received on deposits
+        - Minus losses on loans written off this period (before tax, as in bank accounting)
+
+        Args:
+            loan_losses (Optional[np.ndarray]): Losses by bank this period. Defaults to none.
 
         Returns:
             np.ndarray: Total profits by bank
         """
-        return self.ts.current("interest_received_on_loans") + self.ts.current("interest_received_on_deposits")
+        profits = self.ts.current("interest_received_on_loans") + self.ts.current("interest_received_on_deposits")
+        if loan_losses is not None:
+            profits = profits - loan_losses
+        return profits
 
     def update_deposits(
         self,
@@ -512,21 +519,18 @@ class Banks(Agent):
             is_insolvent=self.states["is_insolvent"],
         )
 
-        # Remove loans
-        for bank_id in np.where(self.states["is_insolvent"])[0]:
-            credit_market.remove_loans_by_bank(bank_id)
-
-        # Update deposits
-        new_firm_deposits = self.ts.current("deposits")
-        new_firm_deposits[self.states["is_insolvent"]] = 0.0
-        self.ts.deposits.pop()
-        self.ts.deposits.append(new_firm_deposits)
-
-        # Update equity
-        new_firm_equity = self.ts.current("equity")
-        new_firm_equity[self.states["is_insolvent"]] = average_equity
+        # Recapitalise: the government tops equity up to `average_equity` (the injection, counted in its deficit).
+        # Loans and deposits stay: borrowers still owe what they borrowed and depositors keep their money. Deleting
+        # the loan book and zeroing reserves, as before, created money with no counterpart.
+        insolvent = self.states["is_insolvent"]
+        new_equity = self.ts.current("equity").copy()
+        new_equity[insolvent] = np.maximum(new_equity[insolvent], average_equity)
         self.ts.equity.pop()
-        self.ts.equity.append(new_firm_equity)
+        self.ts.equity.append(new_equity)
+        new_reserves = self.ts.current("deposits").copy()
+        new_reserves[insolvent] = self.compute_deposits()[insolvent]
+        self.ts.deposits.pop()
+        self.ts.deposits.append(new_reserves)
 
         return equity_injection
 

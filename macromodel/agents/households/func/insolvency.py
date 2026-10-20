@@ -93,6 +93,12 @@ class DefaultHouseholdInsolvencyHandler(HouseholdInsolvencyHandler):
         )[0]
         bad_hh_cons_loans, bad_mortgages = credit_market.remove_loans_to_households(insolvent_households)
 
+        # The written-off loans are gone from the households' own books too
+        for key in ["consumption_loan_debt", "mortgage_debt", "debt"]:
+            cleared = households.ts.current(key).copy()
+            cleared[insolvent_households] = 0.0
+            households.ts.override_current(key, cleared)
+
         # Calculate NPL ratios
         total_cons_loans = credit_market.ts.current("total_outstanding_loans_granted_households_consumption")[0]
         if total_cons_loans == 0.0:

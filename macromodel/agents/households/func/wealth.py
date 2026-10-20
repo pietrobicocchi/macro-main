@@ -332,10 +332,10 @@ class DefaultWealthSetter(WealthSetter):
             Tuple[np.ndarray, np.ndarray]: Used deposits and other assets
         """
         used_up_wealth_in_other_financial_assets = np.minimum(current_wealth_in_other_financial_assets, used_up_wealth)
-        used_up_wealth_in_deposits = np.minimum(
-            current_wealth_in_deposits,
-            used_up_wealth - used_up_wealth_in_other_financial_assets,
-        )
+        # Spending is paid for in full: what other financial assets do not cover comes out of deposits, which may go
+        # into overdraft. Capping at current deposits used to leave the shortfall unpaid and, for households already in
+        # overdraft, subtracted a negative amount that wiped the overdraft.
+        used_up_wealth_in_deposits = used_up_wealth - used_up_wealth_in_other_financial_assets
         return (
             used_up_wealth_in_deposits,
             used_up_wealth_in_other_financial_assets,

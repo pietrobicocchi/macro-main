@@ -377,6 +377,7 @@ class CentralGovernment(Agent):
         current_household_social_transfers: np.ndarray,
         current_government_nominal_amount_spent: np.ndarray,
         government_interest_rates: float,
+        bank_equity_injection: float = 0.0,
     ) -> np.ndarray:
         """Calculate the government deficit.
 
@@ -394,6 +395,7 @@ class CentralGovernment(Agent):
             current_household_social_transfers (np.ndarray): Social transfers
             current_government_nominal_amount_spent (np.ndarray): Spending
             government_interest_rates (float): Interest rate on debt
+            bank_equity_injection (float): Equity injected into failing banks this period
 
         Returns:
             np.ndarray: Government deficit (positive = deficit)
@@ -410,6 +412,7 @@ class CentralGovernment(Agent):
                 all_benefits
                 + np.sum(current_government_nominal_amount_spent)
                 + interest_payments
+                + bank_equity_injection
                 - self.ts.current("revenue")[0]
             ]
         )

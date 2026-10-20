@@ -524,7 +524,8 @@ class CreditMarket:
     def remove_loans_to_firm(self, firm_id: int | np.ndarray) -> float:
         """Remove all loans associated with specified firm(s).
 
-        Used when firms default or exit the market. Returns the total amount written off.
+        Used when firms default or exit the market. Returns the total amount written off, which is also
+        recorded as a loss of the lending banks (see `take_loan_losses`).
 
         Args:
             firm_id (int | np.ndarray): ID(s) of firm(s) to remove loans for
@@ -532,15 +533,20 @@ class CreditMarket:
         Returns:
             float: Total amount of loans written off
         """
-        total_amount = self.states["st_loans"][0][:, firm_id].sum() + self.states["lt_loans"][0][:, firm_id].sum()
+        firm_ids = np.atleast_1d(firm_id)
+        by_bank = self.states["st_loans"][0][:, firm_ids].sum(axis=1) + self.states["lt_loans"][0][:, firm_ids].sum(
+            axis=1
+        )
+        self.record_loan_losses(by_bank)
         self.states["st_loans"][:, :, firm_id] = 0.0
         self.states["lt_loans"][:, :, firm_id] = 0.0
-        return total_amount
+        return by_bank.sum()
 
     def remove_loans_to_households(self, household_id: int | np.ndarray) -> Tuple[float, float]:
         """Remove all loans associated with specified household(s).
 
-        Used when households default. Returns the total amounts written off by loan type.
+        Used when households default. Returns the total amounts written off by loan type, which are also
+        recorded as losses of the lending banks (see `take_loan_losses`).
 
         Args:
             household_id (int | np.ndarray): ID(s) of household(s) to remove loans for
@@ -548,11 +554,25 @@ class CreditMarket:
         Returns:
             Tuple[float, float]: Total consumer loans and mortgages written off
         """
-        cons_amount = self.states["cons_loans"][0][:, household_id].sum()
-        mort_amount = self.states["mort_loans"][0][:, household_id].sum()
+        household_ids = np.atleast_1d(household_id)
+        cons_by_bank = self.states["cons_loans"][0][:, household_ids].sum(axis=1)
+        mort_by_bank = self.states["mort_loans"][0][:, household_ids].sum(axis=1)
+        self.record_loan_losses(cons_by_bank + mort_by_bank)
         self.states["cons_loans"][:, :, household_id] = 0.0
         self.states["mort_loans"][:, :, household_id] = 0.0
-        return cons_amount, mort_amount
+        return cons_by_bank.sum(), mort_by_bank.sum()
+
+    def record_loan_losses(self, losses_by_bank: np.ndarray) -> None:
+        """Add losses (written-off loans, net of anything recovered) to each bank's losses for this period."""
+        if "loan_losses_by_bank" not in self.states:
+            self.states["loan_losses_by_bank"] = np.zeros(self.states["st_loans"].shape[1])
+        self.states["loan_losses_by_bank"] = self.states["loan_losses_by_bank"] + losses_by_bank
+
+    def take_loan_losses(self) -> np.ndarray:
+        """Each bank's losses recorded this period, resetting them to zero. Banks charge them against profits."""
+        losses = self.states.get("loan_losses_by_bank", np.zeros(self.states["st_loans"].shape[1]))
+        self.states["loan_losses_by_bank"] = np.zeros_like(losses)
+        return losses
 
     def remove_loans_by_bank(self, bank_id: int | np.ndarray) -> None:
         """Remove all loans associated with specified bank(s).

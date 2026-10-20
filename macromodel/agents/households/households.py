@@ -897,10 +897,15 @@ class Households(Agent):
         self.ts.rent.append(rent_by_household)
         self.ts.rent_imputed.append(imputed_rent_by_household)
 
-        # Calculate the price paid for property
+        # Net price paid for property: purchases minus sale proceeds, so the seller is credited what the buyer pays.
+        # Rentals are paid through rent, not here.
         price_paid_for_property = np.zeros(self.ts.current("n_households"))
         if len(current_sales) > 0:
-            price_paid_for_property[current_sales["buyer_id"].values] = current_sales["price_or_rent"].values
+            sales = current_sales[current_sales["sales_types"] == "Sell"]
+            np.add.at(price_paid_for_property, sales["buyer_id"].values.astype(int), sales["price_or_rent"].values)
+            np.subtract.at(
+                price_paid_for_property, sales["seller_id"].values.astype(int), sales["price_or_rent"].values
+            )
         self.ts.price_paid_for_property.append(price_paid_for_property)
 
     def compute_rent(

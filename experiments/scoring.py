@@ -16,6 +16,7 @@ import pandas as pd
 
 from macro_data import DataWrapper
 from macro_data.configuration_utils import default_data_configuration
+from macromodel.accounting import AccountingMonitor
 from macromodel.configurations import CountryConfiguration, SimulationConfiguration
 from macromodel.simulation import Simulation
 
@@ -56,15 +57,29 @@ def load_data(
     return DataWrapper.from_config(configuration=configuration, raw_data_path=RAW_DATA, single_hfcs_survey=True)
 
 
-def simulate(data: DataWrapper, country_config: CountryConfiguration, seed: int, quarters: int) -> pd.DataFrame:
-    """One run; returns quarterly real growth rates, CPI inflation, unemployment and policy rate for t = 1..quarters."""
+def simulate(
+    data: DataWrapper,
+    country_config: CountryConfiguration,
+    seed: int,
+    quarters: int,
+    audit: list[pd.DataFrame] | None = None,
+) -> pd.DataFrame:
+    """One run; returns quarterly real growth rates, CPI inflation, unemployment and policy rate for t = 1..quarters.
+
+    If `audit` is a list, the run's accounting report (macromodel.accounting) is appended to it.
+    """
     sim = Simulation.from_datawrapper(
         datawrapper=data,
         simulation_configuration=SimulationConfiguration(
             country_configurations={COUNTRY: country_config}, t_max=quarters, seed=seed
         ),
     )
+    monitor = AccountingMonitor()
+    monitor.record(sim, t=-1)
+    sim.posthooks.append(monitor)
     sim.run()
+    if audit is not None:
+        audit.append(monitor.report().assign(seed=seed))
     country = sim.countries[COUNTRY]
     ts = country.economy.ts
 
@@ -150,3 +165,12 @@ def plot(sim: pd.DataFrame, obs: pd.DataFrame, quarters: int, title: str, path: 
     fig.tight_layout()
     fig.savefig(path, dpi=120)
     plt.close(fig)
+
+
+def accounts_summary(audit: list[pd.DataFrame]) -> pd.DataFrame:
+    """Worst residual of each accounting check over all seeds and periods, as a share of quarterly GDP."""
+    report = pd.concat(audit, ignore_index=True)
+    worst = report.loc[report.groupby("check")["share_of_gdp"].apply(lambda s: s.abs().idxmax())]
+    return worst.set_index("check")[["share_of_gdp", "t", "seed"]].rename(
+        columns={"share_of_gdp": "worst share of GDP"}
+    )

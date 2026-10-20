@@ -11,6 +11,7 @@ Writes to outputs/exp001_baseline/<policy>_scale<scale>/:
     run.json       commit, dirty files, command line, parameters
     series.csv     simulated quarterly growth rates, one row per (seed, t)
     scorecard.csv  per-aggregate comparison against data and AR(1)
+    accounts.csv   worst residual of each accounting check (macromodel.accounting)
     figure.png     simulated paths vs data
 """
 
@@ -20,7 +21,7 @@ import warnings
 
 import pandas as pd
 from provenance import record_run
-from scoring import COUNTRY, RAW_DATA, ROOT, START, load_data, observed, plot, scorecard, simulate
+from scoring import COUNTRY, RAW_DATA, ROOT, START, accounts_summary, load_data, observed, plot, scorecard, simulate
 
 from macromodel.configurations import CountryConfiguration
 from macromodel.configurations.central_bank_configuration import (
@@ -49,14 +50,17 @@ def main() -> None:
             functions=CentralBankFunctions(policy_rate=CentralBankPolicy(name=args.policy))
         )
     )
+    audit = []
     sim = pd.concat(
-        [simulate(data, country_config, seed, args.quarters) for seed in range(args.seeds)], ignore_index=True
+        [simulate(data, country_config, seed, args.quarters, audit) for seed in range(args.seeds)], ignore_index=True
     )
+    accounts = accounts_summary(audit)
     obs = observed(data)
 
     card = scorecard(sim, obs, args.quarters)
     sim.to_csv(out_dir / "series.csv", index=False)
     card.to_csv(out_dir / "scorecard.csv")
+    accounts.to_csv(out_dir / "accounts.csv")
     title = f"exp001 baseline — {COUNTRY}, default parameters, scale {args.scale} (quarterly rates)"
     plot(sim, obs, args.quarters, title, out_dir / "figure.png")
 
@@ -66,6 +70,8 @@ def main() -> None:
         f"scale={args.scale}, policy={args.policy}"
     )
     print(card.to_string(float_format=lambda x: f"{x:.4f}"))
+    print("\naccounting checks, worst residual over seeds and quarters (share of quarterly GDP):")
+    print(accounts.to_string(float_format=lambda x: f"{x:.4f}"))
     print(f"\nwritten to {out_dir.relative_to(ROOT)}/")
 
 

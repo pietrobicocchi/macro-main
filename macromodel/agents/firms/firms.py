@@ -1770,8 +1770,16 @@ class Firms(Agent):
         insolvent_firms = np.where(self.states["is_insolvent"])[0]
         bad_firm_loans = credit_market.remove_loans_to_firm(insolvent_firms)
 
-        # Update deposits
+        # Update deposits. The lending bank keeps a positive balance against the written-off loans and loses an
+        # overdraft, so the net is a loss (or a recovery) for that bank.
         new_firm_deposits = self.ts.current("deposits")
+        credit_market.record_loan_losses(
+            -np.bincount(
+                self.states["Corresponding Bank ID"][insolvent_firms],
+                weights=new_firm_deposits[insolvent_firms],
+                minlength=credit_market.states["st_loans"].shape[1],
+            )
+        )
         new_firm_deposits[self.states["is_insolvent"]] = 0.0
         self.ts.deposits.pop()
         self.ts.deposits.append(new_firm_deposits)
