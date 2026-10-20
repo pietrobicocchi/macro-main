@@ -160,3 +160,6 @@ debugging_experiments/
 dev/
 inet-macro-dev/
 macro-dev/
+
+# Experiment outputs (regenerate with make exp)
+outputs/
