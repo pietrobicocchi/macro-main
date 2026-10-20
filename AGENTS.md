@@ -66,6 +66,8 @@ for diagnosing mechanisms, not for claims in the paper. Default `scale=10_000`
 - One experiment answers one question, stated in its docstring.
 - `experiments/expNNN_short_name.py` writes only to `outputs/expNNN_short_name/`
   and calls `provenance.record_run(out_dir, ...)` before writing results.
+- Score against data with `experiments/scoring.py` (`load_data`, `simulate`,
+  `observed`, `scorecard`, `plot`), so every experiment uses the same metric.
 - Never edit a generated output by hand. Record the conclusion in PROJECT.md.
 - Run with `make exp EXP=exp001 ARGS="..."`. `make baseline` is the reference
   check after any change to model behaviour.

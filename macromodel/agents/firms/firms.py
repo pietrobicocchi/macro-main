@@ -2094,13 +2094,20 @@ class Firms(Agent):
         # We need current good prices for monetary calculation
         # Use previous period prices as current prices aren't available yet in the timestep
         if len(self.ts.price) > 1:
-            current_good_prices = self.ts.prev("price")  # Previous period prices
+            firm_prices = self.ts.prev("price")  # Previous period prices
         else:
-            current_good_prices = self.ts.current("price")  # Initial prices for
+            firm_prices = self.ts.current("price")  # Initial prices for
+
+        # Prices are per firm; capital goods are priced per industry (mean price of its firms)
+        industries = self.states["Industry"]
+        n_industries = self.base_capital_inputs_depreciation_matrix.shape[0]
+        current_good_prices = np.bincount(industries, weights=firm_prices, minlength=n_industries) / np.maximum(
+            np.bincount(industries, minlength=n_industries), 1
+        )
 
         # Calculate replacement investment needed (in monetary terms)
         production = self.ts.current("production")
-        depreciation_matrix = self.base_capital_inputs_depreciation_matrix[:, self.states["Industry"]].T
+        depreciation_matrix = self.base_capital_inputs_depreciation_matrix[:, industries].T
 
         # For each firm, calculate total replacement cost across all capital types
         replacement_needs = production[:, None] * depreciation_matrix
