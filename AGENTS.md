@@ -6,9 +6,15 @@ Keep it under ~150 lines, and keep it true.
 ## What this is
 
 A data-driven macroeconomic agent-based model (Wiese et al.), the main competitor
-of the IIASA/Poledna model. It runs, but its dynamics are not yet credible. The
-work is to make them credible, understand why they are not, and keep the code
-publication-quality.
+of the IIASA/Poledna model. The code behind the original paper is not available;
+everything is built from this code. The work is to make its dynamics economically
+credible, then run the experiments the referees asked for, for a rewritten paper.
+
+Modelling choices follow economic reasoning, guided by the paper and the referee
+reports, never by what makes the fit look better. Every choice gets a row in
+PROJECT.md "Modelling decisions", with its reason written before seeing the result.
+New mechanisms are new behaviour classes selectable in config (keep the old one),
+so each one can be switched off for the ablation experiments.
 
 Optimise, in this order: **correctness → readability → reproducibility → simplicity.**
 

@@ -6,27 +6,38 @@ Git remembers what happened.
 
 ## Question
 
-Can this model produce credible macro dynamics, and forecast real GDP, inflation,
-household consumption, government consumption and investment better than an
-AR(1) benchmark and the IIASA/Poledna model, as the paper claims (Table
-`table:forecasting_gdp`, `paper-macro-model/main.tex`)?
+Starting from this code (the paper's original code is not available), can we build a
+macro ABM whose dynamics are economically credible and whose forecasts of real GDP,
+inflation, household consumption, government consumption and investment are
+comparable to, or better than, the paper's (Table `table:forecasting_gdp`)? Then:
+which of its ingredients deliver that skill (the reviewers' attribution and ablation
+questions)?
+
+Modelling choices follow economic reasoning, guided by the paper and the referee
+reports. Where the paper is too simple or wrong, we change the model and the paper
+says so. Every choice is recorded in "Modelling decisions".
 
 ## Hypothesis
 
-The default build's dynamics are wrong mainly because of mechanism bugs (several
-already fixed in unmerged upstream PRs), not missing calibration. Falsified if,
-after the known fixes, the drift in exp001 persists and a parameter sweep over
-the calibrated parameters removes it.
+Credible dynamics need three things the current build lacks: (a) balanced accounts,
+(b) a growth engine (firms with spare capacity that invest gradually towards
+expected demand, plus a source of productivity growth), and (c) prices driven by
+costs and demand rather than copied from a forecast. With these in place and the
+paper's parameters calibrated on 2010–2013 data only, the model forecasts France
+2013–2016 better than AR(1). Falsified if, with (a)–(c) in place, every calibration
+leaves `sim / AR(1)` above 1 for GDP and inflation.
 
 ## Success metric
 
 `make baseline` scorecard: `sim / AR(1)` RMSE ratio (median seed, 12 quarters,
-France 2014-Q1) for the five aggregates.
+France) for the five aggregates. Gates, in order:
 
-- **Sanity gate:** no systematic drift. Mean simulated growth is within 0.5 pp/quarter
-  of the data, and unemployment stays within 2 pp of the data after 12 quarters.
-- **Target:** ratio ≤ 1 for every aggregate. The paper reports roughly 40–75% of
-  the AR(1) RMSE.
+1. **Accounts gate:** the accounting checks (S1) pass every quarter.
+2. **Sanity gate:** no systematic drift. Mean simulated growth is within 0.5 pp/quarter
+   of the data, unemployment stays within 2 pp of the data after 12 quarters, and
+   20-quarter runs neither explode nor collapse.
+3. **Target:** after calibration on pre-forecast data only, ratio ≤ 1 for every
+   aggregate. For reference, the paper reports roughly 40–75% of the AR(1) RMSE.
 
 ## Data
 
@@ -47,6 +58,15 @@ posterior (Table `table:prior`) is not used.
   (price setting, target production, input constraints, utilisation rates, bank limits,
   credit and housing markets). The only one changed so far is `price_setting_noise_std`
   0.05 → 0.0005.
+
+## Modelling decisions
+
+Each departure from today's code or from the paper, with the reason recorded *before*
+looking at the result. This is the raw material for the rewritten model section.
+
+| # | Decision | Economic reason | Alternative considered | Evidence | Paper impact |
+| --- | --- | --- | --- | --- | --- |
+| MD1 | Price noise 0.0005 per quarter (was 0.05) | A 5% random price shock per firm per quarter is far larger than observed price changes; the paper's price equation has none | 0 (exactly the paper) | exp002, `60948b7` | none (matches paper) |
 
 ## Baselines
 
@@ -226,7 +246,7 @@ commit messages (e.g. `G1:`).
 
 | ID | Problem | Kind | Source | Evidence | Status | Pri |
 | --- | --- | --- | --- | --- | --- | --- |
-| R1 | The code, configs and posterior samples behind the paper's results are not in this repo | Data | both | Sam's scripts use separate `inet-macro-*` repos and parameters that never existed here | open: ask Sam / José | P1 |
+| R1 | The code, configs and posterior samples behind the paper's results are not in this repo | Data | both | Sam's scripts use separate `inet-macro-*` repos and parameters that never existed here | closed: not obtainable; everything is built from this code | — |
 | R2 | No calibration in use; every behavioural parameter is a hand-set default | Gap | both | "Parameters in use" | open; after G1–G3 | P1 |
 | R3 | Calibration and specification problems are hard to tell apart | Question | CB7 | Approach: ablations against a fixed scorecard (exp002–004) | partial | P2 |
 | R4 | Scoring differs from the paper: GDP deflated by PPI (macro_data's "Real GDP" too, +2.6%/yr vs ~1% official), one country, one start date | Spec | ours | exp001 | open | P2 |
@@ -324,14 +344,22 @@ no EV investment; net-zero uptake decisions; alignment with DESNZ / UK TIMES;
 alternative investment; consumer energy prices; granular policy shocks and scenarios.
 Kept here so that their fixes are recognisable if they land upstream.
 
-### Next up
+### Roadmap
 
-1. **G1–G3 (growth loop):** a stable stock top-up, then 20+ quarter runs to see
-   whether growth persists.
-2. **S1, S2:** a t=0 accounting test; find why firm profits are negative.
-3. **R1:** message Sam / José for the paper's code and artefacts.
-4. **P3:** decide on forecast noise.
-5. **E5:** merge the next upstream fixes (#83, #85), scoring each.
+Rules: every mechanism change is a new behaviour class selectable in config (the old one
+kept), so each rung of the reviewers' ablation ladder is a config switch; every change
+gets a modelling-decision row, a before/after scorecard and a register update.
+
+| Phase | Goal | Issues | Done when |
+| --- | --- | --- | --- |
+| 1 | **Balanced accounts**: an automatic accountant (balance-sheet and flow checks every quarter), then fix what it finds | S1–S6, F2 | checks pass at t=0 and every quarter; GDP no longer forced to balance |
+| 2 | **A growth engine**: spare capacity, a gradual investment rule towards expected demand, growth expectations on, and a source of productivity growth | G1–G4, G6 | France grows at a plausible, steady rate over 20+ quarters with stable unemployment and no explosion |
+| 3 | **Prices and money**: prices from costs and demand (not copied from the forecast); a working Taylor rule; decide forecast noise | P2–P4 | inflation emerges from the model and responds to slack; the policy rate reacts |
+| 4 | **Markets and government**: housing (rental market, speed), consumer credit, taxes and benefits, trade | M1–M5, F1, E12, E5 | each market passes a plausibility check; remaining upstream fixes merged |
+| 5 | **Calibration done properly**: choose parameters by sensitivity analysis, informed priors, fit on 2010–2013, score on held-out years | R2, R3, R4, E4 | sanity gate passed after calibration; target met for France, then several countries |
+| 6 | **Reviewer experiments**: ablation ladder (Poledna-like → full), simple-expectations / interactions-off, VAR benchmark, unemployment and growth in the results table, uncertainty | see `revision_plan.md` "Post" entries | the numbers the paper's Post entries wait for |
+
+In parallel: **D1** (full raw data for 2010–2017 and 38 countries), needed by phase 5.
 
 ## Claims → evidence
 
