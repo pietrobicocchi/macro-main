@@ -13,6 +13,9 @@ publication-quality.
 Optimise, in this order: **correctness → readability → reproducibility → simplicity.**
 
 Current scientific state, open questions and next steps live in [PROJECT.md](PROJECT.md).
+Every known problem has an ID in its **Issue register**: check it before starting work,
+add a row for anything new you find, update the row's status when you fix it, and start
+commit subjects with the ID (`G1: ...`).
 
 ## Structure
 

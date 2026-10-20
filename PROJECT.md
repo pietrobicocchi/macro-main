@@ -207,31 +207,128 @@ Paper settings added cumulatively to the defaults as they were with 5% price noi
 - Runs are deterministic per seed. A 12-quarter France run takes about 1 s with 18
   firms and about 10 s with 408.
 
-## Open threads
+## Issue register
 
-1. **Get the paper's code and artefacts.** Ask Sam Wiese (and José Moran) for
-   `inet-macro-model`, `inet-macro-data`, `inet-macro-calibration` and `inet-macro-dev`
-   at the paper's commits, plus `configs/inet*.yaml`, `prior.yaml`, `samples.txt` and
-   the processed data. With these, reproducing the paper is a re-run, not a port.
-2. **The growth loop.** Spare capacity (ω = 0.85) plus growth expectations gives growth.
-   Next: make the stock top-up stable (close a fraction of the gap per quarter, or use
-   target rather than realised output), then test χ-on-target-production as a new
-   `TargetProduction` class and the inventory target. Check whether growth persists or is
-   a one-off catch-up (run 20+ quarters).
-3. **Forecast noise:** decide whether expectations carry the AR(1) noise draw (paper and
-   Sam: yes; without it CPI beats AR(1)). It is a modelling choice, not a bug.
-4. **Fix the re-initialisation path** (double-counted bank deposits), or remove it in
-   favour of building data with matching settings.
-5. **Calibration:** none is in use (see Parameters). Calibrate the paper's seven
-   parameters once the growth loop is stable.
-6. **Scoring like the paper:** GDP deflator instead of PPI, calibration window
-   2010–2013, forecast from 2013-Q1, and more countries once data allows.
-7. **Merge the remaining upstream fixes**, scoring each: #83 Taylor rule, #85 frequency
-   conversion, #56/#64/#67 productivity/investment/substitution, `bug/government-expenditure`.
-8. **Report upstream:** the rent-regression fix, the many-firm crash, the data mutation
-   and the inventory mapping.
-9. **Initial-state consistency:** negative firm profits at t=0; a t=0 accounting test.
-10. **Real micro-data:** HFCS and Compustat access.
+One register for everything known to be wrong, missing or uncertain, merging our
+findings with the CB7 team's list (UK fork). Update rows in place; reference IDs in
+commit messages (e.g. `G1:`).
+
+- **Kind:** **Bug**: code does not do what it intends. **Spec**: works as written but
+  differs from the paper or behaves implausibly. **Gap**: missing feature.
+  **Infra**: engineering or workflow. **Data**: inputs. **Question**: not yet
+  established as a problem; verify first.
+- **Priority:** **P1** blocks credible dynamics or reproducing the paper. **P2** needed
+  for the paper revision or for trustworthy experiments. **P3** later. **—** out of
+  scope for us.
+- **Source:** ours (with experiment), CB7, upstream, or both.
+
+### R. Reproducing the paper and calibration
+
+| ID | Problem | Kind | Source | Evidence | Status | Pri |
+| --- | --- | --- | --- | --- | --- | --- |
+| R1 | The code, configs and posterior samples behind the paper's results are not in this repo | Data | both | Sam's scripts use separate `inet-macro-*` repos and parameters that never existed here | open: ask Sam / José | P1 |
+| R2 | No calibration in use; every behavioural parameter is a hand-set default | Gap | both | "Parameters in use" | open; after G1–G3 | P1 |
+| R3 | Calibration and specification problems are hard to tell apart | Question | CB7 | Approach: ablations against a fixed scorecard (exp002–004) | partial | P2 |
+| R4 | Scoring differs from the paper: GDP deflated by PPI (macro_data's "Real GDP" too, +2.6%/yr vs ~1% official), one country, one start date | Spec | ours | exp001 | open | P2 |
+| R5 | `macrocalib` is untested and excluded from the test suite | Infra | ours | pytest `addopts` | open | P3 |
+| R6 | Differentiable version of the model | Gap | CB7 | Matias investigating | not ours now | P3 |
+
+### G. Growth and firm behaviour
+
+| ID | Problem | Kind | Source | Evidence | Status | Pri |
+| --- | --- | --- | --- | --- | --- | --- |
+| G1 | No growth: firms start at full capacity (ω = 1; paper 0.85) and capital purchases only replace depreciation (φ^K = 0; paper 1) | Spec | ours | exp003, exp004: every firm at capital capacity; ω = 0.85 gives +0.3%/q | open | P1 |
+| G2 | The paper's stock top-up (φ^K = φ^M = 1) explodes like an accelerator | Spec | ours | exp004 step 3: investment +15%/q | open | P1 |
+| G3 | Growth expectations off by default (`sectoral_growth_adjustment_speed = 0`; paper weight 1) | Spec | ours | exp002, exp003 | open; with G1 | P1 |
+| G4 | χ caps input purchases and hiring, not target production as in the paper | Spec | ours | exp002; Sam's `target_production_considers_*` | open | P2 |
+| G5 | One firm per industry by default, and `default_data_configuration` ignores its `single_firm_per_industry` argument | Bug | ours | `configuration_utils.py:74` | workaround in `scoring.load_data` | P2 |
+| G6 | Spare capacity overshoots: unemployment falls to 5.8% (data 9.4%) | Question | ours | exp004 step 2 | open | P2 |
+| G7 | Many-firm runs crashed (per-firm prices used as per-industry) | Bug | ours | — | done `31f797a` | — |
+
+### P. Prices, expectations and monetary policy
+
+| ID | Problem | Kind | Source | Evidence | Status | Pri |
+| --- | --- | --- | --- | --- | --- | --- |
+| P1 | 5% per-firm price noise dominated the dynamics | Spec | ours | exp002 | done `60948b7` (0.0005) | — |
+| P2 | Realised inflation equals the AR(1) forecast (self-fulfilling; referee R2.4) | Question | ours | exp003 | open | P2 |
+| P3 | Forecast noise draw roughly doubles the inflation error: keep (paper) or drop? | Question | ours | exp003: CPI ratio 1.8 → 0.95 without it | decision pending | P2 |
+| P4 | Taylor rule inert (zero by quarter 3), constant rate by default, and a TODO says `xi_pi` is estimated wrongly | Bug | ours | exp001; `default_synthetic_central_bank.py:168` | open; see upstream #83 | P2 |
+
+### S. Initial state and stock-flow consistency
+
+| ID | Problem | Kind | Source | Evidence | Status | Pri |
+| --- | --- | --- | --- | --- | --- | --- |
+| S1 | Stock-flow consistency is not verified; no accounting test | Gap | both | CB7: Tom's review | open | P1 |
+| S2 | Aggregate firm profits are negative at t=0 and stay negative | Question | ours | probes; also with 408 firms | open | P1 |
+| S3 | The re-initialisation path double-counts bank deposits (liabilities 1.65e16) | Bug | ours | exp004 | workaround: build data with matching settings | P2 |
+| S4 | Bank deposits are negative on the normal path (−1.17e12) | Question | ours | probe | open | P2 |
+| S5 | Initial Demand = Production + Inventory | Question | ours | `firm_tools.py:487` | open | P3 |
+| S6 | GDP is forced to balance by adjusting imports/exports, which can hide inconsistencies | Spec | ours | `economy.compute_gdp(always_adjust=True)` | open | P2 |
+| S7 | Simulations modified their input data | Bug | ours | — | done `62d29d3` | — |
+| S8 | Initial inventory read from the wrong parameter | Bug | ours | — | done `62d29d3` | — |
+
+### M. Markets and trade
+
+| ID | Problem | Kind | Source | Evidence | Status | Pri |
+| --- | --- | --- | --- | --- | --- | --- |
+| M1 | Housing market initialises and executes poorly (tenure mix, stock quality) | Spec | both | CB7; upstream #93 | partial: #93 merged | P2 |
+| M2 | Rental market nearly dead (0–1 rentals/q vs 400–500 sales); some rent/value above 1 | Question | ours | rent probe; possibly spoofed data | open | P2 |
+| M3 | Consumer credit decays towards 0 even after #104 | Question | ours | probes | open | P2 |
+| M4 | Government consumption still about 2× the AR(1) error | Question | ours | baseline | partial: price noise fixed most | P2 |
+| M5 | Imports, exports and exchange rates need review | Spec | CB7 | see S6 | open | P3 |
+| M6 | Housing IDs set to −1 at initialisation | Bug | upstream | — | done: #93 merged `80d8b3d` | — |
+| M7 | Credit-supply units bug | Bug | upstream | — | done: #104 merged `a6dca3c` | — |
+| M8 | Rent-value regression swapped and fitted through one point | Bug | ours | — | done `21f1f2b`; report upstream (E9) | — |
+
+### F. Government and finance
+
+| ID | Problem | Kind | Source | Evidence | Status | Pri |
+| --- | --- | --- | --- | --- | --- | --- |
+| F1 | Taxes and benefits need review | Spec | both | upstream `bug/government-expenditure` (benefits, deficit fixes; no PR) | open | P2 |
+| F2 | Corporate equity not wired between firms and households (profits not redistributed) | Gap | CB7 | Andrea's module; relates to S2 | open | P2 |
+| F3 | Government debt, bond issuance, QE | Gap | CB7 | Tom's UK prototype | open | P3 |
+| F4 | Fiscal rules | Gap | CB7 | — | open | P3 |
+
+### E. Engineering and workflow
+
+| ID | Problem | Kind | Source | Evidence | Status | Pri |
+| --- | --- | --- | --- | --- | --- | --- |
+| E1 | Tests pass while dynamics are broken; no behavioural check runs automatically | Infra | ours | housing IDs, rent bug | partial: `make baseline` | P1 |
+| E2 | Weak modularity: hard to run experiments on parts of the model | Infra | both | e.g. a firm-stock reset re-runs the whole financial initialisation | open | P2 |
+| E3 | No standard Monte Carlo / experiment procedure | Infra | both | CB7: Emma's code, SLURM arrays | partial: `scoring.py` + `provenance.py` | P2 |
+| E4 | No systematic sensitivity analysis of dynamics | Gap | both | CB7: Andrea and Marcela; ablations exp002–004 | partial | P2 |
+| E5 | Upstream fixes not yet merged: #83, #85, #56/#64/#67, `bug/government-expenditure` | Infra | ours | `make upstream` | open | P2 |
+| E6 | Scaling effects (1:100 vs 1:100,000) | Question | both | exp001: 10× agents changes nothing, but firms stay at 1 per industry (G5) | partial | P3 |
+| E7 | Standardised outputs, dashboards, reporting to non-coders | Infra | CB7 | scorecard CSV/PNG per experiment | partial | P3 |
+| E8 | Agent-level reporting; visualising the synthetic population | Gap | CB7 | — | open | P3 |
+| E9 | Report our fixes upstream: rent regression, many-firm crash, data mutation, inventory mapping | Infra | ours | — | open | P3 |
+| E10 | New-user induction; AI workflows not standardised | Infra | CB7 | partial: AGENTS.md, PROJECT.md | partial | P3 |
+| E11 | `make lint` fails on the file merged from #104 | Infra | ours | `credit_market/func/clearing.py` | wait for upstream | P3 |
+
+### D. Data
+
+| ID | Problem | Kind | Source | Evidence | Status | Pri |
+| --- | --- | --- | --- | --- | --- | --- |
+| D1 | Only spoofed HFCS and Compustat on this machine | Data | ours | — | open: request access | P2 |
+| D2 | OECD ICIO 2022 update; ICIO tables are nominal (referee R1.5) | Data | both | — | open | P3 |
+| D3 | Wage distributions | Data | CB7 | Nuffield bid | open | P3 |
+| D4 | Household composition and demography (death, marriage, inheritance) | Gap | CB7 | — | open | P3 |
+
+### UK. CB7 net-zero and UK policy (out of scope for us)
+
+CB subsidies all-or-nothing; random retrofitting order; all household changes at once;
+no EV investment; net-zero uptake decisions; alignment with DESNZ / UK TIMES;
+alternative investment; consumer energy prices; granular policy shocks and scenarios.
+Kept here so that their fixes are recognisable if they land upstream.
+
+### Next up
+
+1. **G1–G3 (growth loop):** a stable stock top-up, then 20+ quarter runs to see
+   whether growth persists.
+2. **S1, S2:** a t=0 accounting test; find why firm profits are negative.
+3. **R1:** message Sam / José for the paper's code and artefacts.
+4. **P3:** decide on forecast noise.
+5. **E5:** merge the next upstream fixes (#83, #85), scoring each.
 
 ## Claims → evidence
 
