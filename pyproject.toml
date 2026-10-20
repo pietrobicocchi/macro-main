@@ -16,7 +16,7 @@ classifiers = [
 dependencies = [
     "h5py",
     "matplotlib",
-    "numba",
+    "numba>=0.59.0,<0.63.0",
     "numpy",
     "pandas",
     "pyarrow",
@@ -31,12 +31,14 @@ dependencies = [
     "tqdm",
     "strenum",
     "cvxpy",
-    "torch>=2.6.0,<2.7.0",
     "joblib",
-    "sbi",
 ]
 
 [project.optional-dependencies]
+calibration = [
+    "torch>=2.5.0,<2.6.0",
+    "sbi",
+]
 dev = [
     "pytest",
     "pytest-cov",
@@ -80,6 +82,7 @@ ignore = ["E501"]
 known-first-party = ["macro_data", "macromodel"]
 
 [tool.pytest.ini_options]
+addopts = "--ignore=tests/test_macrocalib"
 filterwarnings = [
     # Ignore numpy matmul warnings (overflow, invalid, divide by zero)
     "ignore:overflow encountered in matmul:RuntimeWarning",
@@ -89,4 +92,11 @@ filterwarnings = [
     "ignore:The default value of raise_error will change:PendingDeprecationWarning",
     # Ignore sklearn version mismatch when unpickling models
     "ignore:Trying to unpickle estimator.*:sklearn.exceptions.InconsistentVersionWarning",
+]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.2.0",
+    "jupyter>=1.1.1",
+    "nbconvert>=7.17.1",
 ]
