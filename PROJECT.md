@@ -35,6 +35,19 @@ France 2014-Q1) for the five aggregates.
 | Sample raw data | canonical (for now) | `tests/test_macro_data/unit/sample_raw_data` | Real OECD/Eurostat/ICIO/IMF; **spoofed** HFCS and Compustat |
 | Real HFCS / Compustat | needed for paper claims | not on this machine | confidential |
 
+## Parameters in use
+
+No calibrated values are loaded anywhere: `macrocalib` has not been run, and the paper's
+posterior (Table `table:prior`) is not used.
+- **Estimated from data at initialisation:** input–output coefficients, initial stocks
+  and balance sheets, tax rates, the Taylor-rule coefficients (ARDL on the policy-rate
+  history; a TODO says `xi_pi` is wrong), and each quarter the AR(1) growth and inflation
+  forecasts.
+- **Hand-set defaults** in `macromodel/configurations/*.py`: every behavioural parameter
+  (price setting, target production, input constraints, utilisation rates, bank limits,
+  credit and housing markets). The only one changed so far is `price_setting_noise_std`
+  0.05 → 0.0005.
+
 ## Baselines
 
 | Baseline | Why it is the right comparison | Status |
@@ -49,6 +62,8 @@ France 2014-Q1) for the five aggregates.
 | --- | --- | --- | --- |
 | exp001 | Does the default model produce plausible dynamics? | done, re-run after each fix | Fails the sanity gate; see the scorecard history. `outputs/exp001_baseline/` |
 | exp002 | How much of the gap to the paper is configuration rather than code? | done | Most of the damage is the 5% price noise; see below. `outputs/exp002_paper_ablation/` |
+| exp003 | Can the model grow, and where does its inflation come from? | done | Inflation = the noisy AR(1) forecast; no growth in any cell. `outputs/exp003_growth_inflation/` |
+| exp004 | Does the paper's capacity setup let the growth loop run? | done | Spare capacity gives growth; the stock top-up explodes. `outputs/exp004_growth_loop/` |
 
 ### Baseline scorecard history
 
@@ -121,11 +136,40 @@ Paper settings added cumulatively to the defaults as they were with 5% price noi
   hard-codes the per-country flag), and many-firm mode crashed in
   `compute_productivity_investment` (per-firm prices used as per-industry). Both are
   worked around or fixed; many firms do not change the scorecard much.
-- **Initial inventories equal about one quarter of output**, so the paper's inventory
-  rule collapses production in quarter 1 and the run diverges. Likely a units problem
-  in initialisation.
+- **The inventory step diverged because of two bugs, not the paper's rule** (both
+  fixed after exp002, so its inventory row is stale): `FirmsConfiguration.reset_params`
+  passed `existing_inventory_fraction` (how much inventory target production subtracts)
+  as the *initial* inventory, so −S gave every firm a full quarter of output in stock;
+  and the resulting data reset ran the broken re-initialisation path (below).
 - Even at its best, the model has 0% GDP growth vs +0.6% in the data, and every
   ratio is still above 1: no growth engine, and no calibration yet.
+
+### Growth and inflation (exp003, exp004)
+
+- **Inflation is the forecast.** Firms set price = previous price × (1 + forecast PPI
+  inflation), so realised PPI inflation equals `estimated_ppi_inflation` almost exactly.
+  The forecast is an AR(1) on the previous 60 quarters (2000–2013, about 0.4%/quarter)
+  plus a random draw each quarter (`assume_zero_noise=False`, as in Sam's runs). It
+  cannot see the 2014–16 disinflation. Without the draw, CPI `sim / AR(1)` drops from
+  about 1.8 to **0.95** and government consumption from 2.0 to about 1.35 (exp003).
+  This is the "embedded AR(1)" concern of referee R2.4.
+- **Growth is blocked at capital capacity.** With today's defaults all 18 firms produce
+  exactly at capital capacity every quarter, headcount does not move and
+  unemployment stays at 10.29%. Two reasons:
+  - Initial stocks are sized for full utilisation (ω = 1.0; the paper uses 0.85).
+  - Capital purchases target only depreciation, d·Ŷ (φ^K = 0; the paper uses 1), so
+    the stock never grows.
+
+  Turning on growth expectations alone changes nothing (exp003, all 8 cells ≈ 0% growth).
+- **Spare capacity unlocks growth** (exp004 step 2: growth expectations + ω = 0.85):
+  real GDP +0.3%/quarter (data +0.64%), investment +0.4%, GDP `sim / AR(1)` **1.09**
+  (the best yet). Unemployment overshoots to 5.8% (data 9.4%), so part of this is a
+  one-off catch-up into the spare capacity rather than steady growth.
+- **The stock top-up explodes** (exp004 step 3, φ^K = φ^M = 1, the paper's values):
+  investment +15%/quarter and GDP `sim / AR(1)` 12. It acts as an accelerator: closing
+  the whole gap between stock and K(0)·Y/Y(0) each quarter raises demand for capital
+  goods, hence output, hence the target stock. Later exp004 steps inherit the explosion
+  and say nothing about χ, inventory or many firms.
 
 ### Bugs and model state on `main`
 
@@ -135,6 +179,19 @@ Paper settings added cumulatively to the defaults as they were with 5% price noi
     +0.8%. There is no growth engine.
   - CPI inflation about 0.5%/quarter (≈2%/yr) vs about 0.1% in the data.
   - Every `sim / AR(1)` ratio is still above 1 (best: GDP and investment, both 1.14).
+- **Simulations modified their input data:** when the simulation's firm settings
+  differed from the data config, `Simulation.from_datawrapper` reset the caller's
+  datawrapper in place, so later runs inherited it. Fixed (it now deep-copies).
+- **The re-initialisation path is broken (open):** that reset re-runs the whole financial
+  initialisation (`reset_firm_function_dependent` → `set_wealth_and_credit`) on data that
+  is already initialised. Bank deposits go from −1.17e12 to +1.18e14 and bank
+  liabilities to 1.65e16 (4,000× the normal path), and the run diverges.
+  Experiments avoid it by building the data with matching settings
+  (`scoring.load_data(utilisation_rate=..., inventory_fraction=...)`). Even the normal
+  path's negative bank deposits look wrong.
+- **Initial demand includes inventory:** `firm_tools.py:487` sets Demand = Production +
+  Inventory (comment: "I am not sure about this"), so any inventory target starts firms
+  expecting more demand than they sell. Left as is; changes initialisation.
 - **Rent-regression bugs (ours, not fixed upstream):**
   `HousingMarket.compute_observed_fraction_rent_value` fitted value on rent (arguments
   swapped) and fitted a line through a single rental. After #104 vacated houses were
@@ -156,18 +213,25 @@ Paper settings added cumulatively to the defaults as they were with 5% price noi
    `inet-macro-model`, `inet-macro-data`, `inet-macro-calibration` and `inet-macro-dev`
    at the paper's commits, plus `configs/inet*.yaml`, `prior.yaml`, `samples.txt` and
    the processed data. With these, reproducing the paper is a re-run, not a port.
-2. **Without them: a "paper configuration" on today's code.** Price noise is done
-   (0.0005). Next: find the growth engine (expected-demand growth plus
-   χ-on-target-production as a new `TargetProduction` class), fix the inventory
-   initialisation units, explain the excess inflation, then calibrate the paper's
-   seven parameters.
-3. **Scoring like the paper:** GDP deflator instead of PPI, calibration window
+2. **The growth loop.** Spare capacity (ω = 0.85) plus growth expectations gives growth.
+   Next: make the stock top-up stable (close a fraction of the gap per quarter, or use
+   target rather than realised output), then test χ-on-target-production as a new
+   `TargetProduction` class and the inventory target. Check whether growth persists or is
+   a one-off catch-up (run 20+ quarters).
+3. **Forecast noise:** decide whether expectations carry the AR(1) noise draw (paper and
+   Sam: yes; without it CPI beats AR(1)). It is a modelling choice, not a bug.
+4. **Fix the re-initialisation path** (double-counted bank deposits), or remove it in
+   favour of building data with matching settings.
+5. **Calibration:** none is in use (see Parameters). Calibrate the paper's seven
+   parameters once the growth loop is stable.
+6. **Scoring like the paper:** GDP deflator instead of PPI, calibration window
    2010–2013, forecast from 2013-Q1, and more countries once data allows.
-4. **Merge the remaining upstream fixes**, scoring each: #83 Taylor rule, #85 frequency
+7. **Merge the remaining upstream fixes**, scoring each: #83 Taylor rule, #85 frequency
    conversion, #56/#64/#67 productivity/investment/substitution, `bug/government-expenditure`.
-5. **Report the rent-regression fix and the many-firm crash upstream.**
-6. **Initial-state consistency:** negative firm profits at t=0; a t=0 accounting test.
-7. **Real micro-data:** HFCS and Compustat access.
+8. **Report upstream:** the rent-regression fix, the many-firm crash, the data mutation
+   and the inventory mapping.
+9. **Initial-state consistency:** negative firm profits at t=0; a t=0 accounting test.
+10. **Real micro-data:** HFCS and Compustat access.
 
 ## Claims → evidence
 

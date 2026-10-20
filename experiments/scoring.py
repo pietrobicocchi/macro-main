@@ -36,12 +36,23 @@ AGGREGATES = {
 SCORED = [*AGGREGATES, "CPI Inflation", "Unemployment Rate"]
 
 
-def load_data(scale: int = 10_000, many_firms: bool = False) -> DataWrapper:
-    """France 2014 initial state. many_firms uses business-demography firm counts instead of one per industry."""
+def load_data(
+    scale: int = 10_000, many_firms: bool = False, utilisation_rate: float = 1.0, inventory_fraction: float = 0.0
+) -> DataWrapper:
+    """France 2014 initial state. many_firms uses business-demography firm counts instead of one per industry.
+
+    utilisation_rate and inventory_fraction size the initial input stocks and inventory. Build the data with the
+    values the simulation will use: if they differ, Simulation.from_datawrapper re-runs the financial
+    initialisation, which double-counts bank deposits (see PROJECT.md).
+    """
     configuration = default_data_configuration(countries=[COUNTRY], seed=0, scale=scale)
     # default_data_configuration ignores its single_firm_per_industry argument; the per-country flag is what counts
     for country_configuration in configuration.country_configs.values():
         country_configuration.single_firm_per_industry = not many_firms
+        firms = country_configuration.firms_configuration
+        firms.capital_inputs_utilisation_rate = utilisation_rate
+        firms.intermediate_inputs_utilisation_rate = utilisation_rate
+        firms.initial_inventory_to_input_fraction = inventory_fraction
     return DataWrapper.from_config(configuration=configuration, raw_data_path=RAW_DATA, single_hfcs_survey=True)
 
 
