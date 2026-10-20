@@ -312,7 +312,7 @@ commit messages (e.g. `G1:`).
 
 | ID | Problem | Kind | Source | Evidence | Status | Pri |
 | --- | --- | --- | --- | --- | --- | --- |
-| D1 | Only spoofed HFCS and Compustat on this machine | Data | ours | — | open: request access | P2 |
+| D1 | Only the test sample data is on this machine: one year (2014 input–output tables, one spoofed HFCS wave, spoofed Compustat). The paper needs 2010–2017 and 38 countries with real micro-data | Data | ours | `sample_raw_data/`; `~/Documents/dev/phd/datasets` is empty | open: get the full raw data (likely on the INET server Sam used) | P1 |
 | D2 | OECD ICIO 2022 update; ICIO tables are nominal (referee R1.5) | Data | both | — | open | P3 |
 | D3 | Wage distributions | Data | CB7 | Nuffield bid | open | P3 |
 | D4 | Household composition and demography (death, marriage, inheritance) | Gap | CB7 | — | open | P3 |
