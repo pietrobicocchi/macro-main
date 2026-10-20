@@ -68,7 +68,8 @@ mean quarterly real GDP growth (data: +0.64%) and the median unemployment rate a
 ### Is today's code the paper's model?
 
 **No.** The code that produced the paper's results is not in this repository.
-- Sam's calibration scripts (`extra/sam_calibration/`, untracked) ran on a server
+- Sam's calibration scripts (`extra/sam_calibration/`, local only and gitignored; dated
+  Apr–Sep 2024, so later than any model code in this history) ran on a server
   against three separate repositories: `/data1/sam/inet-macro-model`,
   `/data1/sam/inet-macro-data` and `/data1/sam/inet-macro-calibration`. They used
   APIs (`inet_macromodel.Runner`, `inet_data.Creator`, YAML configs `inet_<ISO>.yaml`)

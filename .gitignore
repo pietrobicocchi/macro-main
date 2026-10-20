@@ -163,3 +163,6 @@ macro-dev/
 
 # Experiment outputs (regenerate with make exp)
 outputs/
+
+# Local reference material, not published (e.g. Sam Wiese's paper calibration scripts)
+extra/
