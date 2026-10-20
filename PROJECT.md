@@ -61,7 +61,8 @@ mean quarterly real GDP growth (data: +0.64%) and the median unemployment rate a
 | upstream `76ac000` | 1.63 | 3.92 | 8.10 | 1.81 | 3.65 | −0.53% | 16.0% |
 | + PR #93 housing IDs | 1.68 | 4.03 | 8.83 | 1.99 | 3.67 | −0.62% | — |
 | + PR #104 credit units | 7.00 | 3.37 | 8.32 | 2.06 | 3.78 | explodes | 15.8% |
-| + rent-regression fixes (ours) | **1.46** | 3.54 | 8.40 | 1.88 | 3.73 | −0.34% | 15.0% |
+| + rent-regression fixes (ours) | 1.46 | 3.54 | 8.40 | 1.88 | 3.73 | −0.34% | 15.0% |
+| + price noise 0.05 → 0.0005 (default) | **1.14** | **2.47** | **1.99** | **1.14** | **1.72** | −0.04% | 10.5% |
 
 ## What we have learned
 
@@ -91,11 +92,12 @@ mean quarterly real GDP growth (data: +0.64%) and the median unemployment rate a
 
 ### Where today's defaults differ from the paper (exp002, 5 seeds, 12 quarters)
 
-Paper settings added cumulatively to today's defaults (`sim / AR(1)` RMSE ratios):
+Paper settings added cumulatively to the defaults as they were with 5% price noise
+(`sim / AR(1)` RMSE ratios):
 
 | Step | GDP | HH cons. | Gov. cons. | Invest. | CPI | GDP growth | Unemp. q12 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| today's defaults | 1.32 | 3.52 | 8.40 | 2.06 | 2.59 | −0.4% | 14.8% |
+| defaults with old 5% price noise | 1.32 | 3.52 | 8.40 | 2.06 | 2.59 | −0.4% | 14.8% |
 | + growth expectations (sectoral speed 1) | 1.57 | 3.92 | 7.24 | 1.66 | 2.86 | −0.6% | 16.6% |
 | + input constraints χ (mapped) | 1.64 | 3.74 | 8.07 | 2.20 | 3.21 | −0.6% | 16.6% |
 | **+ no price noise** | **1.19** | **2.75** | **1.97** | **1.13** | **1.83** | 0.0% | **10.1%** |
@@ -105,10 +107,10 @@ Paper settings added cumulatively to today's defaults (`sim / AR(1)` RMSE ratios
 | + inventory target (φ^StY 0.10, −S) | diverges | | | | | | |
 | data | | | | | | +0.6% | 9.4% |
 
-- **Price noise is the main pathology.** Firms add 5% noise to prices every quarter
-  (`price_setting_noise_std = 0.05`); the paper's price equation has none, and Sam's
-  prior defaults it to 0. Removing it *alone* from today's defaults: GDP ratio 1.13,
-  government consumption 2.07, investment 1.16, unemployment flat at 10.4%.
+- **Price noise was the main pathology.** Firms multiplied their price by a random
+  shock with 5% standard deviation every quarter; the shocks compound as a random walk
+  and, with one firm per industry, move whole sectors. The paper's price equation has
+  none, and Sam's prior defaults it to 0. **The default is now 0.0005 (0.05%).**
 - **Growth expectations are off by default** (`sectoral_growth_adjustment_speed = 0`)
   although in the paper firms always scale demand by predicted sectoral growth.
   Switching them on does not help with today's other defaults.
@@ -127,6 +129,12 @@ Paper settings added cumulatively to today's defaults (`sim / AR(1)` RMSE ratios
 
 ### Bugs and model state on `main`
 
+- **Current state (default price noise 0.0005, 10 seeds, 12 quarters):** unemployment
+  passes the sanity gate (10.5% after 12 quarters vs ~9.4–10%). Growth still fails:
+  - Real GDP about −0.04%/quarter vs +0.64% in the data, and investment about 0% vs
+    +0.8%. There is no growth engine.
+  - CPI inflation about 0.5%/quarter (≈2%/yr) vs about 0.1% in the data.
+  - Every `sim / AR(1)` ratio is still above 1 (best: GDP and investment, both 1.14).
 - **Rent-regression bugs (ours, not fixed upstream):**
   `HousingMarket.compute_observed_fraction_rent_value` fitted value on rent (arguments
   swapped) and fitted a line through a single rental. After #104 vacated houses were
@@ -148,9 +156,11 @@ Paper settings added cumulatively to today's defaults (`sim / AR(1)` RMSE ratios
    `inet-macro-model`, `inet-macro-data`, `inet-macro-calibration` and `inet-macro-dev`
    at the paper's commits, plus `configs/inet*.yaml`, `prior.yaml`, `samples.txt` and
    the processed data. With these, reproducing the paper is a re-run, not a port.
-2. **Without them: a "paper configuration" on today's code.** Price noise 0 as the
-   starting point. Then port χ-on-target-production (a new `TargetProduction` class),
-   fix the inventory initialisation units, and calibrate the paper's seven parameters.
+2. **Without them: a "paper configuration" on today's code.** Price noise is done
+   (0.0005). Next: find the growth engine (expected-demand growth plus
+   χ-on-target-production as a new `TargetProduction` class), fix the inventory
+   initialisation units, explain the excess inflation, then calibrate the paper's
+   seven parameters.
 3. **Scoring like the paper:** GDP deflator instead of PPI, calibration window
    2010–2013, forecast from 2013-Q1, and more countries once data allows.
 4. **Merge the remaining upstream fixes**, scoring each: #83 Taylor rule, #85 frequency

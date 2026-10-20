@@ -1018,7 +1018,7 @@ class Prices(BaseModel):
     name: Literal["DefaultPriceSetter", "ExogenousPriceSetter"] = "DefaultPriceSetter"
     path_name: str = "prices"
     parameters: dict[str, Any] = {
-        "price_setting_noise_std": 0.05,
+        "price_setting_noise_std": 0.0005,
         "price_setting_speed_gf": 1.0,
         "price_setting_speed_dp": 0.0,
         "price_setting_speed_cp": 0.0,

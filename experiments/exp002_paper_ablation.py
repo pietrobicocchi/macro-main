@@ -66,6 +66,12 @@ def input_constraints(c: CountryConfiguration) -> None:
     }
 
 
+def old_price_noise(c: CountryConfiguration) -> None:
+    # The default before 2026-10-20, kept as the ablation's starting point
+    p = c.firms.functions.prices.parameters
+    c.firms.functions.prices.parameters = {**p, "price_setting_noise_std": 0.05}
+
+
 def no_price_noise(c: CountryConfiguration) -> None:
     # eq. firm_prices has no noise term
     p = c.firms.functions.prices.parameters
@@ -88,7 +94,7 @@ def taylor_rule(c: CountryConfiguration) -> None:
 # Inventory goes last: with initial inventories of about one quarter of output, the paper's rule
 # (subtract all inventory) collapses production in quarter 1 and the run diverges.
 STEPS = [
-    ("today's defaults", None, False),
+    ("defaults with old 5% price noise", old_price_noise, False),
     ("+ growth expectations", growth_expectations, False),
     ("+ input constraints chi", input_constraints, False),
     ("+ no price noise", no_price_noise, False),
