@@ -102,6 +102,7 @@ initial-state consistency, determinism per seed; add a regression test for every
 
 - `origin` = pietrobicocchi/macro-main (this fork, public); `upstream` = INET-Complexity/macro-main.
 - Work and commit directly on `main`; no feature branches. Push to `origin`.
+- Commits and PRs are authored by Pietro only: never add `Co-Authored-By` or any AI attribution.
 - Before fixing a bug, `make upstream`: an unmerged upstream PR may already fix it.
   Bring those in with `git merge upstream/<branch>` (not cherry-pick), one per commit.
 - A fix meant for upstream: branch from `upstream/main`, without the overlay files
