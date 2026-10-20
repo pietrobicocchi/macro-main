@@ -539,7 +539,9 @@ class FirmsConfiguration(BaseModel):
 
     @property
     def reset_params(self):
-        inventory_frac = self.functions.target_production.parameters["existing_inventory_fraction"]
+        # Initial inventory is the target inventory, as in Firms.reset (not existing_inventory_fraction,
+        # which is how much inventory target production subtracts)
+        inventory_frac = self.functions.target_production.parameters["target_inventory_to_production_fraction"]
         values = {
             "capital_inputs_utilisation_rate": self.parameters.capital_inputs_utilisation_rate,
             "intermediate_inputs_utilisation_rate": self.parameters.intermediate_inputs_utilisation_rate,

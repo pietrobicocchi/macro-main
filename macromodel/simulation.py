@@ -90,6 +90,8 @@ class Simulation:
         """
 
         data_configuration = datawrapper.configuration
+        # Resetting firm data below must not leak into the caller's datawrapper, which is often reused across runs
+        datawrapper = deepcopy(datawrapper)
         for country, country_sim_conf in simulation_configuration.country_configurations.items():
             if country not in data_configuration.country_configs:
                 raise ValueError(
