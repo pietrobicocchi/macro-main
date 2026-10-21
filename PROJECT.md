@@ -103,6 +103,7 @@ mean quarterly real GDP growth (data: +0.64%) and the median unemployment rate a
 | + rent-regression fixes (ours) | 1.46 | 3.54 | 8.40 | 1.88 | 3.73 | −0.34% | 15.0% |
 | + price noise 0.05 → 0.0005 (default) | 1.14 | 2.47 | 1.99 | 1.14 | 1.72 | −0.04% | 10.5% |
 | + Phase 1 accounting fixes (S15–S20) | **1.13** | **2.45** | 2.11 | **1.09** | 1.82 | −0.01% | 10.4% |
+| + Phase 1 round 2 (S11, S12, S14, S22) | 1.16 | 2.56 | 1.94 | 1.13 | 1.92 | −0.05% | 10.4% |
 
 ## What we have learned
 
@@ -202,10 +203,10 @@ Default settings (price noise 0.0005), 10 seeds, 12 quarters, France 2014:
 - **Growth fails**: real GDP about −0.04%/quarter vs +0.64% in the data, investment
   about 0% vs +0.8%. There is no growth engine (G1–G3).
 - **Inflation is too high**: about 0.5%/quarter vs about 0.1% (P2, P3).
-- Every `sim / AR(1)` ratio is still above 1 (best: investment 1.09, GDP 1.13).
-- **Accounts (Phase 1)**: every loan and deposit ledger agrees exactly; money is conserved to
-  within ±3% of GDP for 8 quarters and drifts to 12% by quarter 10, through flows that have no
-  counterpart (S9–S13).
+- Every `sim / AR(1)` ratio is still above 1 (best: investment 1.13, GDP 1.16).
+- **Accounts (Phase 1)**: every loan and deposit ledger agrees exactly; the money residual
+  (up to 11% of GDP) is the by-design unbacked flows (S9, S10, S13); unexplained money is at
+  most 4% of GDP, in the early quarters (S23).
 - Too few agents is not the cause of noise or drift (scale 10,000 vs 1,000; E6).
 - Runs are deterministic per seed: about 1 s per 12 quarters with 18 firms, about 10 s
   with 408, mostly in the housing market (E12).
@@ -263,7 +264,7 @@ commit messages (e.g. `G1:`).
 
 | ID | Problem | Kind | Source | Evidence | Status | Pri |
 | --- | --- | --- | --- | --- | --- | --- |
-| S1 | Stock-flow consistency: `macromodel/accounting.py` checks every quarter that the loan and deposit ledgers agree, bank equity and government debt move only by their flows, and money changes only by the deficit plus net exports | Gap | both | exp001 `accounts.csv`: all ledgers exact; money within ±3% of GDP for 8 quarters, up to 12% by quarter 10 (S9–S13) | partial | P1 |
+| S1 | Stock-flow consistency: `macromodel/accounting.py` checks every quarter that the loan and deposit ledgers agree, bank equity and government debt move only by their flows, and money changes only by the deficit plus net exports; it separates the by-design unbacked flows from leaks | Gap | both | exp001 `accounts.csv`: all ledgers exact; money residual ≈ unbacked flows (up to 11% of GDP); unexplained ≤ 4% of GDP, early quarters only (S23) | partial: done once S9, S10, S13, S23 are closed | P1 |
 | S2 | Aggregate firm profits are negative at t=0 and stay negative | Question | ours | probes; also with 408 firms | open | P1 |
 | S3 | The re-initialisation path double-counts bank deposits (liabilities 1.65e16) | Bug | ours | exp004 | workaround: build data with matching settings | P2 |
 | S4 | Bank deposits are negative on the normal path (−1.17e12) | Question | ours | probe | open | P2 |
@@ -271,12 +272,12 @@ commit messages (e.g. `G1:`).
 | S6 | GDP is forced to balance by adjusting imports/exports, which can hide inconsistencies | Spec | ours | `gdp.trade_adjustment` check: the adjustment is 0 in single-country runs | not active for one country; check in multi-country runs | P3 |
 | S7 | Simulations modified their input data | Bug | ours | — | done `62d29d3` | — |
 | S8 | Initial inventory read from the wrong parameter | Bug | ours | — | done `62d29d3` | — |
-| S9 | Households receive income on "other financial assets" (about 19% of quarterly GDP) that nobody pays: money from nowhere | Spec | ours | Phase 1 decomposition | open: needs an issuer (F2) | P1 |
+| S9 | Households receive income on "other financial assets" (about 19% of quarterly GDP) that nobody pays, received gross although the government books income tax on it | Spec | ours | `money.unbacked_flows` | open: needs an issuer (F2, decision pending) | P1 |
 | S10 | Saving into "other financial assets" (about 13% of GDP per quarter) pays no one: money destroyed | Spec | ours | Phase 1 decomposition | open: needs an issuer (F2) | P1 |
-| S11 | Firms receive about 18–35 bn/q more for sales than buyers pay (goods market, product taxes) | Question | ours | Phase 1 decomposition | open | P2 |
-| S12 | Firms pay about 30 bn/q more in wages than workers and the government receive | Question | ours | Phase 1 decomposition | open | P2 |
+| S11 | VAT was booked as government revenue but never paid by households (about 27 bn/q created) | Bug | ours | — | done: households pay VAT on consumption | — |
+| S12 | Wage taxes were levied on the net wage while firms paid the gross (about 37 bn/q destroyed), and the wage bill was multiplied by the CPI a second time (gap growing with prices) | Bug | ours | — | done: taxes on the gross wage; wage bill = gross-up of wages received | — |
 | S13 | Interest on government debt is added to the deficit but paid to no one | Spec | ours | about 4 bn/q | open: needs a bondholder (F3) | P3 |
-| S14 | Firms' cash is charged for inputs used, not inputs bought; differs as soon as stocks change (Phase 2) | Bug | ours | `firms.compute_deposits` | open: fix before Phase 2 | P1 |
+| S14 | Firms' cash was charged for inputs used, not inputs bought | Bug | ours | — | done: cash follows purchases; used costs stay in profits | — |
 | S15 | House sales charged buyers but never credited sellers: about 1 trillion destroyed per quarter | Bug | ours | — | done (Phase 1 commit) | — |
 | S16 | Dissaving wiped households' overdrafts (`min(deposits, ...)` on a negative balance): 450–800 bn/q created | Bug | ours | — | done (Phase 1 commit), with test | — |
 | S17 | Written-off household and firm loans cost the banks nothing | Bug | ours | — | done: losses reduce bank profits before tax (MD2), with test | — |
@@ -284,6 +285,8 @@ commit messages (e.g. `G1:`).
 | S19 | A failing bank's whole loan book was deleted and its reserves zeroed; the government's injection was not in the deficit | Bug | ours | — | done (MD3) | — |
 | S20 | Households' debt records kept loans after they were written off | Bug | ours | — | done | — |
 | S21 | With a single bank there are no healthy banks to average over, so a failing bank is never recapitalised | Spec | ours | `DefaultBankDemography` | open: decide recapitalisation rule | P2 |
+| S22 | Unemployment benefits were counted in the deficit but paid to no one (about 9 bn/q destroyed) | Bug | ours | `distribute_unemployment_benefits_to_individuals` was never called | done: paid with household labour income | — |
+| S23 | A transient unexplained money residual of up to 4% of GDP in quarters 2–4, fading to about 0 by quarter 10 | Question | ours | `money.unexplained` | open | P2 |
 
 ### M. Markets and trade
 

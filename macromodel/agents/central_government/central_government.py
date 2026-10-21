@@ -303,8 +303,15 @@ class CentralGovernment(Agent):
         # Taxes on exports
         self.ts.taxes_exports.append([self.states["Export Tax"] * current_total_exports])
 
-        # Total wages of employed individuals
-        tot_wages_employed_ind = np.sum([current_ind_employee_income[current_ind_activity == ActivityStatus.EMPLOYED]])
+        # Gross wages of employed individuals. Individuals receive their wage net of income tax and employee social
+        # insurance, and firms pay the gross wage plus employer social insurance (Firms.total_wage), so the taxes are
+        # levied on the gross wage recovered from the net one.
+        net_wages_employed_ind = np.sum([current_ind_employee_income[current_ind_activity == ActivityStatus.EMPLOYED]])
+        tot_wages_employed_ind = net_wages_employed_ind / (
+            1
+            - self.states["Employee Social Insurance Tax"]
+            - self.states["Income Tax"] * (1 - self.states["Employee Social Insurance Tax"])
+        )
 
         # Taxes on income
         self.ts.taxes_income.append(

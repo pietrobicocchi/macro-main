@@ -1237,9 +1237,13 @@ class Country:
         self.households.ts.dicts["income_rental"][-1] = final_income_rental
         self.households.ts.dicts["total_income_rental"][-1] = [final_income_rental.sum()]
 
+        # Labour income received: wages, plus unemployment benefits for unemployed members (counted in the deficit)
         self.households.ts.income_employee.append(
             self.households.compute_employee_income(
-                individual_income=self.individuals.ts.current("employee_income"),
+                individual_income=self.individuals.ts.current("employee_income")
+                + self.central_government.distribute_unemployment_benefits_to_individuals(
+                    current_individual_activity_status=self.individuals.states["Activity Status"]
+                ),
                 corr_households=self.individuals.states["Corresponding Household ID"],
             )
         )
@@ -1297,6 +1301,7 @@ class Country:
         self.households.update_wealth(
             housing_data=self.housing_market.states["properties"],
             tau_cf=self.central_government.states["Capital Formation Tax"],
+            tau_vat=self.central_government.states["Value-added Tax"],
         )
         self.households.ts.wealth_histogram.append(get_histogram(self.households.ts.current("wealth"), self.scale))
         self.households.ts.net_wealth.append(self.households.compute_net_wealth())

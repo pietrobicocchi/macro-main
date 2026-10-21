@@ -989,18 +989,18 @@ class Firms(Agent):
             employer_social_insurance_tax (float): Employer SI tax rate
             cpi (float): Consumer price index
         """
-        real_wages = np.bincount(
+        # Individual wages are nominal net wages (indexed to expected inflation by the wage setter) and are what
+        # households receive; the firm pays them grossed up for income tax and employee and employer social
+        # insurance. Multiplying by the CPI again, as before, made firms pay more than workers and government got.
+        net_wages = np.bincount(
             corresponding_firm[corresponding_firm >= 0],
             weights=individual_wages[corresponding_firm >= 0],
             minlength=self.ts.current("n_firms"),
         )
         self.ts.total_wage.append(
-            cpi
-            * (
-                (1.0 + employer_social_insurance_tax)
-                / (1 - employee_social_insurance_tax - income_taxes * (1 - employee_social_insurance_tax))
-                * real_wages
-            )
+            (1.0 + employer_social_insurance_tax)
+            / (1 - employee_social_insurance_tax - income_taxes * (1 - employee_social_insurance_tax))
+            * net_wages
         )
         self.ts.real_wage_per_capita.append(
             self.ts.current("total_wage") / cpi / self.ts.current("number_of_employees")
@@ -1715,8 +1715,9 @@ class Firms(Agent):
             self.ts.current("deposits")
             + self.ts.current("nominal_amount_sold_in_lcu")
             - self.ts.current("total_wage")
-            - self.ts.current("used_intermediate_inputs_costs")
-            - self.ts.current("used_capital_inputs_costs")
+            # Cash leaves when inputs are bought, not when they are used from stock (used costs enter profits)
+            - self.ts.current("total_intermediate_inputs_bought_costs")
+            - self.ts.current("total_capital_inputs_bought_costs")
             - self.ts.current("taxes_paid_on_production")
             - self.ts.current("corporate_taxes_paid")
             - self.ts.current("interest_paid")

@@ -18,9 +18,9 @@ LEDGER_CHECKS = [
     "bank_equity",
     "government_debt",
 ]
-# Money is not yet exactly conserved: financial-asset income and purchases have no counterpart, and goods-market
-# and wage payments still differ by a few percent of GDP (issues S9-S12 in PROJECT.md). Tighten as they are fixed.
-MONEY_TOLERANCE = 0.05
+# Money not accounted for by the flows that have no counterpart by design (S9, S10, S13 in PROJECT.md).
+# A small transient remains in the first quarters (S23); tighten as it is fixed.
+UNEXPLAINED_MONEY_TOLERANCE = 0.04
 
 
 @pytest.fixture(scope="module", name="audited_run")
@@ -44,11 +44,12 @@ def test_ledgers_agree_every_quarter(audited_run):
     )
 
 
-def test_money_is_roughly_conserved(audited_run):
-    """Regression: wiped overdrafts, unpaid house sellers and free write-offs created or destroyed up to 160% of GDP."""
+def test_money_is_conserved_apart_from_unbacked_flows(audited_run):
+    """Regression: wiped overdrafts, unpaid house sellers, free write-offs, unpaid VAT, untaxed gross wages,
+    double-inflated wage bills and unpaid unemployment benefits created or destroyed up to 160% of GDP."""
     _, report = audited_run
-    money = report[report["check"] == "money"]
-    assert money["share_of_gdp"].abs().max() < MONEY_TOLERANCE
+    unexplained = report[report["check"] == "money.unexplained"]
+    assert unexplained["share_of_gdp"].abs().max() < UNEXPLAINED_MONEY_TOLERANCE
 
 
 def test_dissaving_does_not_wipe_overdrafts():

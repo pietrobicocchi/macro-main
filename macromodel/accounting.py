@@ -34,6 +34,9 @@ CHECKS = {
     "deposits.firms": "firms' deposits differ from banks' deposits from firms",
     "deposits.households": "households' deposits differ from banks' deposits from households",
     "money": "reserves changed by more or less than the government deficit plus net exports",
+    "money.unbacked_flows": "flows with no counterpart by design (S9, S10, S13): financial-asset income and its tax, "
+    "net purchases of other financial assets, interest on government debt",
+    "money.unexplained": "money residual not accounted for by the unbacked flows: a leak to find",
     "bank_equity": "bank equity changed by more or less than after-tax profits plus government injections",
     "government_debt": "government debt changed by more or less than the deficit",
     "gdp.trade_adjustment": "output GDP minus expenditure GDP before imports/exports are adjusted to close it",
@@ -81,6 +84,10 @@ def snapshot(country: Any) -> dict[str, float]:
         "exports_adjusted": _total(economy, "total_exports"),
         "imports_adjusted": _total(economy, "total_imports"),
         "gdp": _total(economy, "gdp_output"),
+        "household_financial_asset_income": _total(households, "income_financial_assets"),
+        "household_other_financial_assets": _total(households, "wealth_other_financial_assets"),
+        "income_tax_rate": float(country.central_government.states["Income Tax"]),
+        "policy_rate": float(country.central_bank.ts.current("policy_rate")[0]),
     }
 
 
@@ -108,6 +115,14 @@ def residuals(current: dict[str, float], previous: dict[str, float] | None) -> d
             c["bank_after_tax_profits"] + c["bank_equity_injection"]
         )
         out["government_debt"] = (c["government_debt"] - p["government_debt"]) - c["government_deficit"]
+        # Households receive financial-asset income nobody pays (and the government books a tax on it that nobody
+        # pays), save into other financial assets nobody receives, and the government owes interest nobody receives.
+        out["money.unbacked_flows"] = (
+            c["household_financial_asset_income"] * (1 + c["income_tax_rate"])
+            - (c["household_other_financial_assets"] - p["household_other_financial_assets"])
+            - c["policy_rate"] * p["government_debt"]
+        )
+        out["money.unexplained"] = out["money"] - out["money.unbacked_flows"]
     return out
 
 
