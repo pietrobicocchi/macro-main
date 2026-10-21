@@ -144,7 +144,6 @@ class Simulation:
                 industries=datawrapper.industries,
                 initial_year=datawrapper.configuration.year,
                 t_max=simulation_configuration.t_max,
-                time_unit=datawrapper.time_unit,
                 running_multiple_countries=running_multi_country,
                 time_unit=time_unit,
                 emission_factors_usd=emission_factors,
