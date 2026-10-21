@@ -246,10 +246,10 @@ Paper settings added cumulatively to the defaults as they were with 5% price noi
 - **Financing limits (G9)** cause a recession with today's bank lending limits (firm
   debt/equity 0.03; paper 1.0).
 
-### Current state of `main`
+### Current state of `main` (commit 7a8ac4d)
 
 Default settings (price noise 0.0005), 10 seeds, 12 quarters, France 2014:
-- **Unemployment passes the sanity gate**: 10.5% after 12 quarters vs ~9.4–10%.
+- **Unemployment passes the sanity gate**: 10.3–10.5% after 12 quarters vs ~9.4–10%.
 - **Growth fails**: real GDP about −0.04%/quarter vs +0.64% in the data, investment
   about 0% vs +0.8%. There is no growth engine (G1–G3).
 - **Inflation is too high**: about 0.5%/quarter vs about 0.1% (P2, P3).
@@ -261,6 +261,31 @@ Default settings (price noise 0.0005), 10 seeds, 12 quarters, France 2014:
 - Too few agents is not the cause of noise or drift (scale 10,000 vs 1,000; E6).
 - Runs are deterministic per seed: about 1 s per 12 quarters with 18 firms, about 10 s
   with 408, mostly in the housing market (E12).
+
+### Next step: G13 (labour-market search frictions)
+
+**Why:** exp009 showed that with steady growth (MD10, demand smoothing 0.10), unemployment
+falls from 10.3% to 0% within two years because the labour market clears frictionlessly:
+firms fill every vacancy within the quarter (`hiring_speed = 1`), nobody separates
+(`random_firing_probability = 0`), no quits. The work-effort cap (G12) at 1.1–1.5 barely
+matters: the real problem is that even with work-effort frozen, employment rises 11.5% in two
+years.
+
+**Plan:** Build G13 as a switchable labour market clearer with:
+1. **Separations** at 3–4% per quarter (adjust `random_firing_probability`; mechanism
+   already exists).
+2. **Matching function** (Cobb-Douglas, Poledna-style) capping hires per period based on
+   unemployed and vacancy stock. Calibrate to French flows so steady-state job finding ≈
+   separation rate.
+3. **Work-effort cap** at a realistic ~1.1 (G12, already a setting).
+
+Test on exp010: `investment_engine(adjustment_speed=0.25, demand_smoothing=0.10)` with
+frictions enabled. Target: unemployment stays near 8–10% while GDP grows steadily at ~0.7%/q.
+
+Then:
+- **P5** (Phase 3): cost pass-through in prices, so wage tightness (G8) brakes the engine.
+- **G9** (Phase 2 then Phase 3): realistic bank lending limits.
+- Merge **MD10** and **G13** as defaults once stable.
 
 Every known problem, fixed or open, is in the Issue register below.
 
