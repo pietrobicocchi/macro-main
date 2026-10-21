@@ -191,9 +191,9 @@ class Prices(BaseModel):
     parameters: dict[str, Any] = {
         # Quarterly std of the multiplicative price shock. 0.05 dominated the dynamics (exp002); the paper has none.
         "price_setting_noise_std": 0.0005,
-        "price_setting_speed_gf": 1.0,
+        "price_setting_speed_gf": 0.5,  # MD14: half expected inflation, half unit-cost growth
         "price_setting_speed_dp": 0.0,
-        "price_setting_speed_cp": 0.0,
+        "price_setting_speed_cp": 0.5,
     }
 
 
@@ -261,7 +261,7 @@ class WageSetter(BaseModel):
         "labour_market_tightness_markup_scale": 0.0,
         "markup_time_span": 4,
         "max_increase_in_work_effort": 1.5,
-        "cpi_indexation_speed": 1.0,
+        "cpi_indexation_speed": 0.25,  # MD14: wages catch up with prices about once a year
     }
 
 

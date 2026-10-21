@@ -93,7 +93,7 @@ class ConsumptionFunction(BaseModel):
     parameters: dict[str, Any] = {
         "consumption_smoothing_fraction": 0.0,
         "consumption_smoothing_window": 12,
-        "minimum_consumption_fraction": 1.0,
+        "minimum_consumption_fraction": 0.0,  # MD14: the floor counted every adult as unemployed (S26)
         "elasticity_of_substitution": 1.0,
     }
 

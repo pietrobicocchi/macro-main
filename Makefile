@@ -15,7 +15,7 @@ lint:
 	uv run ruff format --check --exclude $(LINT_FORMAT_EXCLUDE) macromodel macro_data experiments tests
 
 fmt:
-	uv run ruff format macromodel macro_data experiments tests
+	uv run ruff format --exclude $(LINT_FORMAT_EXCLUDE) macromodel macro_data experiments tests
 	uv run ruff check --fix macromodel macro_data experiments tests
 
 # make exp EXP=exp001 ARGS="--seeds 5"

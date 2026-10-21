@@ -225,3 +225,14 @@ def no_consumption_floor(c: CountryConfiguration) -> None:
     jumped 7% in the first quarter."""
     p = c.households.functions.consumption.parameters
     c.households.functions.consumption.parameters = {**p, "minimum_consumption_fraction": 0.0}
+
+
+def pre_md14_prices_wages_consumption(c: CountryConfiguration) -> None:
+    """The defaults before MD14 (2026-10-21): prices follow expected inflation only, wages follow last quarter's CPI
+    in full, and households consume at least (1 - saving rate) x benefits."""
+    p = c.firms.functions.prices.parameters
+    c.firms.functions.prices.parameters = {**p, "price_setting_speed_gf": 1.0, "price_setting_speed_cp": 0.0}
+    w = c.firms.functions.wage_setter.parameters
+    c.firms.functions.wage_setter.parameters = {**w, "cpi_indexation_speed": 1.0}
+    h = c.households.functions.consumption.parameters
+    c.households.functions.consumption.parameters = {**h, "minimum_consumption_fraction": 1.0}
