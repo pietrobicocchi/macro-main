@@ -112,6 +112,7 @@ looking at the result. This is the raw material for the rewritten model section.
 | exp016 | Does removing the consumption floor (S26) fix the start-up jump? | done | Yes: HH cons. ratio 2.85 → 1.71 on defaults; candidate B's start-up shock goes, unemployment 10.7% at q12 and 8.1% at q20 (data 9.4%, 8.4%), growth 0.6%/q in the last two years; GDP ratio worsens (1.14 → 1.24). `outputs/exp016_consumption_floor/` |
 | exp017 | Is the growth engine ready to be the default, on the new defaults? | done | It passes the sanity gate, the first configuration to do so: unemployment 9.9% at q12 and 8.5% at q20 (data 9.4%, 8.4%), growth 0.2–0.4%/q, GDP ratio 1.14 (defaults 1.18); but investment 2.50 (lumpy, seed-to-seed), HH cons., gov. cons. and CPI worse. Spare capacity is needed. `outputs/exp017_engine_on_new_defaults/` |
 | exp018 | With many firms, is the growth engine's investment less lumpy? | done | Barely: investment ratio 2.50 → 2.39 with 408 firms, so the poor investment forecast is the engine's dynamics (early burst, 1.1%/q vs 0.8%), not lumpiness; unemployment 9.6% at q12 and 8.4% at q20 (data 9.4%, 8.4%). `outputs/exp018_engine_many_firms/` |
+| exp019 | Do financing limits with realistic bank lending limits tame the engine's investment? | done | No: with the paper's bank limits alone the investment ratio is 2.34 (2.50 without); with capital purchases cut by unmet credit the economy goes into recession (unemployment 16–18%). Only 2 of 18 firms want long-term credit and both already owe more than their capital is worth (spoofed balance sheets, D1). `outputs/exp019_financing_limits/` |
 
 ### Baseline scorecard history
 
@@ -412,11 +413,12 @@ On exp011's engine (frictions, productivity +0.25%/q), with two forecasts of gro
 1. **Decision (needs approval): make B the default.** It passes the sanity gate, which comes before the
    ratios in the success metric. It changes the initial state (utilisation 0.85 must be built into the
    data, S3) and the default data configuration.
-2. **B's investment forecast** (2.4–2.5): not lumpiness (exp018, 408 firms: 2.39) but the dynamics: the
-   early burst from spare capacity and growth of 1.1%/q (data 0.8%). Financing limits (G9) next.
+2. **B's investment forecast** (2.3–2.5): not lumpiness (exp018, 408 firms: 2.39) but the dynamics: the
+   early burst from spare capacity and growth of 1.1%/q (data 0.8%). Financing limits cannot help on the
+   spoofed firm balance sheets (exp019, G9). Next: release spare capacity gradually (G6), or investment
+   that responds to the real interest rate (G17).
 3. **R4:** needs the chain-linked volume series (blocked on data).
-4. **S29 rest**; **G9** with realistic bank limits; investment that responds to the real interest rate
-   (G17); MD6.
+4. **S29 rest**; MD6 (dividends); G9 once real firm balance sheets are available (D1).
 
 Every known problem, fixed or open, is in the Issue register below.
 
@@ -458,7 +460,7 @@ commit messages (e.g. `G1:`).
 | G6 | Spare capacity overshoots: unemployment falls to 5.8% (data 9.4%) | Question | ours | exp004 step 2 | open | P2 |
 | G7 | Many-firm runs crashed (per-firm prices used as per-industry) | Bug | ours | — | done `31f797a` | — |
 | G8 | Wages did not respond to labour-market tightness (existing employees' markup scale 0) | Spec | ours | exp007: a tightness markup raises wages, but with prices not passing costs through it adds demand instead of braking | partial: needs cost pass-through in prices (P5) | P1 |
-| G9 | Capital purchases are not limited by financing (`credit_gap_fraction = 0`) | Spec | ours | exp008: switching it on with today's bank lending limits (firm debt/equity 0.03; paper 1.0) starves investment and causes a recession | open: needs realistic bank limits first | P1 |
+| G9 | Capital purchases are not limited by financing (`credit_gap_fraction = 0`) | Spec | ours | exp008; exp019: even with the paper's bank limits, firms receive no long-term credit: only 2 of 18 firms want it, both with debt above the value of their capital (the bank rule is a loan-to-collateral limit) and one loss-making; cutting their investment by the unmet credit causes a recession | blocked on data: firm balance sheets are spoofed (D1) | P2 |
 | G10 | Desired capital followed current planned output, booms included: multiplier–accelerator cycles | Spec | ours | exp008: sizing desired capital on smoothed planned output (`demand_smoothing` 0.10) gives steady growth of 0.7%/q (data 0.6%) with no bust | fix built (option) | — |
 | G11 | Spare capacity alone sends unemployment from 10% to 4% within five years | Question | ours | exp006 step 2 (see G6) | open: check labour demand vs planned output | P2 |
 | G12 | Work effort can raise output per worker by up to 50% (`max_increase_in_work_effort = 1.5`) | Spec | ours | exp009; exp015: a cap of 1.1 changes nothing in the candidate model | low priority: effort is not what drives employment | P3 |
