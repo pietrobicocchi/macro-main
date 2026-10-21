@@ -57,10 +57,15 @@ def get_histogram(values: np.ndarray, scale: Optional[int], bins: int = 40, norm
             values = (values - np.min(values)) / diff
         else:
             values = values - np.min(values)
-    if scale is None:
-        hist, bin_edges = np.histogram(values, bins=bins)
-    else:
-        hist, bin_edges = np.histogram(values / scale, bins=bins)
+    if scale is not None:
+        values = values / scale
+    lo, hi = np.min(values), np.max(values)
+    # Values that differ only by rounding cannot be split into `bins` finite bins; treat them as identical, as numpy
+    # does for equal values. Non-finite values still raise.
+    histogram_range = None
+    if np.isfinite(lo) and np.isfinite(hi) and hi - lo <= 1e-9 * max(1.0, abs(lo), abs(hi)):
+        histogram_range = (lo - 0.5, hi + 0.5)
+    hist, bin_edges = np.histogram(values, bins=bins, range=histogram_range)
     hist = hist.astype(float)
     hist /= hist.sum()
     return np.array([np.concatenate((hist, [np.nan])), bin_edges])

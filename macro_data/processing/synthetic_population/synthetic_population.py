@@ -390,7 +390,9 @@ class SyntheticPopulation(ABC):
         pass
 
     @abstractmethod
-    def compute_household_wealth(self, independents: Optional[list[str]] = None) -> None:
+    def compute_household_wealth(
+        self, independents: Optional[list[str]] = None, cap_mortgages_at_property_value: bool = True
+    ) -> None:
         """Compute and update household wealth components.
 
         This method should:

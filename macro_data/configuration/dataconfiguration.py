@@ -175,6 +175,9 @@ class CountryDataConfiguration(BaseModel):
     scale: int
     eu_proxy_country: Optional[Country] = None
     carbon_price: float = 0.0
+    # A mortgage is secured on a property: cap each household's mortgages at the value of the properties they finance.
+    # Spoofed survey data breaks that link (S24); real HFCS data rarely binds.
+    cap_mortgages_at_property_value: bool = True
 
 
 class ROWDataConfiguration(BaseModel):

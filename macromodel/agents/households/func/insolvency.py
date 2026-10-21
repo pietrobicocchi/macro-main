@@ -63,6 +63,15 @@ class DefaultHouseholdInsolvencyHandler(HouseholdInsolvencyHandler):
     - NPL ratio calculations
     """
 
+    def find_insolvent(self, households: Households) -> np.ndarray:
+        """Households in negative net wealth with any overdraft."""
+        return np.where(
+            np.logical_and(
+                households.ts.current("net_wealth") < 0,
+                households.ts.current("wealth_deposits") < 0,
+            )
+        )[0]
+
     def handle_insolvency(
         self,
         households: Households,
@@ -85,12 +94,7 @@ class DefaultHouseholdInsolvencyHandler(HouseholdInsolvencyHandler):
             Tuple[float, float, float]: Default rate, NPL ratios for consumption
                 loans and mortgages
         """
-        insolvent_households = np.where(
-            np.logical_and(
-                households.ts.current("net_wealth") < 0,
-                households.ts.current("wealth_deposits") < 0,
-            )
-        )[0]
+        insolvent_households = self.find_insolvent(households)
         bad_hh_cons_loans, bad_mortgages = credit_market.remove_loans_to_households(insolvent_households)
 
         # The written-off loans are gone from the households' own books too
@@ -115,3 +119,26 @@ class DefaultHouseholdInsolvencyHandler(HouseholdInsolvencyHandler):
             npl_hh_cons_loans,
             npl_mortgages,
         )
+
+
+class UnableToPayHouseholdInsolvencyHandler(DefaultHouseholdInsolvencyHandler):
+    """Households default when they cannot pay, not at the first overdraft.
+
+    A household defaults when it is underwater (negative net wealth) and its overdraft exceeds
+    `overdraft_limit_in_quarters_of_income` quarters of its income, i.e. it has run out of room to keep paying.
+    Underwater households that still meet their payments keep their loans, as with negative equity in practice.
+    """
+
+    def __init__(self, overdraft_limit_in_quarters_of_income: float = 1.0):
+        self.overdraft_limit_in_quarters_of_income = overdraft_limit_in_quarters_of_income
+
+    def find_insolvent(self, households: Households) -> np.ndarray:
+        """Underwater households whose overdraft exceeds the limit relative to income."""
+        income = np.maximum(households.ts.current("income"), 0.0)
+        overdraft = -np.minimum(households.ts.current("wealth_deposits"), 0.0)
+        return np.where(
+            np.logical_and(
+                households.ts.current("net_wealth") < 0,
+                overdraft > self.overdraft_limit_in_quarters_of_income * income,
+            )
+        )[0]

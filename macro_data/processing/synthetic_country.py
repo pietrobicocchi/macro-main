@@ -312,7 +312,14 @@ class SyntheticCountry:
                 country=country, year=year
             )
 
-        cls.match_households_firms_banks(banks, firms, industries, population, tax_data)
+        cls.match_households_firms_banks(
+            banks,
+            firms,
+            industries,
+            population,
+            tax_data,
+            cap_mortgages_at_property_value=country_configuration.cap_mortgages_at_property_value,
+        )
 
         housing_data = set_housing_df(
             synthetic_population=population,
@@ -545,7 +552,14 @@ class SyntheticCountry:
         else:
             weights_by_income = readers.expand_weights_by_income(year=year, country=country)
 
-        cls.match_households_firms_banks(banks, firms, industries, population, tax_data)
+        cls.match_households_firms_banks(
+            banks,
+            firms,
+            industries,
+            population,
+            tax_data,
+            cap_mortgages_at_property_value=country_configuration.cap_mortgages_at_property_value,
+        )
 
         housing_data = set_housing_df(
             synthetic_population=population,
@@ -711,6 +725,7 @@ class SyntheticCountry:
         population: SyntheticPopulation,
         tax_data: TaxData,
         independents: Optional[list[str]] = None,
+        cap_mortgages_at_property_value: bool = True,
     ):
         """
         Match economic agents (households, firms, banks) to establish relationships.
@@ -739,7 +754,10 @@ class SyntheticCountry:
             population=population,
         )
         match_firms_with_banks_optimal(firms=firms, banks=banks)
-        population.compute_household_wealth(independents=independents)
+        population.compute_household_wealth(
+            independents=independents,
+            cap_mortgages_at_property_value=cap_mortgages_at_property_value,
+        )
         match_households_with_banks_optimal(population=population, banks=banks)
 
     @classmethod
@@ -951,7 +969,14 @@ class SyntheticCountry:
         owned_houses = housing_data["Is Owner-Occupied"]
         total_rent = housing_data.loc[owned_houses, "Rent"].sum()
 
-        self.match_households_firms_banks(self.banks, self.firms, self.industries, self.population, self.tax_data)
+        self.match_households_firms_banks(
+            self.banks,
+            self.firms,
+            self.industries,
+            self.population,
+            self.tax_data,
+            cap_mortgages_at_property_value=self.country_configuration.cap_mortgages_at_property_value,
+        )
 
         housing_data = set_housing_df(
             synthetic_population=self.population,

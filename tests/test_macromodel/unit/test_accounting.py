@@ -95,3 +95,20 @@ def test_firm_shares_mode_conserves_money(datawrapper):
     assert ledgers["share_of_gdp"].abs().max() < 1e-9
     unexplained = report[report["check"] == "money.unexplained"]
     assert unexplained["share_of_gdp"].abs().max() < UNEXPLAINED_MONEY_TOLERANCE
+
+
+def test_households_default_only_when_unable_to_pay():
+    """Regression: any overdraft plus negative net wealth used to write off a household's whole debt."""
+    from types import SimpleNamespace
+
+    from macromodel.agents.households.func.insolvency import UnableToPayHouseholdInsolvencyHandler
+
+    current = {
+        "net_wealth": np.array([-10.0, -10.0, 5.0, -10.0]),
+        "wealth_deposits": np.array([-1.0, -50.0, -50.0, 3.0]),
+        "income": np.array([20.0, 20.0, 20.0, 20.0]),
+    }
+    households = SimpleNamespace(ts=SimpleNamespace(current=lambda key: current[key]))
+    handler = UnableToPayHouseholdInsolvencyHandler(overdraft_limit_in_quarters_of_income=1.0)
+    # only the underwater household whose overdraft exceeds a quarter's income defaults
+    np.testing.assert_array_equal(handler.find_insolvent(households), [1])

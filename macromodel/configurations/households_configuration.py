@@ -114,8 +114,10 @@ class InsolvencyFunction(BaseModel):
     """
 
     path_name: str = "insolvency"
-    name: Literal["DefaultHouseholdInsolvencyHandler"] = "DefaultHouseholdInsolvencyHandler"
-    parameters: dict[str, Any] = {}
+    name: Literal["DefaultHouseholdInsolvencyHandler", "UnableToPayHouseholdInsolvencyHandler"] = (
+        "UnableToPayHouseholdInsolvencyHandler"
+    )
+    parameters: dict[str, Any] = {"overdraft_limit_in_quarters_of_income": 1.0}
 
 
 class PropertyFunction(BaseModel):

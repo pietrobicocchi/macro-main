@@ -329,12 +329,15 @@ class SyntheticHFCSPopulation(SyntheticPopulation):
     def restrict(self) -> None:
         self.household_data = self.household_data[RESTRICT_COLS]
 
-    def compute_household_wealth(self, independents: Optional[list[str]] = None) -> None:
+    def compute_household_wealth(
+        self, independents: Optional[list[str]] = None, cap_mortgages_at_property_value: bool = True
+    ) -> None:
         """
         Computes the household wealth based on the given independent variables.
 
         Args:
             independents (Optional[list[str]]): The list of independent variables. Defaults to ["Income", "Debt"].
+            cap_mortgages_at_property_value (bool): Cap mortgages at the value of the properties they finance.
         """
 
         if independents is None:
@@ -345,7 +348,7 @@ class SyntheticHFCSPopulation(SyntheticPopulation):
         self.set_household_other_financial_assets()
         self.set_household_financial_assets()
         self.set_household_wealth()
-        self.set_household_mortgage_debt()
+        self.set_household_mortgage_debt(cap_at_property_value=cap_mortgages_at_property_value)
         self.set_household_other_debt()
         self.set_household_debt()
         self.set_household_net_wealth()
@@ -451,7 +454,7 @@ class SyntheticHFCSPopulation(SyntheticPopulation):
             self.household_data["Wealth in Real Assets"] + self.household_data["Wealth in Financial Assets"]
         )
 
-    def set_household_mortgage_debt(self) -> None:
+    def set_household_mortgage_debt(self, cap_at_property_value: bool = False) -> None:
         self.household_data.loc[
             self.household_data["Outstanding Balance of HMR Mortgages"].isna(),
             "Outstanding Balance of HMR Mortgages",
@@ -462,6 +465,15 @@ class SyntheticHFCSPopulation(SyntheticPopulation):
         ] = 0.0
         self.household_data.loc[:, "Outstanding Balance of HMR Mortgages"] *= self.scale
         self.household_data.loc[:, "Outstanding Balance of Mortgages on other Properties"] *= self.scale
+        if cap_at_property_value:
+            # Property values are already scaled when the housing data is set
+            for mortgage, value in [
+                ("Outstanding Balance of HMR Mortgages", "Value of the Main Residence"),
+                ("Outstanding Balance of Mortgages on other Properties", "Value of other Properties"),
+            ]:
+                self.household_data[mortgage] = np.minimum(
+                    self.household_data[mortgage], self.household_data[value].fillna(0.0).clip(lower=0.0)
+                )
 
     def set_household_other_debt(self) -> None:
         self.household_data.loc[

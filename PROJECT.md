@@ -73,6 +73,8 @@ looking at the result. This is the raw material for the rewritten model section.
 | MD4 | The credit market holds all household mortgages, on the main residence and on other properties | They are real debts, already recorded by banks and households | — | Phase 1 accounting | none |
 | MD5 | A failing bank is recapitalised by the government to exactly the minimum capital ratio (`MinimumCapitalBankDemography`, default) | Regulators restore minimum capital; it also works with one bank, unlike topping up to the healthy banks' average | top up to the average of healthy banks (still selectable) | Phase 1 | describe bank resolution |
 | MD6 | Households' other financial assets are shares in domestic firms: purchases fund firms, firms pay dividends (Eurostat payout ratio) out of after-tax profits (`FirmSharesFinancialAssets`) | Income must have a payer and savings a receiver; shares in firms are the main household financial asset with a domestic counterpart | claims on the rest of the world; government bonds | Phase 1: money conserved; but dividends are ~2 bn/q against 107 bn/q of the old income, so consumption drops ~19% | built, off by default until firm profits are realistic (S2) |
+| MD7 | Initial mortgages are capped at the value of the property they finance (`cap_mortgages_at_property_value`, data config, default on) | A mortgage is secured on a property; the spoofed survey breaks that link | wait for real data; cap at a loan-to-value above 1 | Phase 1: underwater households 77 → 24 | none; switch off with real HFCS |
+| MD8 | Households default when they cannot pay: underwater and an overdraft above one quarter of income (`UnableToPayHouseholdInsolvencyHandler`, default) | Underwater households that keep paying do not default; the old rule defaulted at the first overdraft | old rule (still selectable); recovery of the house by the bank (not yet) | Phase 1: quarter-1 write-offs 400 → 110 bn, no bank bail-out needed | describe household default |
 
 ## Baselines
 
@@ -107,6 +109,7 @@ mean quarterly real GDP growth (data: +0.64%) and the median unemployment rate a
 | + Phase 1 accounting fixes (S15–S20) | **1.13** | **2.45** | 2.11 | **1.09** | 1.82 | −0.01% | 10.4% |
 | + Phase 1 round 2 (S11, S12, S14, S22) | 1.16 | 2.56 | 1.94 | 1.13 | 1.92 | −0.05% | 10.4% |
 | + upstream #83, #85 (quarterly rates), MD5 | 1.14 | 2.57 | 1.92 | 1.12 | 1.89 | −0.04% | 10.4% |
+| + MD7 mortgage cap, MD8 default rule | 1.17 | 2.59 | 2.06 | 1.17 | 1.76 | −0.05% | 10.4% |
 
 ## What we have learned
 
@@ -206,11 +209,11 @@ Default settings (price noise 0.0005), 10 seeds, 12 quarters, France 2014:
 - **Growth fails**: real GDP about −0.04%/quarter vs +0.64% in the data, investment
   about 0% vs +0.8%. There is no growth engine (G1–G3).
 - **Inflation is too high**: about 0.5%/quarter vs about 0.1% (P2, P3).
-- Every `sim / AR(1)` ratio is still above 1 (best: investment 1.12, GDP 1.14).
+- Every `sim / AR(1)` ratio is still above 1 (best: GDP and investment, both 1.17).
 - **Accounts (Phase 1)**: every loan and deposit ledger agrees exactly; the money residual
   (up to 10% of GDP) is the by-design unbacked flows (S9, S10, S13); unexplained money is at
-  most 1.1% of GDP (S23). Household defaults on underwater initial positions (S24, S25) cost
-  the bank 20–400 bn/q, covered by government recapitalisation (MD5).
+  most 1.2% of GDP (S23). Household defaults cost the bank 2–110 bn/q (S25), absorbed
+  without government recapitalisation after MD7–MD8.
 - Too few agents is not the cause of noise or drift (scale 10,000 vs 1,000; E6).
 - Runs are deterministic per seed: about 1 s per 12 quarters with 18 firms, about 10 s
   with 408, mostly in the housing market (E12).
@@ -291,8 +294,8 @@ commit messages (e.g. `G1:`).
 | S21 | With a single bank there are no healthy banks to average over, so a failing bank was never recapitalised | Spec | ours | — | done: `MinimumCapitalBankDemography` (default) tops equity up to the solvency ratio (MD5) | — |
 | S22 | Unemployment benefits were counted in the deficit but paid to no one (about 9 bn/q destroyed) | Bug | ours | `distribute_unemployment_benefits_to_individuals` was never called | done: paid with household labour income | — |
 | S23 | A transient unexplained money residual in the early quarters | Question | ours | `money.unexplained`: at most 1.1% of GDP after the upstream merges (was 4%) | open | P3 |
-| S24 | At t=0, 2.7% of households are underwater and hold 40% of household debt (521 bn of mortgages against about 190 bn of property); 49 hold mortgages with no property besides their home | Data | ours | likely the spoofed HFCS: mortgages and property values spoofed independently (D1) | open: decide (cap mortgages at property value, or wait for real data) | P1 |
-| S25 | Household default rule: negative net wealth plus any overdraft writes off all the household's debt, with no collateral recovered | Spec | ours | `DefaultHouseholdInsolvency`; drives bank losses of 20–400 bn/q | open: default on inability to pay, banks recover the house | P2 |
+| S24 | At t=0, 2.7% of households were underwater and held 40% of household debt: mortgages with no matching property (spoofed HFCS) | Data | ours | — | done (MD7): mortgages capped at property value; now 0.8% underwater holding 14% of debt; mortgages 698 bn (was 1,315; France ~850 bn) | — |
+| S25 | Household default rule wrote off a household's whole debt at its first overdraft when underwater | Spec | ours | — | partial (MD8): default only when unable to pay; still 10–18 defaults/quarter (~2%/yr, real <1%); no collateral recovered yet | P2 |
 
 ### M. Markets and trade
 
