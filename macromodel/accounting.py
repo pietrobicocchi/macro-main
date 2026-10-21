@@ -33,7 +33,8 @@ CHECKS = {
     "loans.total.banks": "banks' total outstanding loans differ from the credit market's",
     "deposits.firms": "firms' deposits differ from banks' deposits from firms",
     "deposits.households": "households' deposits differ from banks' deposits from households",
-    "money": "reserves changed by more or less than the government deficit plus net exports",
+    "money": "reserves changed by more or less than the government deficit, net exports and the central bank's "
+    "interest on reserves",
     "money.unbacked_flows": "flows with no counterpart by design (S9, S10, S13): financial-asset income and its tax, "
     "net purchases of other financial assets (unless they are shares in firms), interest on government debt",
     "money.unexplained": "money residual not accounted for by the unbacked flows: a leak to find",
@@ -72,6 +73,8 @@ def snapshot(country: Any) -> dict[str, float]:
         "bank_deposits_from_firms": _total(banks, "deposits_from_firms"),
         "bank_deposits_from_households": _total(banks, "deposits_from_households"),
         "bank_reserves": _total(banks, "deposits"),
+        # Banks earn the policy rate on positive reserves (Banks.compute_interest_received_on_deposits)
+        "bank_positive_reserves": float(np.sum(np.maximum(0.0, banks.current("deposits")))),
         "bank_equity": _total(banks, "equity"),
         "bank_after_tax_profits": float(
             np.sum(bank_profits - country.central_government.states["Profit Tax"] * np.maximum(bank_profits, 0.0))
@@ -112,8 +115,10 @@ def residuals(current: dict[str, float], previous: dict[str, float] | None) -> d
     }
     if previous is not None:
         p = previous
+        # The central bank creates the interest it pays on reserves (S29)
+        central_bank_interest = c["policy_rate"] * p["bank_positive_reserves"]
         out["money"] = (c["bank_reserves"] - p["bank_reserves"]) - (
-            c["government_deficit"] + c["exports"] - c["imports"]
+            c["government_deficit"] + c["exports"] - c["imports"] + central_bank_interest
         )
         out["bank_equity"] = (c["bank_equity"] - p["bank_equity"]) - (
             c["bank_after_tax_profits"] + c["bank_equity_injection"]

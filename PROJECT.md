@@ -110,6 +110,7 @@ looking at the result. This is the raw material for the rewritten model section.
 | exp014 | Does anchoring firms' growth expectations stop the engine running unemployment down? | done | Partly: a slack-aware forecast keeps unemployment at 5.5–6.9% after five years (engine alone 2.4%); with cost pass-through and yearly wage catch-up the engine is within the sanity gate's tolerances at 12 quarters (unemployment 7.7% vs 9.4%, growth 0.4% vs 0.64%/q). The data-only forecast barely helps (3.6%). `outputs/exp014_growth_expectations/` |
 | exp015 | How does the candidate model score against today's defaults, and what does each part contribute? | done | A (cost pass-through + yearly wage catch-up) improves HH cons., investment and CPI (1.84 → 1.06), worsens gov. cons.; B (A + engine) grows but stalls after three years and misses the unemployment gate by 0.6 pp. The slack-aware forecast is B's key part; the work-effort cap has no effect. `outputs/exp015_candidate_model/` |
 | exp016 | Does removing the consumption floor (S26) fix the start-up jump? | done | Yes: HH cons. ratio 2.85 → 1.71 on defaults; candidate B's start-up shock goes, unemployment 10.7% at q12 and 8.1% at q20 (data 9.4%, 8.4%), growth 0.6%/q in the last two years; GDP ratio worsens (1.14 → 1.24). `outputs/exp016_consumption_floor/` |
+| exp017 | Is the growth engine ready to be the default, on the new defaults? | done | It passes the sanity gate, the first configuration to do so: unemployment 9.9% at q12 and 8.5% at q20 (data 9.4%, 8.4%), growth 0.2–0.4%/q, GDP ratio 1.14 (defaults 1.18); but investment 2.50 (lumpy, seed-to-seed), HH cons., gov. cons. and CPI worse. Spare capacity is needed. `outputs/exp017_engine_on_new_defaults/` |
 
 ### Baseline scorecard history
 
@@ -263,7 +264,7 @@ Paper settings added cumulatively to the defaults as they were with 5% price noi
 
 Default settings, 10 seeds, 12 quarters, France 2014:
 - **Scorecard** (`sim / AR(1)`): GDP 1.18, HH cons. 1.38, gov. cons. 2.20, investment 1.14, CPI 1.09.
-  Every ratio is still above 1; all but government consumption are at their best so far.
+  Every ratio is still above 1; household consumption and CPI are the best so far.
 - **No growth**: real GDP −0.07%/q (data +0.64%, overstated by R4). The growth engine (MD10–MD13) is
   built as options and tracks unemployment, but grows only 0.2%/q in its first three years (exp016).
 - **Unemployment** 10.7% after 12 quarters (data ~9.4%): inside the sanity gate's 2 pp.
@@ -387,14 +388,33 @@ On exp011's engine (frictions, productivity +0.25%/q), with two forecasts of gro
 - **Candidate B without the floor tracks French unemployment** (10.7% → 8.1% vs 9.4% → 8.4%) and grows
   0.6%/q in its last two years, but only 0.2%/q in the first three: GDP ratio 1.37, investment 2.55.
 
+### The growth engine on the new defaults (exp017, 10 seeds, 20 quarters, ratios over the first 12)
+
+| | GDP | HH cons. | Gov. cons. | Invest. | CPI | Growth/q (12q / 20q) | Unemp. q12 / q20 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| defaults (MD14, income-weighted saving rate) | 1.18 | 1.38 | 2.20 | 1.14 | 1.09 | −0.1 / −0.1% | 10.7 / 10.7% |
+| B: + engine (MD10–MD13, spare capacity 0.85) | **1.14** | 1.45 | 2.45 | 2.50 | 1.25 | 0.2 / 0.3% | **9.9 / 8.5%** |
+| B without spare capacity | 1.19 | 1.66 | 2.71 | 2.09 | 1.17 | −0.0 / −0.0% | 12.4 / 14.1% |
+| B without productivity growth | 1.32 | 1.34 | 2.23 | 2.41 | 1.05 | 0.2 / 0.2% | 8.7 / 7.2% |
+| B, slack sensitivity 0.1 | 1.29 | 1.40 | 2.37 | 2.26 | 1.19 | 0.2 / 0.3% | 9.7 / 8.0% |
+| data | | | | | | 0.64% | 9.4 / 8.4% |
+
+- **B passes the sanity gate** (growth within 0.5 pp/q, unemployment within 2 pp, no explosion); today's
+  defaults fail it on growth. B also has the best GDP ratio of the two.
+- **B's investment forecast is poor because investment is lumpy:** the median path is sensible (0.4–2.5%
+  a quarter), but quarter-2 investment growth ranges from −1.8% to +8.8% across seeds, with one firm per
+  industry each closing a share of its capital gap. Many firms (G5) should smooth it.
+- **Spare capacity is necessary:** without it the engine has no room to grow and unemployment rises.
+
 ### Next step
 
-1. **B's slow start and its investment forecast**, then make the engine (MD10–MD13) the default.
-2. **R4:** needs the chain-linked volume series (blocked on data), so the growth target is right.
-3. **S29:** add central-bank interest on reserves to the money identity; why reserves balloon.
-4. **G9** with realistic bank limits; investment that responds to the real interest rate (G17); MD6.
-
-Experiments before MD14 (exp001–exp016) ran on the old defaults; their `run.json` records the commit.
+1. **Decision (needs approval): make B the default.** It passes the sanity gate, which comes before the
+   ratios in the success metric. It changes the initial state (utilisation 0.85 must be built into the
+   data, S3) and the default data configuration.
+2. **B with many firms** (`scoring.load_data(many_firms=True)`): does investment become less lumpy?
+3. **R4:** needs the chain-linked volume series (blocked on data).
+4. **S29 rest**; **G9** with realistic bank limits; investment that responds to the real interest rate
+   (G17); MD6.
 
 Every known problem, fixed or open, is in the Issue register below.
 
@@ -489,7 +509,7 @@ commit messages (e.g. `G1:`).
 | S26 | Household consumption jumped about 7% in the first quarter | Spec | ours | the consumption floor (1 − saving rate) × benefits counted every adult as receiving unemployment benefit, exceeded the income of 39.5% of households, and was not in the initial state; without it consumption fell 1.5% instead, because every household was given the simple mean of the data's saving rates (0.432) where the income-weighted mean (0.421) reproduces initial consumption | done: floor off (MD14); income-weighted average saving rate, with test | — |
 | S27 | Regression from S12: firms' wage bill lost its CPI factor, so nominal wages were frozen and real wages fell with prices | Bug | ours | the wage setter pays real wages; the CPI factor belonged on the employees' side | done: employees receive real wage × CPI, firms pay the gross-up of that | — |
 | S28 | Firm-loan ledger residual (3.5% of GDP, seed 7, one quarter): a firm's written-off loans stayed in its own debt records until the next quarter (households' were fixed in S20) | Bug | ours | seed 7, t = 7 | done: insolvency clears the firm's debt records, with test | — |
-| S29 | With the Taylor rule (`PolednaPolicyRate`) on the engine, unexplained money reaches 15.6% of GDP | Question | ours | exp012; probe (seed 0, 20q): interest the central bank pays on bank reserves (policy rate × reserves, money it creates, missing from the money identity) explains about 75%; bank reserves grow to 5× quarterly GDP, itself implausible; on defaults the rule falls to 0 (P4) | open: add central-bank interest to the money identity; find why reserves balloon | P2 |
+| S29 | Unexplained money grew with the policy rate: 15.6% of GDP with the Taylor rule on the engine (exp012, old defaults) | Question | ours | the interest the central bank pays on positive bank reserves (money it creates) was missing from the money identity; with it, the engine + Taylor run's worst unexplained money is 2.8% and the default run's halves (1.3% → 0.7% at q11); the rest grows with reserves, probably deposit interest booked differently by banks and depositors; bank reserves reach 3–5× quarterly GDP in engine runs | partial: identity fixed, with test; rest open | P2 |
 
 ### M. Markets and trade
 

@@ -133,3 +133,20 @@ def test_households_default_only_when_unable_to_pay():
     handler = UnableToPayHouseholdInsolvencyHandler(overdraft_limit_in_quarters_of_income=1.0)
     # only the underwater household whose overdraft exceeds a quarter's income defaults
     np.testing.assert_array_equal(handler.find_insolvent(households), [1])
+
+
+def test_money_identity_counts_central_bank_interest_on_reserves():
+    """Regression (S29): the interest the central bank pays on positive reserves is money it creates, not a leak."""
+    from collections import defaultdict
+
+    from macromodel.accounting import residuals
+
+    def books(reserves: float, rate: float) -> dict[str, float]:
+        # every other stock and flow is zero
+        return defaultdict(
+            float, {"bank_reserves": reserves, "bank_positive_reserves": max(reserves, 0.0), "policy_rate": rate}
+        )
+
+    previous, current = books(100.0, 0.02), books(102.0, 0.02)
+    out = {k: v for k, v in residuals(current, previous).items() if k.startswith("money")}
+    assert np.isclose(out["money"], 0.0) and np.isclose(out["money.unexplained"], 0.0)
