@@ -92,6 +92,7 @@ class FirmWageSetter(ABC):
         employee_social_insurance_tax: float,
         employer_social_insurance_tax: float,
         current_tfp_multiplier: np.ndarray = None,
+        current_cpi: float = 1.0,
     ) -> np.ndarray:
         """Set employee incomes considering all relevant factors.
 
@@ -261,6 +262,7 @@ class WorkEffortFirmWageSetter(FirmWageSetter):
         employee_social_insurance_tax: float,
         employer_social_insurance_tax: float,
         current_tfp_multiplier: np.ndarray = None,
+        current_cpi: float = 1.0,
     ) -> np.ndarray:
         """Set employee incomes based on work effort and market conditions.
 
@@ -274,6 +276,7 @@ class WorkEffortFirmWageSetter(FirmWageSetter):
         Args:
             [same as parent class]
             current_tfp_multiplier (np.ndarray): TFP multiplier by firm (for linking wages to tech progress)
+            current_cpi (float): Current consumer price index; wages are paid in nominal terms
 
         Returns:
             np.ndarray: Updated employee incomes adjusted for all factors
@@ -314,7 +317,9 @@ class WorkEffortFirmWageSetter(FirmWageSetter):
             * initial_wage_per_capita
         )
         scaled_real_wages_by_individual[emp_ind] = scaled_real_wages[corresponding_firm[emp_ind]]
-        return scaled_real_wages_by_individual / tax
+        # Wages are real: employees receive them at the current price level, and firms pay the gross-up of exactly
+        # that (Firms.update_total_wages_paid)
+        return current_cpi * scaled_real_wages_by_individual / tax
 
     def get_offered_wage_given_labour_inputs_function(
         self,

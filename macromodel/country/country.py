@@ -647,6 +647,7 @@ class Country:
                 current_individual_offered_wage=self.individuals.states["Offered Wage of Accepted Job"],
                 labour_inputs_from_employees=labour_inputs_from_employees,
                 estimated_ppi_inflation=self.economy.ts.current("estimated_ppi_inflation")[0],
+                current_cpi=self.economy.ts.current("cpi")[0],
                 income_taxes=self.central_government.states["Income Tax"],
                 employee_social_insurance_tax=self.central_government.states["Employee Social Insurance Tax"],
                 employer_social_insurance_tax=self.central_government.states["Employer Social Insurance Tax"],

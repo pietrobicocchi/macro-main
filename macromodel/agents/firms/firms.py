@@ -914,6 +914,7 @@ class Firms(Agent):
         income_taxes: float,
         employee_social_insurance_tax: float,
         employer_social_insurance_tax: float,
+        current_cpi: float = 1.0,
     ) -> np.ndarray:
         """Set employee wages based on offers and market conditions.
 
@@ -962,6 +963,7 @@ class Firms(Agent):
             employee_social_insurance_tax=employee_social_insurance_tax,
             employer_social_insurance_tax=employer_social_insurance_tax,
             current_tfp_multiplier=self.states["tfp_multiplier"],
+            current_cpi=current_cpi,
         )
 
     def update_total_wages_paid(
@@ -989,7 +991,7 @@ class Firms(Agent):
             employer_social_insurance_tax (float): Employer SI tax rate
             cpi (float): Consumer price index
         """
-        # Individual wages are nominal net wages (indexed to expected inflation by the wage setter) and are what
+        # Individual wages are nominal net wages (real wages at the current CPI, set by the wage setter) and are what
         # households receive; the firm pays them grossed up for income tax and employee and employer social
         # insurance. Multiplying by the CPI again, as before, made firms pay more than workers and government got.
         net_wages = np.bincount(
