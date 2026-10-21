@@ -77,6 +77,7 @@ looking at the result. This is the raw material for the rewritten model section.
 | MD8 | Households default when they cannot pay: underwater and an overdraft above one quarter of income (`UnableToPayHouseholdInsolvencyHandler`, default) | Underwater households that keep paying do not default; the old rule defaulted at the first overdraft | old rule (still selectable); recovery of the house by the bank (not yet) | Phase 1: quarter-1 write-offs 400 → 110 bn, no bank bail-out needed | describe household default |
 | MD9 | Initial wages keep each industry's SEA labour share of value added; capital compensation stays equal to investment (steady capital stock), and the rest is profit (`labour_share_from_sea`) | Value added = wages + depreciation + profits + taxes; the old rule gave profits to workers | keep the old rule (current default) | exp005: profits 3.9% → 24.5% of GDP, wages match France, GDP and CPI scores hold or improve | default since 2026-10-21; describe the initial income split |
 | MD10 | Investment as a flexible accelerator: replacement plus a fraction λ of the gap to desired capital (initial capital/output ratio at planned output), planned on expected demand (`PartialAdjustmentTargetCapitalInputsSetter`) | Standard investment theory; closing only part of the gap avoids the paper's runaway top-up | paper's full top-up (G2) | exp006–exp008: cycles without brakes; with desired capital on smoothed demand (`demand_smoothing` 0.10) growth is steady at 0.7%/q | candidate, option until unemployment stays plausible (G12) |
+| MD11 | Search frictions in the labour market: employees separate at s = 3% per quarter, firms post vacancies for the gap to desired labour (replacements included), and hires are capped by a Cobb-Douglas matching function M = μU^0.5 V^0.5, with μ set so the initial unemployment rate (10.3%) is a steady state (`SearchFrictionsLabourMarketClearer`, `settings.search_frictions`) | Real labour markets have job-to-unemployment flows and take time to fill vacancies; without them a boom hires the whole unemployed pool within a quarter (G13). Flows are calibrated to a steady state at the initial unemployment rate, as initial stocks are | quits by wage/wealth (`individuals_quitting`); a hiring-speed cap (`hiring_speed` < 1) | exp010: unemployment holds at 10.3% under today's defaults; under the growth engine it falls to 2% (no frictions: 0%) | option; describe the labour market |
 
 ## Baselines
 
@@ -99,6 +100,7 @@ looking at the result. This is the raw material for the rewritten model section.
 | exp007 | Do wages that follow prices and labour-market tightness stabilise the engine? | done | Indexation (S27) halves the bust; tightness adds demand without cost pass-through. `outputs/exp007_wage_brake/` |
 | exp008 | Which brakes turn the boom–bust into steady growth? | done | Smoothed desired capital (G10): steady 0.7%/q growth; financing (G9) needs realistic bank limits. `outputs/exp008_investment_brakes/` |
 | exp009 | Does a realistic work-effort cap keep unemployment plausible? | done | No: the labour market has no frictions (G13). `outputs/exp009_work_effort/` |
+| exp010 | Do search frictions keep unemployment plausible while the economy grows? | done | No: 10.3% → 2% instead of 0%. Labour demand outgrows the labour force because labour productivity does not grow (G14). `outputs/exp010_search_frictions/` |
 
 ### Baseline scorecard history
 
@@ -262,30 +264,30 @@ Default settings (price noise 0.0005), 10 seeds, 12 quarters, France 2014:
 - Runs are deterministic per seed: about 1 s per 12 quarters with 18 firms, about 10 s
   with 408, mostly in the housing market (E12).
 
-### Next step: G13 (labour-market search frictions)
+### Search frictions (exp010, 5 seeds, 20 quarters)
 
-**Why:** exp009 showed that with steady growth (MD10, demand smoothing 0.10), unemployment
-falls from 10.3% to 0% within two years because the labour market clears frictionlessly:
-firms fill every vacancy within the quarter (`hiring_speed = 1`), nobody separates
-(`random_firing_probability = 0`), no quits. The work-effort cap (G12) at 1.1–1.5 barely
-matters: the real problem is that even with work-effort frozen, employment rises 11.5% in two
-years.
+`SearchFrictionsLabourMarketClearer` (MD11): 3% of employees separate each quarter and a matching function
+caps hires; μ makes the initial 10.3% unemployment a steady state (job-finding rate 0.21 per quarter).
+- **On today's defaults the frictions are neutral:** unemployment stays at 10.3%, with about 3% of
+  employment hired and separated each quarter.
+- **Under the growth engine they slow the fall in unemployment but do not stop it:** 10.3% → 2.0% after
+  five years (no frictions: 0%), and 1.3–1.9% for s = 0.02–0.04. A matching elasticity of 0.7 keeps 4.7%.
+  GDP grows 0.6–0.7%/q as before, but more slowly in the last two years (0.2–0.4%/q vs 0.5%) because
+  firms cannot fill all vacancies.
+- **Why:** labour productivity is constant, so the engine's output growth needs proportionally more
+  workers (about 0.5% more each quarter), and the labour force is fixed. Frictions only delay hiring.
+  Unfilled vacancies stay open and pile up, and more vacancies raise the number of matches (a Beveridge
+  curve), so unemployment keeps falling. Holding it near 9% while GDP grows 0.6%/q needs output per
+  worker to grow (G14) or labour demand to respond to tightness through wages and prices (G8, P5).
 
-**Plan:** Build G13 as a switchable labour market clearer with:
-1. **Separations** at 3–4% per quarter (adjust `random_firing_probability`; mechanism
-   already exists).
-2. **Matching function** (Cobb-Douglas, Poledna-style) capping hires per period based on
-   unemployed and vacancy stock. Calibrate to French flows so steady-state job finding ≈
-   separation rate.
-3. **Work-effort cap** at a realistic ~1.1 (G12, already a setting).
+### Next step
 
-Test on exp010: `investment_engine(adjustment_speed=0.25, demand_smoothing=0.10)` with
-frictions enabled. Target: unemployment stays near 8–10% while GDP grows steadily at ~0.7%/q.
-
-Then:
-- **P5** (Phase 3): cost pass-through in prices, so wage tightness (G8) brakes the engine.
-- **G9** (Phase 2 then Phase 3): realistic bank lending limits.
-- Merge **MD10** and **G13** as defaults once stable.
+1. **G14**: labour productivity growth, so that output can grow without hiring the whole labour force.
+   A TFP module exists (`productivity_growth`, default `NoOpTFPGrowth`); check it and test it on exp010's
+   engine + frictions.
+2. **P5** (Phase 3): cost pass-through in prices, so wage tightness (G8) brakes the engine.
+3. **G9** (Phase 2 then Phase 3): realistic bank lending limits.
+4. Make **MD10** and **MD11** the defaults once unemployment stays plausible under growth.
 
 Every known problem, fixed or open, is in the Issue register below.
 
@@ -331,7 +333,8 @@ commit messages (e.g. `G1:`).
 | G10 | Desired capital followed current planned output, booms included: multiplier–accelerator cycles | Spec | ours | exp008: sizing desired capital on smoothed planned output (`demand_smoothing` 0.10) gives steady growth of 0.7%/q (data 0.6%) with no bust | fix built (option) | — |
 | G11 | Spare capacity alone sends unemployment from 10% to 4% within five years | Question | ours | exp006 step 2 (see G6) | open: check labour demand vs planned output | P2 |
 | G12 | Work effort can raise output per worker by up to 50% (`max_increase_in_work_effort = 1.5`) | Spec | ours | exp009: not why unemployment hits 0% (caps of 1.05–1.2 change little within 5 years); effort rises 7% once all workers are hired | open: set a realistic cap (~1.1) with G13 | P2 |
-| G13 | The labour market has no frictions: firms fill every vacancy within the quarter (`hiring_speed = 1`), nobody separates (`random_firing_probability = 0`), no quits; so a boom hires the whole unemployed pool and unemployment goes to 0% | Spec | ours | exp009: employment +11.5% in two years, unemployment 10.3% → 0% | open: search frictions (separations and a matching function calibrated to French flows) | P1 |
+| G13 | The labour market has no frictions: firms fill every vacancy within the quarter (`hiring_speed = 1`), nobody separates (`random_firing_probability = 0`), no quits; so a boom hires the whole unemployed pool and unemployment goes to 0% | Spec | ours | exp009: employment +11.5% in two years, unemployment 10.3% → 0% | partial: `SearchFrictionsLabourMarketClearer` (MD11, option); exp010: unemployment 10.3% → 2% under the engine, because of G14 | P1 |
+| G14 | Labour productivity does not grow (`NoOpTFPGrowth`), so every percent of output growth needs a percent more workers from a fixed labour force | Spec | ours | exp010: with search frictions, the engine's 0.6%/q growth still runs unemployment down to 2% | open: test the existing TFP growth module | P1 |
 
 ### P. Prices, expectations and monetary policy
 
@@ -374,6 +377,7 @@ commit messages (e.g. `G1:`).
 | S25 | Household default rule wrote off a household's whole debt at its first overdraft when underwater | Spec | ours | — | partial (MD8): default only when unable to pay; still 10–18 defaults/quarter (~2%/yr, real <1%); no collateral recovered yet | P2 |
 | S26 | Household consumption jumps about 4.6% in the first quarter, then settles | Question | ours | exp001 figure; household consumption ratio 2.96 under MD9 | open: initial consumption vs income | P2 |
 | S27 | Regression from S12: firms' wage bill lost its CPI factor, so nominal wages were frozen and real wages fell with prices | Bug | ours | the wage setter pays real wages; the CPI factor belonged on the employees' side | done: employees receive real wage × CPI, firms pay the gross-up of that | — |
+| S28 | The baseline's accounting report shows a firm-loan borrower ledger residual of 3.5% of GDP (seed 7, t = 8) and unexplained money of 1.4%, although "Current state" says every ledger agrees exactly and unexplained money is at most 1.2% | Question | ours | `make baseline` at `7a8ac4d` and after MD11 (identical) | open | P2 |
 
 ### M. Markets and trade
 
@@ -389,6 +393,7 @@ commit messages (e.g. `G1:`).
 | M8 | Rent-value regression swapped and fitted through one point | Bug | ours | — | done `21f1f2b`; report upstream (E9) | — |
 | M9 | Houses change hands far too often: about 12% of the stock per quarter (real: about 1%), 800–1,400 bn of sales per quarter | Spec | ours | Phase 1 decomposition | open | P2 |
 | M10 | Interest on existing loans was an annual rate charged every quarter (4×) | Bug | upstream | now: firm loans 1.0%/yr, consumer loans 4.8%/yr, mortgages 2.3%/yr | done: upstream #83 and #85 merged (`40c8a1e`, `f12f78b`) | — |
+| M11 | Poledna layoffs reported the sum of every firm's excess employees, negative ones included, as the number fired (−hires under search frictions); only the reported flows (`num_individuals_newly_fired`, `job_reallocation_rate`) were wrong | Bug | ours | exp010 | done: counts the workers actually fired, with test | — |
 
 ### F. Government and finance
 

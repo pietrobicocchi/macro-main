@@ -13,7 +13,7 @@ class Clearing(BaseModel):
     - Cost considerations
 
     The configuration supports:
-    - Multiple clearing strategies (None, Default, Poledna)
+    - Multiple clearing strategies (None, Default, Poledna, SearchFrictions)
     - Employment target handling
     - Industry switching rules
     - Wage considerations
@@ -35,12 +35,16 @@ class Clearing(BaseModel):
             - optimised_hiring (bool): Use optimized hiring strategy
             - random_firing_probability (float): Random termination chance
             - sorted_firing (bool): Use ordered termination
+            - matching_efficiency, matching_elasticity (float): SearchFrictionsLabourMarketClearer only
         path_name (str): Module path for clearing functions
     """
 
-    name: Literal["NoLabourMarketClearer", "DefaultLabourMarketClearer", "PolednaLabourMarketClearer"] = (
-        "PolednaLabourMarketClearer"
-    )
+    name: Literal[
+        "NoLabourMarketClearer",
+        "DefaultLabourMarketClearer",
+        "PolednaLabourMarketClearer",
+        "SearchFrictionsLabourMarketClearer",
+    ] = "PolednaLabourMarketClearer"
     parameters: dict[str, Any] = {
         "compare_with_normalised_inputs": True,
         "round_target_employment": True,

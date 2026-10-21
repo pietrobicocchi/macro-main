@@ -149,3 +149,29 @@ def work_effort_cap(c: CountryConfiguration, cap: float = 1.1) -> None:
     """Most extra output per worker from effort and overtime (G12; default allows +50%)."""
     p = c.firms.functions.labour_productivity.parameters
     c.firms.functions.labour_productivity.parameters = {**p, "max_increase_in_work_effort": cap}
+
+
+def search_frictions(
+    c: CountryConfiguration,
+    separation_rate: float = 0.03,
+    matching_elasticity: float = 0.5,
+    unemployment_rate: float = 0.103,
+) -> None:
+    """Labour-market search frictions (G13): a share of employees separates into unemployment each quarter, and hires
+    are capped by a Cobb-Douglas matching function M = mu U^alpha V^(1 - alpha).
+
+    mu makes `unemployment_rate` (France at t=0) a steady state. There, firms' vacancies are the replacements for
+    separations, V = s E, the job seekers are the unemployed plus the newly separated, U + s E, and the market fills
+    every vacancy, M = V. So mu = (V / (U + V))^alpha, and a job seeker finds a job within the quarter with
+    probability V / (U + V) (0.21 at s = 0.03). alpha = 0.5 is the middle of the Petrongolo-Pissarides (2001) range.
+    """
+    u = unemployment_rate
+    job_finding_rate = separation_rate * (1.0 - u) / (u + separation_rate * (1.0 - u))
+    c.labour_market.functions.clearing.name = "SearchFrictionsLabourMarketClearer"
+    p = c.labour_market.functions.clearing.parameters
+    c.labour_market.functions.clearing.parameters = {
+        **p,
+        "random_firing_probability": separation_rate,
+        "matching_efficiency": job_finding_rate**matching_elasticity,
+        "matching_elasticity": matching_elasticity,
+    }

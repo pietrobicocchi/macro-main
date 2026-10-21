@@ -70,7 +70,8 @@ def simulate(
     quarters: int,
     audit: list[pd.DataFrame] | None = None,
 ) -> pd.DataFrame:
-    """One run; returns quarterly real growth rates, CPI inflation, unemployment and policy rate for t = 1..quarters.
+    """One run; returns quarterly real growth rates, CPI inflation, unemployment, policy rate and labour flows (hires
+    and separations as shares of employment) for t = 1..quarters.
 
     If `audit` is a list, the run's accounting report (macromodel.accounting) is appended to it.
     """
@@ -99,6 +100,13 @@ def simulate(
     out["CPI Inflation"] = series("cpi")[1:] / series("cpi")[:-1] - 1.0
     out["Unemployment Rate"] = np.asarray(country.economy.unemployment_rate(), dtype=float).ravel()[1:]
     out["Policy Rate"] = np.asarray(country.central_bank.ts.get_aggregate("policy_rate"), dtype=float).ravel()[1:]
+    labour = country.labour_market.ts
+    employed = np.asarray(labour.get_aggregate("num_employed_individuals_before_clearing"), dtype=float).ravel()[1:]
+    for flow, name in [
+        ("Hiring Rate", "num_individuals_newly_joining"),
+        ("Separation Rate", "num_individuals_newly_leaving"),
+    ]:
+        out[flow] = np.asarray(labour.get_aggregate(name), dtype=float).ravel()[1:] / employed
     n = min(len(v) for v in out.values())
     df = pd.DataFrame({k: v[:n] for k, v in out.items()})
     df.insert(0, "t", np.arange(1, n + 1))

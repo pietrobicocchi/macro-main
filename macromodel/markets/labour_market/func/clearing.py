@@ -9,6 +9,7 @@ Key Components:
    - Default clearing with productivity-based matching
    - No-op clearing for testing
    - Poledna-style clearing with optimized matching
+   - Search frictions: separations and a matching function capping hires
    - Random and deterministic firing mechanisms
 
 2. Employment Dynamics:
@@ -980,29 +981,7 @@ class PolednaLabourMarketClearer(LabourMarketClearer):
             hiring_speed=self.hiring_speed,
             hiring_cost_fraction=self.hiring_cost_fraction,
         )
-
-        for employment, hires in zip(firm_employments, new_hires):
-            employment.extend(hires)
-            current_individuals_activity[hires] = ActivityStatus.EMPLOYED
-
-        # Sanity check
-        no_zero_employees = np.all(
-            np.bincount(
-                individuals_corresponding_firm[individuals_corresponding_firm >= 0],
-                minlength=firms.ts.current("n_firms"),
-            )
-            > 0
-        )
-        assert no_zero_employees
-
-        # Update individuals activity status
-        current_individuals_activity[
-            np.logical_and(
-                current_individuals_activity != ActivityStatus.NOT_ECONOMICALLY_ACTIVE,
-                individuals_corresponding_firm < 0,
-            )
-        ] = ActivityStatus.UNEMPLOYED
-        current_individuals_activity[individuals_corresponding_firm >= 0] = ActivityStatus.EMPLOYED
+        record_new_hires(firms, individuals, new_hires)
 
         return (
             firing_costs_random_firing + firing_costs_regular + hiring_costs_regular,
@@ -1011,6 +990,191 @@ class PolednaLabourMarketClearer(LabourMarketClearer):
             num_newly_randomly_quit,
             num_newly_fired,
         )
+
+
+class SearchFrictionsLabourMarketClearer(LabourMarketClearer):
+    """Poledna-style clearing with separations and a matching function (G13).
+
+    Each quarter a fraction `random_firing_probability` of employees separate into unemployment, and firms post
+    vacancies for the gap between desired and remaining labour, replacements included. Hires are limited by a
+    Cobb-Douglas matching function of the unemployed U and the vacancies V,
+
+        M = min(U, V, matching_efficiency * U^matching_elasticity * V^(1 - matching_elasticity)),
+
+    so each vacancy is filled with probability M / V. Unfilled vacancies stay open: firms post them again next
+    quarter while desired labour exceeds their workforce. Layoffs of excess workers are as in
+    `PolednaLabourMarketClearer`.
+    """
+
+    def __init__(self, matching_efficiency: float, matching_elasticity: float, **kwargs):
+        super().__init__(**kwargs)
+        self.matching_efficiency = matching_efficiency
+        self.matching_elasticity = matching_elasticity
+
+    def matches(self, unemployed: float, vacancies: float) -> float:
+        """Number of matches the market makes in one quarter."""
+        if unemployed <= 0 or vacancies <= 0:
+            return 0.0
+        alpha = self.matching_elasticity
+        return min(unemployed, vacancies, self.matching_efficiency * unemployed**alpha * vacancies ** (1.0 - alpha))
+
+    def clear(
+        self,
+        firms: Firms,
+        households: Households,
+        individuals: Individuals,
+    ) -> tuple[np.ndarray, int, int, int, int]:
+        """Clear the market: separations, layoffs, then hires capped by the matching function.
+
+        Args:
+            firms: Firm agents with labour demand
+            households: Household agents
+            individuals: Individual agents
+
+        Returns:
+            tuple containing:
+            - np.ndarray: Total labour costs by firm
+            - int: Number of new hires
+            - int: Number of random firings
+            - int: Number of voluntary quits
+            - int: Number of regular firings
+        """
+        if self.compare_with_normalised_inputs:
+            prev_labour_inputs = firms.ts.current("normalised_labour_inputs")
+        else:
+            prev_labour_inputs = firms.ts.current("labour_inputs")
+        desired_labour_inputs = firms.ts.current("desired_labour_inputs")
+        current_individuals_activity = individuals.states["Activity Status"]
+        prev_individuals_productivity = individuals.ts.current("labour_inputs")
+        individuals_corresponding_firm = individuals.states["Corresponding Firm ID"]
+        firm_employments = firms.states["Employments"]
+        current_individual_wages = individuals.ts.current("employee_income")
+        firm_industries = firms.states["Industry"]
+        average_industry_productivity = firms.states["Labour Productivity by Industry"]
+        n_firms = prev_labour_inputs.shape[0]
+
+        def employees_labour() -> np.ndarray:
+            employed = individuals_corresponding_firm >= 0
+            return np.bincount(
+                individuals_corresponding_firm[employed],
+                weights=prev_individuals_productivity[employed],
+                minlength=n_firms,
+            )
+
+        labour_before_separations = employees_labour()
+
+        # Separations into unemployment
+        firing_costs_random_firing, num_newly_randomly_fired = random_firing(
+            number_of_firms=n_firms,
+            current_individuals_activity=current_individuals_activity,
+            individuals_corresponding_firm=individuals_corresponding_firm,
+            firm_employments=firm_employments,
+            current_individual_wages=current_individual_wages,
+            random_firing_probability=self.random_firing_probability,
+            firing_cost_fraction=self.firing_cost_fraction,
+        )
+        if self.individuals_quitting:
+            num_newly_randomly_quit = random_quitting(
+                current_individuals_activity=current_individuals_activity,
+                individuals_corresponding_firm=individuals_corresponding_firm,
+                firm_employments=firm_employments,
+                current_individual_wages=current_individual_wages,
+                current_household_wealth=households.ts.current("wealth"),
+                individuals_corresponding_household=individuals.states["Corresponding Household ID"],
+                individuals_quitting_temperature=self.individuals_quitting_temperature,
+            )
+        else:
+            num_newly_randomly_quit = 0
+
+        # Firms see the labour they lost, so separations open vacancies within the quarter
+        remaining_share = np.divide(
+            employees_labour(),
+            labour_before_separations,
+            out=np.ones(n_firms),
+            where=labour_before_separations > 0,
+        )
+        labour_inputs_after_separations = prev_labour_inputs * remaining_share
+
+        # Layoffs of workers firms no longer want
+        firing_costs_regular, num_newly_fired = firing(
+            individuals_corresponding_firm=individuals_corresponding_firm,
+            prev_individuals_productivity=prev_individuals_productivity,
+            desired_labour_inputs=desired_labour_inputs,
+            prev_labour_inputs=labour_inputs_after_separations,
+            current_individual_wages=current_individual_wages,
+            firm_industries=firm_industries,
+            average_industry_productivity=average_industry_productivity,
+            firing_speed=self.firing_speed,
+            firing_cost_fraction=self.firing_cost_fraction,
+        )
+
+        # Vacancies (rounded like layoffs, so a firm replaces a worker it lost), matches, and hires: each vacancy is
+        # filled with probability M / V
+        vacancies = np.maximum(
+            0.0,
+            np.round(
+                self.hiring_speed
+                * (desired_labour_inputs - labour_inputs_after_separations)
+                / average_industry_productivity[firm_industries]
+            ),
+        )
+        economically_active = np.logical_not(current_individuals_activity == ActivityStatus.NOT_ECONOMICALLY_ACTIVE)
+        job_seekers = np.logical_and(individuals_corresponding_firm == -1, economically_active)
+        n_vacancies = vacancies.sum()
+        fill_rate = self.matches(job_seekers.sum(), n_vacancies) / n_vacancies if n_vacancies > 0 else 0.0
+        hires = np.random.binomial(vacancies.astype(np.int64), fill_rate).astype(np.float64)
+
+        individuals.states["Offered Wage of Accepted Job"] = np.zeros(len(current_individuals_activity))
+        hiring_costs_regular, num_newly_joining, new_hires = fill_vacancies(
+            extra_employees=hires,
+            individuals_corresponding_firm=individuals_corresponding_firm,
+            current_ind_ea=economically_active,
+            offered_wage=individuals.states["Offered Wage of Accepted Job"],
+            hiring_cost_fraction=self.hiring_cost_fraction,
+        )
+        record_new_hires(firms, individuals, new_hires)
+
+        return (
+            firing_costs_random_firing + firing_costs_regular + hiring_costs_regular,
+            num_newly_joining,
+            num_newly_randomly_fired,
+            num_newly_randomly_quit,
+            num_newly_fired,
+        )
+
+
+def record_new_hires(firms: Firms, individuals: Individuals, new_hires: list) -> None:
+    """Add new hires to their firms' employee lists and update everyone's activity status.
+
+    Args:
+        firms: Firm agents
+        individuals: Individual agents, with `Corresponding Firm ID` already set for hires and layoffs
+        new_hires: Lists of new hires by firm
+    """
+    current_individuals_activity = individuals.states["Activity Status"]
+    individuals_corresponding_firm = individuals.states["Corresponding Firm ID"]
+    for employment, hires in zip(firms.states["Employments"], new_hires):
+        employment.extend(hires)
+        current_individuals_activity[hires] = ActivityStatus.EMPLOYED
+
+    # Sanity check
+    no_zero_employees = np.all(
+        np.bincount(
+            individuals_corresponding_firm[individuals_corresponding_firm >= 0],
+            minlength=firms.ts.current("n_firms"),
+        )
+        > 0
+    )
+    assert no_zero_employees
+
+    # Update individuals activity status
+    current_individuals_activity[
+        np.logical_and(
+            current_individuals_activity != ActivityStatus.NOT_ECONOMICALLY_ACTIVE,
+            individuals_corresponding_firm < 0,
+        )
+    ] = ActivityStatus.UNEMPLOYED
+    current_individuals_activity[individuals_corresponding_firm >= 0] = ActivityStatus.EMPLOYED
 
 
 @njit
@@ -1053,6 +1217,7 @@ def firing(
         numpy arrays for efficiency.
     """
     firing_costs = np.zeros(desired_labour_inputs.shape)
+    num_newly_fired = 0
     excess_employees = np.round(
         firing_speed
         * (
@@ -1072,7 +1237,8 @@ def firing(
         )
         individuals_corresponding_firm[ind_firing] = -1
         firing_costs[firm_id] += firing_cost_fraction * current_individual_wages[ind_firing].sum()
-    return firing_costs, int(excess_employees.sum())  # noqa
+        num_newly_fired += ind_firing.shape[0]
+    return firing_costs, num_newly_fired
 
 
 @njit
@@ -1123,14 +1289,45 @@ def hiring(
         performance optimization. The function operates directly on
         numpy arrays and uses numba-compatible data structures.
     """
-    hiring_costs, num_newly_joining = (
-        np.zeros_like(desired_labour_inputs, np.float64),
-        0,
-    )
     extra_employees = np.floor(
         hiring_speed * (desired_labour_inputs - prev_labour_inputs) / average_industry_productivity[firm_industries]
     )
+    return fill_vacancies(
+        extra_employees=extra_employees,
+        individuals_corresponding_firm=individuals_corresponding_firm,
+        current_ind_ea=current_ind_ea,
+        offered_wage=offered_wage,
+        hiring_cost_fraction=hiring_cost_fraction,
+    )
 
+
+@njit
+def fill_vacancies(
+    extra_employees: np.ndarray,
+    individuals_corresponding_firm: np.ndarray,
+    current_ind_ea: np.ndarray,
+    offered_wage: np.ndarray,
+    hiring_cost_fraction: float,
+) -> Tuple[np.ndarray, int, list]:
+    """Each firm hires its number of extra employees at random from the economically active unemployed.
+
+    Args:
+        extra_employees: Number of workers each firm hires
+        individuals_corresponding_firm: Array mapping workers to firms
+        current_ind_ea: Array indicating economically active workers
+        offered_wage: Array to store offered wages
+        hiring_cost_fraction: Hiring costs as fraction of wage
+
+    Returns:
+        tuple:
+        - np.ndarray: Hiring costs by firm
+        - int: Total number of new hires
+        - list: Lists of new hires by firm
+    """
+    hiring_costs, num_newly_joining = (
+        np.zeros(extra_employees.shape, np.float64),
+        0,
+    )
     new_hires = List()
     for _ in range(len(extra_employees)):
         new_hires.append(List.empty_list(int64))
