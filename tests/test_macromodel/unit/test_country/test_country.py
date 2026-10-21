@@ -42,6 +42,7 @@ class TestCountry:
             t_max=12,
             time_unit=datawrapper.time_unit,
             running_multiple_countries=False,
+            time_unit=datawrapper.configuration.time_unit,
             emission_factors_usd=emission_factors,
         )
 
