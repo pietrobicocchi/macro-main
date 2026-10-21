@@ -30,7 +30,8 @@ leaves `sim / AR(1)` above 1 for GDP and inflation.
 ## Success metric
 
 `make baseline` scorecard: `sim / AR(1)` RMSE ratio (median seed, 12 quarters,
-France) for the five aggregates. Gates, in order:
+France) for the five aggregates. The four real aggregates are scored against Eurostat chain-linked volumes
+(since 2026-10-21, R4; before, nominal data deflated by PPI or CPI). Gates, in order:
 
 1. **Accounts gate:** the accounting checks (S1) pass every quarter.
 2. **Sanity gate:** no systematic drift. Mean simulated growth is within 0.5 pp/quarter
@@ -44,6 +45,7 @@ France) for the five aggregates. Gates, in order:
 | Dataset | Role | Location | Notes |
 | --- | --- | --- | --- |
 | Sample raw data | canonical (for now) | `tests/test_macro_data/unit/sample_raw_data` | Real OECD/Eurostat/ICIO/IMF; **spoofed** HFCS and Compustat |
+| Eurostat `namq_10_gdp`, France, chain-linked volumes (`CLV10_MEUR`, SCA), 1999–2019 | scoring target for real aggregates (R4) | `tests/test_macro_data/unit/sample_raw_data/eurostat/namq_10_gdp_clv.csv` | downloaded 2026-10-21 from the Eurostat API (URL in `scoring.py`); not read by the data pipeline |
 | Real HFCS / Compustat | needed for paper claims | not on this machine | confidential |
 | Full raw data, 2010–2017, 38 countries | needed from roadmap phase 5 | not on this machine (D1) | `~/Documents/dev/phd/datasets` is empty |
 
@@ -113,12 +115,14 @@ looking at the result. This is the raw material for the rewritten model section.
 | exp017 | Is the growth engine ready to be the default, on the new defaults? | done | It passes the sanity gate, the first configuration to do so: unemployment 9.9% at q12 and 8.5% at q20 (data 9.4%, 8.4%), growth 0.2–0.4%/q, GDP ratio 1.14 (defaults 1.18); but investment 2.50 (lumpy, seed-to-seed), HH cons., gov. cons. and CPI worse. Spare capacity is needed. `outputs/exp017_engine_on_new_defaults/` |
 | exp018 | With many firms, is the growth engine's investment less lumpy? | done | Barely: investment ratio 2.50 → 2.39 with 408 firms, so the poor investment forecast is the engine's dynamics (early burst, 1.1%/q vs 0.8%), not lumpiness; unemployment 9.6% at q12 and 8.4% at q20 (data 9.4%, 8.4%). `outputs/exp018_engine_many_firms/` |
 | exp019 | Do financing limits with realistic bank lending limits tame the engine's investment? | done | No: with the paper's bank limits alone the investment ratio is 2.34 (2.50 without); with capital purchases cut by unmet credit the economy goes into recession (unemployment 16–18%). Only 2 of 18 firms want long-term credit and both already owe more than their capital is worth (spoofed balance sheets, D1). `outputs/exp019_financing_limits/` |
+| exp020 | Why is the growth engine's investment forecast poor? | done | The random draw in firms' growth forecast and in the government's spending path (P3): without it investment volatility falls from 2.5% to 0.7%/q within a run; with a slower gap adjustment (λ 0.10) too (candidate C), scored against volumes: GDP **0.98**, HH cons. 1.08, gov. cons. 1.89, invest. 1.08, CPI **0.86**, unemployment 10.0% / 9.4% at q12 / q20. `outputs/exp020_engine_investment/` |
 
 ### Baseline scorecard history
 
 `make baseline` run after each change on `main`: `sim / AR(1)` RMSE ratio, plus the
-mean quarterly real GDP growth (data: +0.64%) and the median unemployment rate after
-12 quarters (data: ~10%).
+mean quarterly real GDP growth (data: +0.28% in chain-linked volumes; +0.64% deflated by PPI, the target
+before R4) and the median unemployment rate after 12 quarters (data: 9.4%). Rows above the R4 line are
+scored against PPI- or CPI-deflated data.
 
 | State of `main` | GDP | HH cons. | Gov. cons. | Invest. | CPI | GDP growth | Unemp. q12 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -135,6 +139,7 @@ mean quarterly real GDP growth (data: +0.64%) and the median unemployment rate a
 | + S27 wages indexed to CPI again | 1.14 | 2.85 | 2.05 | 1.20 | 1.84 | −0.04% | 10.3% |
 | + MD14 cost pass-through, yearly wage catch-up, no consumption floor | 1.26 | **1.52** | 2.26 | **1.13** | 1.20 | −0.13% | 11.2% |
 | + income-weighted average saving rate (S26) | **1.18** | **1.38** | 2.20 | 1.14 | **1.09** | −0.07% | 10.7% |
+| R4: same model, scored against chain-linked volumes | 1.50 | 2.32 | 6.70 | 1.11 | 1.09 | −0.07% | 10.7% |
 
 ## What we have learned
 
@@ -267,7 +272,9 @@ Paper settings added cumulatively to the defaults as they were with 5% price noi
 Default settings, 10 seeds, 12 quarters, France 2014:
 - **Scorecard** (`sim / AR(1)`): GDP 1.18, HH cons. 1.38, gov. cons. 2.20, investment 1.14, CPI 1.09.
   Every ratio is still above 1; household consumption and CPI are the best so far.
-- **No growth**: real GDP −0.07%/q (data +0.64%, overstated by R4). The growth engine (MD10–MD13) is
+- **Against chain-linked volumes (R4)** the same runs score GDP 1.50, HH cons. 2.32, gov. cons. 6.70,
+  investment 1.11: the real series are smooth, so the AR(1) benchmark is harder to beat.
+- **No growth**: real GDP −0.07%/q (data +0.28% in volumes). The growth engine (MD10–MD13) is
   built as options and tracks unemployment, but grows only 0.2%/q in its first three years (exp016).
 - **Unemployment** 10.7% after 12 quarters (data ~9.4%): inside the sanity gate's 2 pp.
 - **Accounts**: every loan and deposit ledger agrees exactly (S28 fixed); unexplained money at most 1.5%
@@ -408,6 +415,42 @@ On exp011's engine (frictions, productivity +0.25%/q), with two forecasts of gro
   2.39, so the cause is the engine's dynamics, not one firm per industry.
 - **Spare capacity is necessary:** without it the engine has no room to grow and unemployment rises.
 
+### Scoring against chain-linked volumes (R4)
+
+- **Deflating by PPI overstated growth and added noise.** France's real GDP grew 0.28%/q over 2014-Q2–2017-Q1
+  in chain-linked volumes, against 0.64%/q as nominal GDP over PPI (falling oil prices pulled the PPI down);
+  investment 0.42% against 0.79%. The quarterly standard deviation of GDP growth is 0.33% in volumes and
+  1.05% deflated by PPI, and the two series are uncorrelated (0.05). Consumption deflated by CPI was close.
+- **So the AR(1) benchmark gets harder**, and the model's own quarter-to-quarter noise, hidden before by the
+  noisy target, dominates its errors: the growth engine (B) has the right average growth (0.18%/q against
+  0.28%) but GDP 2.54 and government consumption 7.27.
+- The simulated side is unchanged: the model's nominal series over its own price index (one price per good).
+  The data pipeline still deflates by PPI for firms' growth expectations; over 2000–2013 the two measures
+  agree on average (0.28% against 0.32%/q).
+
+### Noise in the growth engine (exp020, 10 seeds, 20 quarters, ratios over the first 12, against volumes)
+
+| | GDP | HH cons. | Gov. cons. | Invest. | CPI | Growth/q (12q / 20q) | Unemp. q12 / q20 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| defaults | 1.50 | 2.32 | 6.70 | 1.11 | 1.09 | −0.1 / −0.1% | 10.7 / 10.7% |
+| defaults without forecast noise | 1.41 | 1.27 | 2.15 | 1.05 | 0.86 | −0.0 / −0.0% | 10.3 / 10.3% |
+| B (λ 0.25) | 2.54 | 2.31 | 7.27 | 3.36 | 1.25 | 0.2 / 0.3% | 9.9 / 8.5% |
+| B without forecast noise | 0.99 | 1.04 | 2.49 | 1.48 | 0.86 | 0.2 / 0.3% | 9.8 / 9.0% |
+| B, λ 0.10 | 2.49 | 2.25 | 7.33 | 1.86 | 1.09 | 0.2 / 0.3% | 9.8 / 8.7% |
+| **C: B, λ 0.10, without forecast noise** | **0.98** | 1.08 | 1.89 | 1.08 | **0.86** | 0.2 / 0.2% | 10.0 / 9.4% |
+| data | | | | | | 0.28 / 0.39% | 9.4 / 8.4% |
+
+- **Hypothesis (recorded before running) confirmed:** with `assume_zero_noise=False` each AR(1) forecast
+  (growth, inflation) adds a random draw the size of its historical residual every quarter, and the
+  government's spending path is one simulated AR(1) path with such draws. The flexible accelerator turns a
+  1% change in expected demand into about λ × K/Y of investment. Quarter-1 investment growth ranges from
+  −14% to +15% across seeds in B, +1% to +2% in C.
+- **C is the first configuration with ratios below 1** (GDP, CPI) and it passes the sanity gate. Government
+  consumption (1.89) is the one ratio far above 1.
+- On the old PPI-deflated target the ranking is the same (C: GDP 1.06, HH 1.08, gov. 1.02, invest. 1.00,
+  CPI 0.86); `outputs/exp020_engine_investment/summary.csv` was written on that target, before R4, and the
+  table above rescores its saved series.
+
 ### Next step
 
 1. **Decision (needs approval): make B the default.** It passes the sanity gate, which comes before the
@@ -444,7 +487,7 @@ commit messages (e.g. `G1:`).
 | R1 | The code, configs and posterior samples behind the paper's results are not in this repo | Data | both | Sam's scripts use separate `inet-macro-*` repos and parameters that never existed here | closed: not obtainable; everything is built from this code | — |
 | R2 | No calibration in use; every behavioural parameter is a hand-set default | Gap | both | "Parameters in use" | open; after G1–G3 | P1 |
 | R3 | Calibration and specification problems are hard to tell apart | Question | CB7 | Approach: ablations against a fixed scorecard (exp002–004) | partial | P2 |
-| R4 | Scoring differs from the paper: GDP deflated by PPI (macro_data's "Real GDP" too, +2.6%/yr vs ~1% official), one country, one start date | Spec | ours | exp001; `exogenous_data.py:375` divides nominal growth by PPI inflation; the sample's `namq_10_gdp.csv` has current prices only (`CP_MNAC`) | blocked on data: needs the chain-linked volume series (Eurostat `namq_10_gdp`, unit `CLV10_MEUR`) | P2 |
+| R4 | Scoring differs from the paper: GDP deflated by PPI (macro_data's "Real GDP" too, +2.6%/yr vs ~1% official), one country, one start date | Spec | ours | exp001; `exogenous_data.py:375` divides nominal growth by PPI inflation | fixed for scoring: real aggregates scored against Eurostat chain-linked volumes (`scoring.observed`, `volumes=False` for the old target); firms' growth expectations still use the PPI-deflated history; one country, one start date remain | P3 |
 | R5 | `macrocalib` is untested and excluded from the test suite | Infra | ours | pytest `addopts` | open | P3 |
 | R6 | Differentiable version of the model | Gap | CB7 | Matias investigating | not ours now | P3 |
 
@@ -476,7 +519,7 @@ commit messages (e.g. `G1:`).
 | --- | --- | --- | --- | --- | --- | --- |
 | P1 | 5% per-firm price noise dominated the dynamics | Spec | ours | exp002 | done `60948b7` (0.0005) | — |
 | P2 | Realised inflation equals the AR(1) forecast (self-fulfilling; referee R2.4) | Question | ours | exp003 | open | P2 |
-| P3 | Forecast noise draw roughly doubles the inflation error: keep (paper) or drop? | Question | ours | exp003: CPI ratio 1.8 → 0.95 without it | decision pending | P2 |
+| P3 | Forecast noise draw roughly doubles the inflation error: keep (paper) or drop? | Question | ours | exp003: CPI ratio 1.8 → 0.95 without it; exp020: it drives the growth engine's investment volatility (quarter-1 investment −14% to +15% across seeds) and the government's spending path | decision pending | P1 |
 | P4 | Taylor rule inert (zero by quarter 3), constant rate by default, and a TODO says `xi_pi` is estimated wrongly | Bug | ours | exp001; `default_synthetic_central_bank.py:168` | open; see upstream #83 | P2 |
 | P5 | Firms did not pass cost increases into prices (cost-push weight 0) | Spec | ours | exp007; exp012, exp013, exp015 | done: half pass-through by default (MD14) | — |
 | P6 | Cost-push inflation compared unit costs with the sector's price level, so it pulled prices down to costs (−10%/q) instead of passing on cost changes | Bug | ours | unit cost / price 0.895 at t=1; Sam's prior notes "prices cause shit to break" | done: uses unit-cost growth, with test | — |

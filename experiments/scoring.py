@@ -26,14 +26,18 @@ COUNTRY = "FRA"
 START = pd.Timestamp("2014-01-01")
 AR1_FIT_START = pd.Timestamp("2000-07-01")
 
-# aggregate -> (simulated nominal series, deflator, observed nominal column).
-# Model and data are deflated the same way (nominal / price index) so the comparison is like-for-like.
+# aggregate -> (simulated nominal series, deflator, observed nominal column, Eurostat volume item).
+# The model's volumes are its nominal series over its own price index (one price per good). The data's are Eurostat
+# chain-linked volumes (R4): nominal / PPI in the data overstates real GDP growth (0.64%/q against 0.28%/q in 2014-16).
 AGGREGATES = {
-    "Real GDP": ("gdp_output", "ppi", "GDP"),
-    "Real Household Cons.": ("total_household_fce", "cpi", "Household Consumption"),
-    "Real Government Cons.": ("total_government_fce", "cpi", "Government Consumption"),
-    "Real Investment": ("total_gross_fixed_capital_formation", "ppi", "Gross Fixed Capital Formation"),
+    "Real GDP": ("gdp_output", "ppi", "GDP", "B1GQ"),
+    "Real Household Cons.": ("total_household_fce", "cpi", "Household Consumption", "P31_S14_S15"),
+    "Real Government Cons.": ("total_government_fce", "cpi", "Government Consumption", "P3_S13"),
+    "Real Investment": ("total_gross_fixed_capital_formation", "ppi", "Gross Fixed Capital Formation", "P51G"),
 }
+# France, chain-linked volumes (2010 euros), seasonally and calendar adjusted; downloaded 2026-10-21 from
+# https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/namq_10_gdp/Q.CLV10_MEUR.SCA.B1GQ+P31_S14_S15+P31_S14+P3_S13+P51G.FR/?format=SDMX-CSV&startPeriod=1999-Q1&endPeriod=2019-Q4
+VOLUMES = RAW_DATA / "eurostat/namq_10_gdp_clv.csv"
 SCORED = [*AGGREGATES, "CPI Inflation", "Unemployment Rate"]
 
 
@@ -94,7 +98,7 @@ def simulate(
         return np.asarray(ts.get_aggregate(name), dtype=float).ravel()
 
     out = {}
-    for agg, (nominal, deflator, _) in AGGREGATES.items():
+    for agg, (nominal, deflator, *_) in AGGREGATES.items():
         real = series(nominal) / series(deflator)
         out[agg] = real[1:] / real[:-1] - 1.0
     out["CPI Inflation"] = series("cpi")[1:] / series("cpi")[:-1] - 1.0
@@ -114,12 +118,15 @@ def simulate(
     return df
 
 
-def observed(data: DataWrapper) -> pd.DataFrame:
+def observed(data: DataWrapper, volumes: bool = True) -> pd.DataFrame:
+    """Observed quarterly growth rates. volumes=False deflates nominal data by PPI/CPI as before R4."""
     ex = data.synthetic_countries[COUNTRY].exogenous_data
     na = ex.national_accounts
     obs = pd.DataFrame(index=na.index)
-    for agg, (_, deflator, col) in AGGREGATES.items():
-        real = na[f"{col} (Value)"] / na[f"{deflator.upper()} (Value)"]
+    clv = pd.read_csv(VOLUMES).pivot(index="TIME_PERIOD", columns="na_item", values="OBS_VALUE")
+    clv.index = pd.PeriodIndex(clv.index, freq="Q").to_timestamp()
+    for agg, (_, deflator, col, item) in AGGREGATES.items():
+        real = clv[item].reindex(na.index) if volumes else na[f"{col} (Value)"] / na[f"{deflator.upper()} (Value)"]
         obs[agg] = real / real.shift(1) - 1.0
     obs["CPI Inflation"] = na["CPI (Value)"] / na["CPI (Value)"].shift(1) - 1.0
     obs["Unemployment Rate"] = ex.labour_stats["Unemployment Rate (Value)"].reindex(obs.index)
