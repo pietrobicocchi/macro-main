@@ -17,16 +17,17 @@ def match_iot_with_sea(
     country_names: list[str | Country | Region],
     yearly_factor: float = 4.0,
     regions_dict: Optional[dict[Country, list[Region]]] = None,
+    labour_share_from_sea: bool = False,
 ) -> None:
     for country_name in country_names:
         if regions_dict is None:
-            _match_country_iot_with_sea(country_name, icio_reader, sea_reader, yearly_factor)
+            _match_country_iot_with_sea(country_name, icio_reader, sea_reader, yearly_factor, labour_share_from_sea)
         else:
             if country_name in regions_dict:
                 for region in regions_dict[country_name]:
-                    _match_country_iot_with_sea(region, icio_reader, sea_reader, yearly_factor)
+                    _match_country_iot_with_sea(region, icio_reader, sea_reader, yearly_factor, labour_share_from_sea)
             else:
-                _match_country_iot_with_sea(country_name, icio_reader, sea_reader, yearly_factor)
+                _match_country_iot_with_sea(country_name, icio_reader, sea_reader, yearly_factor, labour_share_from_sea)
 
 
 def add_investment_matrix_to_icio(
@@ -121,8 +122,26 @@ def get_sea(
 
 
 def _match_country_iot_with_sea(
-    country_name: Country | Region, icio_reader: ICIOReader, sea_reader: WIODSEAReader, yearly_factor: float = 4.0
+    country_name: Country | Region,
+    icio_reader: ICIOReader,
+    sea_reader: WIODSEAReader,
+    yearly_factor: float = 4.0,
+    labour_share_from_sea: bool = False,
 ):
+    """Align SEA with the input-output tables: value added from ICIO, capital compensation = investment.
+
+    Capital compensation is set to firms' fixed capital formation, i.e. capital used up equals investment so the
+    capital stock is stationary. With `labour_share_from_sea`, labour compensation keeps each industry's SEA share of
+    value added and the rest (net operating surplus) is profit. Otherwise labour compensation is value added minus
+    capital compensation, which leaves firms no operating profit (S2).
+    """
+    sea_value_added_before = get_sea(country_name, "Value Added", sea_reader)
+    sea_labour_share = np.divide(
+        get_sea(country_name, "Labour Compensation", sea_reader),
+        sea_value_added_before,
+        out=np.zeros_like(sea_value_added_before, dtype=float),
+        where=sea_value_added_before != 0,
+    )
     # sea_reader.df.loc[
     #     sea_reader.df.index.get_level_values(0) == country_name,
     #     "Capital Compensation",
@@ -145,11 +164,13 @@ def _match_country_iot_with_sea(
     # ] = get_sea(
     #     country_name, "Value Added", sea_reader
     # ) - get_sea(country_name, "Capital Compensation", sea_reader)
-    sea_reader.set_values_in_usd(
-        country_name,
-        "Labour Compensation",
-        get_sea(country_name, "Value Added", sea_reader) - get_sea(country_name, "Capital Compensation", sea_reader),
-    )
+    if labour_share_from_sea:
+        labour_compensation = new_va * sea_labour_share
+    else:
+        labour_compensation = get_sea(country_name, "Value Added", sea_reader) - get_sea(
+            country_name, "Capital Compensation", sea_reader
+        )
+    sea_reader.set_values_in_usd(country_name, "Labour Compensation", labour_compensation)
     # Update Capital Stock values using proper indexing to avoid chained assignment
     mask = (sea_reader.df.index.get_level_values(0) == country_name) & (
         sea_reader.df.index.get_level_values(1).isin(sea_reader.industries)

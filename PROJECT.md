@@ -75,6 +75,7 @@ looking at the result. This is the raw material for the rewritten model section.
 | MD6 | Households' other financial assets are shares in domestic firms: purchases fund firms, firms pay dividends (Eurostat payout ratio) out of after-tax profits (`FirmSharesFinancialAssets`) | Income must have a payer and savings a receiver; shares in firms are the main household financial asset with a domestic counterpart | claims on the rest of the world; government bonds | Phase 1: money conserved; but dividends are ~2 bn/q against 107 bn/q of the old income, so consumption drops ~19% | built, off by default until firm profits are realistic (S2) |
 | MD7 | Initial mortgages are capped at the value of the property they finance (`cap_mortgages_at_property_value`, data config, default on) | A mortgage is secured on a property; the spoofed survey breaks that link | wait for real data; cap at a loan-to-value above 1 | Phase 1: underwater households 77 → 24 | none; switch off with real HFCS |
 | MD8 | Households default when they cannot pay: underwater and an overdraft above one quarter of income (`UnableToPayHouseholdInsolvencyHandler`, default) | Underwater households that keep paying do not default; the old rule defaulted at the first overdraft | old rule (still selectable); recovery of the house by the bank (not yet) | Phase 1: quarter-1 write-offs 400 → 110 bn, no bank bail-out needed | describe household default |
+| MD9 | Initial wages keep each industry's SEA labour share of value added; capital compensation stays equal to investment (steady capital stock), and the rest is profit (`labour_share_from_sea`) | Value added = wages + depreciation + profits + taxes; the old rule gave profits to workers | keep the old rule (current default) | exp005: profits 3.9% → 24.5% of GDP, wages match France, GDP and CPI scores hold or improve | proposed default; describe the initial income split |
 
 ## Baselines
 
@@ -92,6 +93,7 @@ looking at the result. This is the raw material for the rewritten model section.
 | exp002 | How much of the gap to the paper is configuration rather than code? | done | Most of the damage is the 5% price noise; see below. `outputs/exp002_paper_ablation/` |
 | exp003 | Can the model grow, and where does its inflation come from? | done | Inflation = the noisy AR(1) forecast; no growth in any cell. `outputs/exp003_growth_inflation/` |
 | exp004 | Does the paper's capacity setup let the growth loop run? | done | Spare capacity gives growth; the stock top-up explodes. `outputs/exp004_growth_loop/` |
+| exp005 | Do realistic initial wages give firms realistic profits, and can profits pay households? | done | Yes (B); paying them as dividends (C) needs firms to invest retained profits first. `outputs/exp005_firm_profits/` |
 
 ### Baseline scorecard history
 
@@ -202,6 +204,18 @@ Paper settings added cumulatively to the defaults as they were with 5% price noi
   goods, hence output, hence the target stock. Later exp004 steps inherit the explosion
   and say nothing about χ, inventory or many firms.
 
+### Firm profits and household income (exp005, 5 seeds, 20 quarters)
+
+- **S2's cause:** the data pipeline set initial wages to value added minus investment, so
+  firms had no operating profit by construction. Keeping SEA labour shares (MD9) gives
+  profits of about 24% of GDP and wages of about 46% (France ≈ 52%), with the scorecard
+  unchanged or better (GDP 1.15, CPI 1.51).
+- **Dividends need investment:** with firms paying 46% of profits as dividends (MD6),
+  households' financial income becomes realistic (6.5% of GDP, paid by firms), but firms
+  hold the retained 54% as deposits and spend nothing, so demand falls and unemployment
+  reaches 19% after five years. Retained profits must finance investment: this is the
+  growth engine (G1–G3).
+
 ### Current state of `main`
 
 Default settings (price noise 0.0005), 10 seeds, 12 quarters, France 2014:
@@ -272,7 +286,7 @@ commit messages (e.g. `G1:`).
 | ID | Problem | Kind | Source | Evidence | Status | Pri |
 | --- | --- | --- | --- | --- | --- | --- |
 | S1 | Stock-flow consistency: `macromodel/accounting.py` checks every quarter that the loan and deposit ledgers agree, bank equity and government debt move only by their flows, and money changes only by the deficit plus net exports; it separates the by-design unbacked flows from leaks | Gap | both | exp001 `accounts.csv`: all ledgers exact; money residual ≈ unbacked flows (up to 11% of GDP); unexplained ≤ 4% of GDP, early quarters only (S23) | partial: done once S9, S10, S13, S23 are closed | P1 |
-| S2 | Aggregate firm profits are about zero (were −21 bn/q before the interest fix); too low to pay realistic dividends | Question | ours | probes; real non-financial corporate profits are several % of GDP | open: blocks MD6 | P1 |
+| S2 | Firms made about zero profit: initial wages were set to value added minus investment (labour share 85%; SEA and France ≈ 59%), so net operating surplus was zero by construction (`icio_sea_matching._match_country_iot_with_sea`) | Bug | ours | exp005: with SEA labour shares, firm profits 3.9% → 24.5% of GDP, wages 65% → 46% (France ≈ 52%) | fix built: `labour_share_from_sea` data option (MD9, default pending) | P1 |
 | S3 | The re-initialisation path double-counts bank deposits (liabilities 1.65e16) | Bug | ours | exp004 | workaround: build data with matching settings | P2 |
 | S4 | Bank deposits are negative on the normal path (−1.17e12) | Question | ours | probe | open | P2 |
 | S5 | Initial Demand = Production + Inventory | Question | ours | `firm_tools.py:487` | open | P3 |

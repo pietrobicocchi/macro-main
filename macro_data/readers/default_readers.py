@@ -240,6 +240,7 @@ class DataReaders:
         allow_missing_emissions: bool = False,
         yearly_factor: float = 4.0,
         simulation_quarter: int = 1,
+        labour_share_from_sea: bool = False,
     ):
         if regions_dict:
             all_regions = [region for regions in regions_dict.values() for region in regions]
@@ -442,6 +443,7 @@ class DataReaders:
             country_names=country_names,
             regions_dict=regions_dict,
             yearly_factor=yearly_factor,
+            labour_share_from_sea=labour_share_from_sea,
         )
 
         oecd_econ = OECDEconData(

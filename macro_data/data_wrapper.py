@@ -251,6 +251,7 @@ class DataWrapper:
             regions_dict=regions_dict,
             yearly_factor=yearly_factor,
             simulation_quarter=quarter,
+            labour_share_from_sea=configuration.labour_share_from_sea,
         )
 
         if regions_dict:
