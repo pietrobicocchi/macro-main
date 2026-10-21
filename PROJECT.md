@@ -111,6 +111,7 @@ looking at the result. This is the raw material for the rewritten model section.
 | exp015 | How does the candidate model score against today's defaults, and what does each part contribute? | done | A (cost pass-through + yearly wage catch-up) improves HH cons., investment and CPI (1.84 → 1.06), worsens gov. cons.; B (A + engine) grows but stalls after three years and misses the unemployment gate by 0.6 pp. The slack-aware forecast is B's key part; the work-effort cap has no effect. `outputs/exp015_candidate_model/` |
 | exp016 | Does removing the consumption floor (S26) fix the start-up jump? | done | Yes: HH cons. ratio 2.85 → 1.71 on defaults; candidate B's start-up shock goes, unemployment 10.7% at q12 and 8.1% at q20 (data 9.4%, 8.4%), growth 0.6%/q in the last two years; GDP ratio worsens (1.14 → 1.24). `outputs/exp016_consumption_floor/` |
 | exp017 | Is the growth engine ready to be the default, on the new defaults? | done | It passes the sanity gate, the first configuration to do so: unemployment 9.9% at q12 and 8.5% at q20 (data 9.4%, 8.4%), growth 0.2–0.4%/q, GDP ratio 1.14 (defaults 1.18); but investment 2.50 (lumpy, seed-to-seed), HH cons., gov. cons. and CPI worse. Spare capacity is needed. `outputs/exp017_engine_on_new_defaults/` |
+| exp018 | With many firms, is the growth engine's investment less lumpy? | done | Barely: investment ratio 2.50 → 2.39 with 408 firms, so the poor investment forecast is the engine's dynamics (early burst, 1.1%/q vs 0.8%), not lumpiness; unemployment 9.6% at q12 and 8.4% at q20 (data 9.4%, 8.4%). `outputs/exp018_engine_many_firms/` |
 
 ### Baseline scorecard history
 
@@ -401,9 +402,9 @@ On exp011's engine (frictions, productivity +0.25%/q), with two forecasts of gro
 
 - **B passes the sanity gate** (growth within 0.5 pp/q, unemployment within 2 pp, no explosion); today's
   defaults fail it on growth. B also has the best GDP ratio of the two.
-- **B's investment forecast is poor because investment is lumpy:** the median path is sensible (0.4–2.5%
-  a quarter), but quarter-2 investment growth ranges from −1.8% to +8.8% across seeds, with one firm per
-  industry each closing a share of its capital gap. Many firms (G5) should smooth it.
+- **B's investment forecast is poor:** the median path is sensible (0.4–2.5% a quarter), but quarter-2
+  investment growth ranges from −1.8% to +8.8% across seeds. With 408 firms (exp018) the ratio is still
+  2.39, so the cause is the engine's dynamics, not one firm per industry.
 - **Spare capacity is necessary:** without it the engine has no room to grow and unemployment rises.
 
 ### Next step
@@ -411,7 +412,8 @@ On exp011's engine (frictions, productivity +0.25%/q), with two forecasts of gro
 1. **Decision (needs approval): make B the default.** It passes the sanity gate, which comes before the
    ratios in the success metric. It changes the initial state (utilisation 0.85 must be built into the
    data, S3) and the default data configuration.
-2. **B with many firms** (`scoring.load_data(many_firms=True)`): does investment become less lumpy?
+2. **B's investment forecast** (2.4–2.5): not lumpiness (exp018, 408 firms: 2.39) but the dynamics: the
+   early burst from spare capacity and growth of 1.1%/q (data 0.8%). Financing limits (G9) next.
 3. **R4:** needs the chain-linked volume series (blocked on data).
 4. **S29 rest**; **G9** with realistic bank limits; investment that responds to the real interest rate
    (G17); MD6.
