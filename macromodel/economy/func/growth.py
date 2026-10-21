@@ -63,15 +63,18 @@ class GrowthForecasting(ABC):
         current_time: int,
         t: int = 1,
         assume_zero_noise: bool = False,
+        **kwargs,
     ) -> float:
         """Generate growth forecasts based on historical data.
 
         Args:
-            historic_growth (np.ndarray): Past growth rates
+            historic_growth (np.ndarray): Past growth rates: the data window, then the simulated quarters
             exogenous_growth (np.ndarray): External growth projections
             current_time (int): Current time period
             t (int, optional): Forecast horizon. Defaults to 1.
             assume_zero_noise (bool, optional): Suppress random variation. Defaults to False.
+            **kwargs: Extra information some rules use (`data_growth`, `unemployment_rate`,
+                `initial_unemployment_rate`)
 
         Returns:
             float: Forecasted growth rate
@@ -165,6 +168,62 @@ class GrowthManualForecastingAutoReg(GrowthForecasting):
         self.forecaster = ManualAutoregForecaster()
 
 
+class DataOnlyGrowthForecastingAutoReg(GrowthManualForecastingAutoReg):
+    """AR(1) growth forecast from the pre-simulation data only (G16).
+
+    Firms' expected growth is the AR(1) forecast made at the start, h quarters ahead in quarter h: it uses only data
+    available at the forecast origin and does not feed on the growth the simulation produces.
+    """
+
+    def forecast_growth(
+        self,
+        historic_growth: np.ndarray,
+        exogenous_growth: np.ndarray,
+        current_time: int,
+        t: int = 1,
+        assume_zero_noise: bool = False,
+        data_growth: np.ndarray = None,
+        **kwargs,
+    ) -> np.ndarray:
+        horizon = len(historic_growth) - len(data_growth) + 1
+        return self.forecaster.forecast(data_growth, horizon, assume_zero_noise=assume_zero_noise)[-1:]
+
+
+class SlackAwareGrowthForecastingAutoReg(GrowthManualForecastingAutoReg):
+    """AR(1) growth forecast, lowered when unemployment is below its initial level (G16).
+
+    Expected growth = AR(1) forecast - slack_sensitivity * (initial unemployment rate - current unemployment rate).
+    By Okun's law output is about twice as far above potential as unemployment is below its normal rate; firms that
+    expect a fraction of that gap to close each quarter expect slower growth when the labour market is tight, and
+    faster growth when it is slack.
+    """
+
+    def __init__(self, lags: int, slack_sensitivity: float = 0.2, *args, **kwargs):
+        """Initialize the slack-aware AR(1) forecaster.
+
+        Args:
+            lags (int): Must be 1 (AR(1) only)
+            slack_sensitivity (float): Fall in expected quarterly growth per unit of unemployment below its initial
+                level
+        """
+        super().__init__(lags)
+        self.slack_sensitivity = slack_sensitivity
+
+    def forecast_growth(
+        self,
+        historic_growth: np.ndarray,
+        exogenous_growth: np.ndarray,
+        current_time: int,
+        t: int = 1,
+        assume_zero_noise: bool = False,
+        unemployment_rate: float = None,
+        initial_unemployment_rate: float = None,
+        **kwargs,
+    ) -> np.ndarray:
+        forecast = self.forecaster.forecast(historic_growth, t, assume_zero_noise=assume_zero_noise)
+        return forecast - self.slack_sensitivity * (initial_unemployment_rate - unemployment_rate)
+
+
 class ExogenousGrowthForecasting(GrowthForecasting):
     """Exogenous growth forecasting implementation.
 
@@ -192,6 +251,7 @@ class ExogenousGrowthForecasting(GrowthForecasting):
         current_time: int,
         t: int = 1,
         assume_zero_noise: bool = False,
+        **kwargs,
     ) -> float | np.ndarray:
         """Generate growth forecasts from exogenous data.
 

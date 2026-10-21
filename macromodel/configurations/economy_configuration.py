@@ -12,6 +12,8 @@ class Growth(BaseModel):
         "GrowthForecastingConstant",
         "GrowthForecastingOLS",
         "GrowthManualForecastingAutoReg",
+        "DataOnlyGrowthForecastingAutoReg",
+        "SlackAwareGrowthForecastingAutoReg",
         "GrowthImplementedForecastingAutoReg",
         "ExogenousGrowthForecasting",
     ] = "GrowthManualForecastingAutoReg"

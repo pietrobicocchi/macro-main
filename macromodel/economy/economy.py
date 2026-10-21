@@ -486,6 +486,9 @@ class Economy:
                             exogenous_growth=exogenous_growth_during,
                             current_time=len(self.ts.historic("ppi")),
                             assume_zero_noise=assume_zero_noise,
+                            data_growth=exogenous_growth[-forecasting_window:],
+                            unemployment_rate=self.ts.current("unemployment_rate")[0],
+                            initial_unemployment_rate=self.ts.initial("unemployment_rate")[0],
                         )[0]
                     )
                     - 1.0

@@ -79,6 +79,7 @@ looking at the result. This is the raw material for the rewritten model section.
 | MD10 | Investment as a flexible accelerator: replacement plus a fraction λ of the gap to desired capital (initial capital/output ratio at planned output), planned on expected demand (`PartialAdjustmentTargetCapitalInputsSetter`) | Standard investment theory; closing only part of the gap avoids the paper's runaway top-up | paper's full top-up (G2) | exp006–exp008: cycles without brakes; with desired capital on smoothed demand (`demand_smoothing` 0.10) growth is steady at 0.7%/q | candidate, option until unemployment stays plausible (G12) |
 | MD11 | Search frictions in the labour market: employees separate at s = 3% per quarter, firms post vacancies for the gap to desired labour (replacements included), and hires are capped by a Cobb-Douglas matching function M = μU^0.5 V^0.5, with μ set so the initial unemployment rate (10.3%) is a steady state (`SearchFrictionsLabourMarketClearer`, `settings.search_frictions`) | Real labour markets have job-to-unemployment flows and take time to fill vacancies; without them a boom hires the whole unemployed pool within a quarter (G13). Flows are calibrated to a steady state at the initial unemployment rate, as initial stocks are | quits by wage/wealth (`individuals_quitting`); a hiring-speed cap (`hiring_speed` < 1) | exp010: unemployment holds at 10.3% under today's defaults; under the growth engine it falls to 2% (no frictions: 0%) | option; describe the labour market |
 | MD12 | Labour-augmenting technical progress: output per worker grows at an exogenous g per quarter in every industry (0.25%, about 1% a year), and real wages per worker grow with it (`LabourAugmentingGrowth`, `settings.labour_productivity_growth`) | On a balanced growth path output per worker rises and the labour share and capital-output ratio stay constant (Harrod-neutral progress); without it, output growth needs a proportional rise in employment from a fixed labour force (G14) | the TFP module (`SimpleTFPGrowth`, G15); g endogenous to investment | exp011: unemployment rises 10.3% → 14.4% on today's capacity-capped defaults; under the growth engine it stays near 2–4% because GDP growth rises instead (G16) | option; describe productivity growth |
+| MD13 | Firms' expected growth falls when unemployment is below its initial level: AR(1) forecast − 0.2 × (initial − current unemployment rate) (`SlackAwareGrowthForecastingAutoReg`, `settings.growth_forecast_slack_aware`) | Firms extrapolating recent growth alone expect a boom to go on whatever the labour market; by Okun's law output is about twice as far above potential as unemployment is below normal, and firms expecting a tenth of that gap to close each quarter expect 0.2 × the unemployment gap less growth | forecast from pre-2014 data only (`DataOnlyGrowthForecastingAutoReg`, no lookahead) | exp014: unemployment 6.4% after five years (engine alone 2.4%); with cost pass-through and yearly wage catch-up 7.7% at q12 and 6.9% at q20, growth 0.4%/q | option; describe expectations |
 
 ## Baselines
 
@@ -105,6 +106,7 @@ looking at the result. This is the raw material for the rewritten model section.
 | exp011 | Does labour-augmenting productivity growth keep unemployment plausible while the economy grows? | done | No: unemployment 2.2–4.0% after five years at g = 0.15–0.5%/q; the engine grows faster instead, because growth expectations feed on the model's own growth (G16). `outputs/exp011_labour_productivity/` |
 | exp012 | Do wages and prices that respond to tightness brake the growth engine? | done | No: unemployment 2.3–3.5% after five years with any brake; the model has no channel through which higher prices or interest rates cut spending (G17). Cost pass-through improves the inflation fit (CPI ratio 1.93 → 1.38). `outputs/exp012_price_wage_brakes/` |
 | exp013 | Do wages that catch up with prices gradually let price rises brake the engine? | done | No: unemployment 3.0–3.5% after five years; the boom raises inflation only to 0.3–0.4%/q, so there is little to brake. On today's defaults, cost pass-through with yearly wage catch-up improves or matches every ratio (CPI 0.98). `outputs/exp013_wage_indexation/` |
+| exp014 | Does anchoring firms' growth expectations stop the engine running unemployment down? | done | Partly: a slack-aware forecast keeps unemployment at 5.5–6.9% after five years (engine alone 2.4%); with cost pass-through and yearly wage catch-up the engine is within the sanity gate's tolerances at 12 quarters (unemployment 7.7% vs 9.4%, growth 0.4% vs 0.64%/q). The data-only forecast barely helps (3.6%). `outputs/exp014_growth_expectations/` |
 
 ### Baseline scorecard history
 
@@ -334,16 +336,28 @@ rule, wages at last quarter's CPI; `settings.lagged_wage_indexation`).
   1.84; 5 seeds, 20 quarters scored on the first 12). Unemployment unchanged at 10.3%. The first ratio
   below 1 for any aggregate.
 
+### Growth expectations (exp014, 5 seeds, 20 quarters)
+
+On exp011's engine (frictions, productivity +0.25%/q), with two forecasts of growth for firms:
+- **From the pre-2014 data only** (h quarters ahead; no lookahead): unemployment 3.6% after five years
+  (2.4% with today's forecast). The engine's own accelerator keeps demand growing even when firms
+  expect only the historical rate, about 0.5%/q.
+- **Lowered when unemployment is below its initial level** (MD13, sensitivity 0.1 / 0.2 chosen from
+  Okun's law): unemployment 5.5% / 6.4% after five years, growth 0.5% / 0.4%/q. The labour market now
+  feeds back on demand.
+- **With cost pass-through 0.5 and yearly wage catch-up as well:** unemployment 7.7% at q12 and 6.9% at
+  q20 (data 9.4%, 8.4%), growth 0.4%/q (data 0.64%/q, itself overstated by R4), CPI ratio 1.28, GDP 1.16.
+  Within the sanity gate's tolerances at 12 quarters, though unemployment is still falling slowly and
+  investment grows 1.0%/q (data 0.8%). The first configuration with growth and plausible unemployment.
+
 ### Next step
 
-1. **G16 (the remaining lever):** the engine's demand growth is not anchored, and since the boom is not
-   inflationary, price and wage brakes cannot stop it. Change the growth forecast firms use: from the
-   data only (not the model's own growth), or one that falls when the economy is tight.
-2. **Candidate default:** cost pass-through 0.5 with yearly wage catch-up (0.25), after a 10-seed
-   baseline run. Needs approval (default change).
-3. **R4:** deflate output and expectations properly.
-4. **G9** with realistic bank limits; investment that responds to the real interest rate.
-5. Make **MD10–MD12** the defaults once unemployment stays plausible under growth.
+1. **A candidate model:** defaults + MD10–MD13 + cost pass-through + yearly wage catch-up. Score it with
+   10 seeds and 12/20 quarters against the baseline, check the accounts, and decide which parts become
+   defaults (needs approval).
+2. **R4:** deflate output and expectations properly; the growth target may be half what the scorecard says.
+3. **G9** with realistic bank limits; investment that responds to the real interest rate (G17).
+4. **S28, S29**, and MD6 (dividends) before anything is published.
 
 Every known problem, fixed or open, is in the Issue register below.
 
@@ -392,7 +406,7 @@ commit messages (e.g. `G1:`).
 | G13 | The labour market has no frictions: firms fill every vacancy within the quarter (`hiring_speed = 1`), nobody separates (`random_firing_probability = 0`), no quits; so a boom hires the whole unemployed pool and unemployment goes to 0% | Spec | ours | exp009: employment +11.5% in two years, unemployment 10.3% → 0% | partial: `SearchFrictionsLabourMarketClearer` (MD11, option); exp010: unemployment 10.3% → 2% under the engine, because of G14 | P1 |
 | G14 | Labour productivity does not grow (`NoOpTFPGrowth`), so every percent of output growth needs a percent more workers from a fixed labour force | Spec | ours | exp010; exp011: labour-augmenting progress cuts labour demand on capacity-capped defaults (unemployment 10.3% → 14.4% at 0.25%/q), but under the engine output grows faster instead (G16) | partial: `LabourAugmentingGrowth` (MD12, option) | P1 |
 | G15 | The TFP module (`SimpleTFPGrowth`) counts all net capital investment as productivity investment, so with the investment engine TFP grows about 3%/q (multiplier 1.88 after 20 quarters at a 0.25%/q base); TFP also scales intermediate and capital capacity, not labour demand | Spec | ours | G14 probes | open: not used | P2 |
-| G16 | Demand growth is not anchored: firms scale demand by forecast growth, an AR(1) over the data history and the model's own realised growth, so extra supply (spare capacity, productivity) becomes faster growth | Spec | ours | exp011: with g = 0.25%/q, last-two-year growth 0.6%/q vs 0.2%/q without, unemployment unchanged at about 2%; `Economy.set_estimates` | open: decide how expectations are anchored | P1 |
+| G16 | Demand growth is not anchored: firms scale demand by forecast growth, an AR(1) over the data history and the model's own realised growth, so extra supply (spare capacity, productivity) becomes faster growth | Spec | ours | exp011; exp014: a slack-aware forecast (MD13) holds unemployment at 5.5–6.9% after five years (2.4% without); a data-only forecast 3.6% | partial: `SlackAwareGrowthForecastingAutoReg` (MD13, option) | P1 |
 | G17 | Nothing transmits higher prices or interest rates to spending: wages are paid at the current CPI (real wages fixed), households spend a fixed share of nominal income, investment ignores interest rates and financing | Spec | ours | exp012: brakes leave unemployment at 2–3.5%; exp013: gradual wage indexation (`cpi_indexation_speed`) works but the boom is not inflationary (0.3–0.4%/q), so there is little to transmit | partial: wage channel built (option); consumption and investment channels open | P1 |
 
 ### P. Prices, expectations and monetary policy

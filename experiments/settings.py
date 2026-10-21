@@ -203,3 +203,17 @@ def lagged_wage_indexation(c: CountryConfiguration, speed: float = 0.25) -> None
     price index and the latest CPI (default 1: last quarter's CPI in full). 0.25 is about one wage round a year."""
     p = c.firms.functions.wage_setter.parameters
     c.firms.functions.wage_setter.parameters = {**p, "cpi_indexation_speed": speed}
+
+
+def growth_forecast_data_only(c: CountryConfiguration) -> None:
+    """Firms' expected growth is the AR(1) forecast from pre-simulation data only, h quarters ahead (G16): it does
+    not feed on the growth the simulation produces. No lookahead: only data before the start is used."""
+    c.economy.functions.growth.name = "DataOnlyGrowthForecastingAutoReg"
+    c.economy.functions.growth.parameters = {"lags": 1}
+
+
+def growth_forecast_slack_aware(c: CountryConfiguration, sensitivity: float = 0.2) -> None:
+    """Expected growth falls when unemployment is below its initial level (G16): AR(1) forecast minus
+    `sensitivity` times the gap. 0.2 = Okun coefficient 2 times a 10% quarterly closing of the output gap."""
+    c.economy.functions.growth.name = "SlackAwareGrowthForecastingAutoReg"
+    c.economy.functions.growth.parameters = {"lags": 1, "slack_sensitivity": sensitivity}
