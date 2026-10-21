@@ -283,8 +283,9 @@ caps hires; μ makes the initial 10.3% unemployment a steady state (job-finding 
 ### Next step
 
 1. **G14**: labour productivity growth, so that output can grow without hiring the whole labour force.
-   A TFP module exists (`productivity_growth`, default `NoOpTFPGrowth`); check it and test it on exp010's
-   engine + frictions.
+   The TFP module does not do this (G15). Probes favour labour-augmenting progress with real wages indexed
+   to it, at France's rate. But the engine's demand grows at the PPI-deflated rate (0.64%/q, R4), faster
+   than French real growth, so unemployment still falls unless productivity grows implausibly fast.
 2. **P5** (Phase 3): cost pass-through in prices, so wage tightness (G8) brakes the engine.
 3. **G9** (Phase 2 then Phase 3): realistic bank lending limits.
 4. Make **MD10** and **MD11** the defaults once unemployment stays plausible under growth.
@@ -334,7 +335,8 @@ commit messages (e.g. `G1:`).
 | G11 | Spare capacity alone sends unemployment from 10% to 4% within five years | Question | ours | exp006 step 2 (see G6) | open: check labour demand vs planned output | P2 |
 | G12 | Work effort can raise output per worker by up to 50% (`max_increase_in_work_effort = 1.5`) | Spec | ours | exp009: not why unemployment hits 0% (caps of 1.05–1.2 change little within 5 years); effort rises 7% once all workers are hired | open: set a realistic cap (~1.1) with G13 | P2 |
 | G13 | The labour market has no frictions: firms fill every vacancy within the quarter (`hiring_speed = 1`), nobody separates (`random_firing_probability = 0`), no quits; so a boom hires the whole unemployed pool and unemployment goes to 0% | Spec | ours | exp009: employment +11.5% in two years, unemployment 10.3% → 0% | partial: `SearchFrictionsLabourMarketClearer` (MD11, option); exp010: unemployment 10.3% → 2% under the engine, because of G14 | P1 |
-| G14 | Labour productivity does not grow (`NoOpTFPGrowth`), so every percent of output growth needs a percent more workers from a fixed labour force | Spec | ours | exp010: with search frictions, the engine's 0.6%/q growth still runs unemployment down to 2% | open: test the existing TFP growth module | P1 |
+| G14 | Labour productivity does not grow (`NoOpTFPGrowth`), so every percent of output growth needs a percent more workers from a fixed labour force | Spec | ours | exp010: with search frictions, the engine's 0.6%/q growth still runs unemployment down to 2%. Probes (engine + frictions, 3 seeds, 20q): the TFP module scales capacity but not labour demand (desired labour and work effort ignore it), so it cannot help (G15); growing `Labour Productivity by Industry` (labour-augmenting) at 0.25 / 0.5%/q leaves 3.4 / 10.2% unemployment but GDP growth falls to 0.38%/q unless wages per worker rise with productivity; with wages indexed, growth is 0.7–0.8%/q and unemployment 2.8 / 6.1% | open: labour-augmenting progress with wages indexed to it; the engine's demand growth also looks too fast (R4) | P1 |
+| G15 | The TFP module (`SimpleTFPGrowth`) counts all net capital investment as productivity investment, so with the investment engine TFP grows about 3%/q (multiplier 1.88 after 20 quarters at a 0.25%/q base); TFP also scales intermediate and capital capacity, not labour demand | Spec | ours | G14 probes | open: not used | P2 |
 
 ### P. Prices, expectations and monetary policy
 
