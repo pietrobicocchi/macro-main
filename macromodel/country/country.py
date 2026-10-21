@@ -631,6 +631,10 @@ class Country:
             )
         )
 
+        # Output per worker grows before this quarter's labour inputs are measured
+        if not self.assume_zero_growth:
+            self.firms.update_labour_productivity()
+
         # Firm labour inputs
         labour_inputs_from_employees = self.firms.compute_labour_inputs(
             corresponding_firm=self.individuals.states["Corresponding Firm ID"],

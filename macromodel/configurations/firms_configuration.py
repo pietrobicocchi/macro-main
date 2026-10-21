@@ -289,10 +289,12 @@ class TargetProduction(BaseModel):
 class ProductivityGrowth(BaseModel):
     """
     The function for computing TFP growth.
-    Options: NoOpTFPGrowth, SimpleTFPGrowth, StochasticTFPGrowth, SectoralTFPGrowth
+    Options: NoOpTFPGrowth, LabourAugmentingGrowth, SimpleTFPGrowth, StochasticTFPGrowth, SectoralTFPGrowth
     """
 
-    name: Literal["NoOpTFPGrowth", "SimpleTFPGrowth", "StochasticTFPGrowth", "SectoralTFPGrowth"] = "NoOpTFPGrowth"
+    name: Literal[
+        "NoOpTFPGrowth", "LabourAugmentingGrowth", "SimpleTFPGrowth", "StochasticTFPGrowth", "SectoralTFPGrowth"
+    ] = "NoOpTFPGrowth"
     path_name: str = "productivity_growth"
     parameters: dict[str, Any] = {}
 

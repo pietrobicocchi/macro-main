@@ -962,7 +962,7 @@ class Firms(Agent):
             income_taxes=income_taxes,
             employee_social_insurance_tax=employee_social_insurance_tax,
             employer_social_insurance_tax=employer_social_insurance_tax,
-            current_tfp_multiplier=self.states["tfp_multiplier"],
+            current_tfp_multiplier=self.wage_productivity_factor,
             current_cpi=current_cpi,
         )
 
@@ -2189,6 +2189,26 @@ class Firms(Agent):
         """
         tfp_growth = self.compute_tfp_growth()
         self.states["tfp_multiplier"] *= 1 + tfp_growth
+
+    def update_labour_productivity(self) -> None:
+        """Grow output per worker by industry (labour-augmenting progress, zero unless configured).
+
+        Called after the labour market clears and before this quarter's labour inputs are computed, so that
+        hiring always compares labour inputs and labour productivity of the same quarter.
+        """
+        if "productivity_growth" in self.functions:
+            labour_productivity = self.states["Labour Productivity by Industry"]
+            self.states["Labour Productivity by Industry"] = labour_productivity * (
+                1 + self.functions["productivity_growth"].compute_labour_productivity_growth(len(labour_productivity))
+            )
+
+    @property
+    def wage_productivity_factor(self) -> np.ndarray:
+        """Technology factor real wages follow, by firm: TFP times output per worker relative to its initial level."""
+        labour_productivity_growth = (
+            self.states["Labour Productivity by Industry"] / self.initial_states["Labour Productivity by Industry"]
+        )
+        return self.states["tfp_multiplier"] * labour_productivity_growth[self.states["Industry"]]
 
     def update_technical_coefficients(self) -> None:
         """Update technical coefficient multipliers based on computed growth rates.

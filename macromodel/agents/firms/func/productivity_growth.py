@@ -41,6 +41,17 @@ class ProductivityGrowth(ABC):
         """
         pass
 
+    def compute_labour_productivity_growth(self, n_industries: int) -> np.ndarray:
+        """Growth rate of output per worker in each industry (labour-augmenting progress); none by default.
+
+        Args:
+            n_industries (int): Number of industries
+
+        Returns:
+            np.ndarray: Labour productivity growth rate for each industry
+        """
+        return np.zeros(n_industries)
+
     @staticmethod
     def update_tfp(current_tfp: np.ndarray, tfp_growth_rates: np.ndarray) -> np.ndarray:
         """Update TFP multipliers based on growth rates.
@@ -92,6 +103,28 @@ class NoOpTFPGrowth(ProductivityGrowth):
         """
         # Return zeros - no TFP growth
         return np.zeros_like(current_tfp)
+
+
+class LabourAugmentingGrowth(NoOpTFPGrowth):
+    """Labour-augmenting (Harrod-neutral) technical progress at an exogenous rate (G14).
+
+    Output per worker grows at `labour_productivity_growth` per quarter in every industry, so firms need fewer
+    workers for the same output; capital and intermediate inputs per unit of output are unchanged, as on a balanced
+    growth path. Real wages per worker grow with it (`Firms.wage_productivity_factor`), so the labour share stays
+    constant. TFP itself does not grow.
+    """
+
+    def __init__(self, labour_productivity_growth: float = 0.0025, **kwargs):
+        """Initialize LabourAugmentingGrowth.
+
+        Args:
+            labour_productivity_growth (float): Quarterly growth rate of output per worker
+            **kwargs: Ignored, for compatibility
+        """
+        self.labour_productivity_growth = labour_productivity_growth
+
+    def compute_labour_productivity_growth(self, n_industries: int) -> np.ndarray:
+        return np.full(n_industries, self.labour_productivity_growth)
 
 
 class SimpleTFPGrowth(ProductivityGrowth):

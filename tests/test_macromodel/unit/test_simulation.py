@@ -804,3 +804,24 @@ def test_heterogeneous_investment_effectiveness(datawrapper):
         total_invested = sum(inv.sum() for inv in total_investment_history)
         # Just verify no errors - investment amount depends on profitability
         assert total_invested >= 0
+
+
+def test_labour_augmenting_growth_raises_output_per_worker_and_wages(datawrapper):
+    """Output per worker grows at the configured rate in every industry, real wages follow it, and the initial state
+    used for resets is untouched."""
+    config = SimulationConfiguration(country_configurations={"FRA": CountryConfiguration()}, seed=0)
+    growth = config.country_configurations["FRA"].firms.functions.productivity_growth
+    growth.name = "LabourAugmentingGrowth"
+    growth.parameters = {"labour_productivity_growth": 0.01}
+    simulation = Simulation.from_datawrapper(datawrapper=datawrapper, simulation_configuration=config)
+    firms = simulation.countries["FRA"].firms
+    initial = firms.states["Labour Productivity by Industry"].copy()
+
+    n_periods = 4
+    for _ in range(n_periods):
+        simulation.iterate()
+
+    np.testing.assert_allclose(firms.states["Labour Productivity by Industry"], initial * 1.01**n_periods)
+    np.testing.assert_allclose(firms.wage_productivity_factor, 1.01**n_periods)
+    np.testing.assert_array_equal(firms.states["tfp_multiplier"], 1.0)
+    np.testing.assert_array_equal(firms.initial_states["Labour Productivity by Industry"], initial)

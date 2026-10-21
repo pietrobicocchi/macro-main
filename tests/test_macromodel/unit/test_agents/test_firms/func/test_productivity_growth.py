@@ -1,10 +1,30 @@
 import numpy as np
 
 from macromodel.agents.firms.func.productivity_growth import (
+    LabourAugmentingGrowth,
+    NoOpTFPGrowth,
     SectoralTFPGrowth,
     SimpleTFPGrowth,
     StochasticTFPGrowth,
 )
+
+
+class TestLabourAugmentingGrowth:
+    def test_grows_labour_productivity_not_tfp(self):
+        growth_func = LabourAugmentingGrowth(labour_productivity_growth=0.0025)
+        tfp_growth = growth_func.compute_tfp_growth(
+            current_tfp=np.ones(3),
+            production=np.full(3, 100.0),
+            productivity_investment=np.full(3, 10.0),
+            base_growth_rate=0.0025,
+            investment_elasticity=0.3,
+        )
+        assert np.all(tfp_growth == 0.0)
+        assert np.allclose(growth_func.compute_labour_productivity_growth(4), 0.0025)
+
+    def test_other_rules_leave_labour_productivity_alone(self):
+        assert np.all(NoOpTFPGrowth().compute_labour_productivity_growth(4) == 0.0)
+        assert np.all(SimpleTFPGrowth().compute_labour_productivity_growth(4) == 0.0)
 
 
 class TestSimpleTFPGrowth:

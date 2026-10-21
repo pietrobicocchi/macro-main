@@ -175,3 +175,11 @@ def search_frictions(
         "matching_efficiency": job_finding_rate**matching_elasticity,
         "matching_elasticity": matching_elasticity,
     }
+
+
+def labour_productivity_growth(c: CountryConfiguration, rate: float = 0.0025) -> None:
+    """Labour-augmenting technical progress (G14): output per worker grows at `rate` per quarter in every industry,
+    and real wages per worker grow with it. 0.0025 is about 1% a year, France's output per person employed in the
+    2000s-2010s (to verify against OECD data: the bundled sample has no employment series)."""
+    c.firms.functions.productivity_growth.name = "LabourAugmentingGrowth"
+    c.firms.functions.productivity_growth.parameters = {"labour_productivity_growth": rate}
