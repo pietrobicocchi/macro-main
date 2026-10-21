@@ -111,11 +111,20 @@ def no_forecast_noise(c: CountryConfiguration) -> None:
     c.assume_zero_noise = True
 
 
-def investment_engine(c: CountryConfiguration, adjustment_speed: float = 0.25) -> None:
+def investment_engine(
+    c: CountryConfiguration,
+    adjustment_speed: float = 0.25,
+    demand_smoothing: float = 1.0,
+    credit_gap_fraction: float = 0.0,
+) -> None:
     """Flexible-accelerator investment (MD10 candidate): capital purchases are replacement plus a fraction of the gap
     to desired capital, planned on expected demand rather than capped by current capacity."""
     c.firms.functions.target_capital_inputs.name = "PartialAdjustmentTargetCapitalInputsSetter"
-    c.firms.functions.target_capital_inputs.parameters = {"capital_gap_adjustment_speed": adjustment_speed}
+    c.firms.functions.target_capital_inputs.parameters = {
+        "capital_gap_adjustment_speed": adjustment_speed,
+        "demand_smoothing": demand_smoothing,  # G10: smoothed demand sizes desired capital
+        "credit_gap_fraction": credit_gap_fraction,  # G9: purchases cut by credit applied for but not received
+    }
     p = c.firms.functions.target_production.parameters
     c.firms.functions.target_production.parameters = {
         **p,
@@ -128,3 +137,9 @@ def investment_engine(c: CountryConfiguration, adjustment_speed: float = 0.25) -
 def firm_shares(c: CountryConfiguration) -> None:
     """Households' other financial assets are shares in firms paying dividends (MD6)."""
     c.households.functions.financial_assets.name = "FirmSharesFinancialAssets"
+
+
+def wage_brake(c: CountryConfiguration, tightness_scale: float = 0.5) -> None:
+    """Existing employees' wages rise with their firm's recent hiring shortfalls (G8), as offered wages already do."""
+    p = c.firms.functions.wage_setter.parameters
+    c.firms.functions.wage_setter.parameters = {**p, "labour_market_tightness_markup_scale": tightness_scale}

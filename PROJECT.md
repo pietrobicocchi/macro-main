@@ -76,7 +76,7 @@ looking at the result. This is the raw material for the rewritten model section.
 | MD7 | Initial mortgages are capped at the value of the property they finance (`cap_mortgages_at_property_value`, data config, default on) | A mortgage is secured on a property; the spoofed survey breaks that link | wait for real data; cap at a loan-to-value above 1 | Phase 1: underwater households 77 → 24 | none; switch off with real HFCS |
 | MD8 | Households default when they cannot pay: underwater and an overdraft above one quarter of income (`UnableToPayHouseholdInsolvencyHandler`, default) | Underwater households that keep paying do not default; the old rule defaulted at the first overdraft | old rule (still selectable); recovery of the house by the bank (not yet) | Phase 1: quarter-1 write-offs 400 → 110 bn, no bank bail-out needed | describe household default |
 | MD9 | Initial wages keep each industry's SEA labour share of value added; capital compensation stays equal to investment (steady capital stock), and the rest is profit (`labour_share_from_sea`) | Value added = wages + depreciation + profits + taxes; the old rule gave profits to workers | keep the old rule (current default) | exp005: profits 3.9% → 24.5% of GDP, wages match France, GDP and CPI scores hold or improve | default since 2026-10-21; describe the initial income split |
-| MD10 | Investment as a flexible accelerator: replacement plus a fraction λ of the gap to desired capital (initial capital/output ratio at planned output), planned on expected demand (`PartialAdjustmentTargetCapitalInputsSetter`) | Standard investment theory; closing only part of the gap avoids the paper's runaway top-up | paper's full top-up (G2) | exp006: growth appears but cycles without brakes (G8–G10) | candidate, option until stable |
+| MD10 | Investment as a flexible accelerator: replacement plus a fraction λ of the gap to desired capital (initial capital/output ratio at planned output), planned on expected demand (`PartialAdjustmentTargetCapitalInputsSetter`) | Standard investment theory; closing only part of the gap avoids the paper's runaway top-up | paper's full top-up (G2) | exp006–exp008: cycles without brakes; with desired capital on smoothed demand (`demand_smoothing` 0.10) growth is steady at 0.7%/q | candidate, option until unemployment stays plausible (G12) |
 
 ## Baselines
 
@@ -96,6 +96,8 @@ looking at the result. This is the raw material for the rewritten model section.
 | exp004 | Does the paper's capacity setup let the growth loop run? | done | Spare capacity gives growth; the stock top-up explodes. `outputs/exp004_growth_loop/` |
 | exp005 | Do realistic initial wages give firms realistic profits, and can profits pay households? | done | Yes (B); paying them as dividends (C) needs firms to invest retained profits first. `outputs/exp005_firm_profits/` |
 | exp006 | Does a flexible-accelerator investment rule give a stable growth engine? | done | Growth, but boom–bust: needs wage, financing and expectation brakes (G8–G10). `outputs/exp006_investment_engine/` |
+| exp007 | Do wages that follow prices and labour-market tightness stabilise the engine? | done | Indexation (S27) halves the bust; tightness adds demand without cost pass-through. `outputs/exp007_wage_brake/` |
+| exp008 | Which brakes turn the boom–bust into steady growth? | done | Smoothed desired capital (G10): steady 0.7%/q growth; financing (G9) needs realistic bank limits. `outputs/exp008_investment_brakes/` |
 
 ### Baseline scorecard history
 
@@ -115,6 +117,7 @@ mean quarterly real GDP growth (data: +0.64%) and the median unemployment rate a
 | + upstream #83, #85 (quarterly rates), MD5 | 1.14 | 2.57 | 1.92 | 1.12 | 1.89 | −0.04% | 10.4% |
 | + MD7 mortgage cap, MD8 default rule | 1.17 | 2.59 | 2.06 | 1.17 | 1.76 | −0.05% | 10.4% |
 | + MD9 realistic initial wages (default) | 1.15 | 2.96 | 1.98 | 1.11 | 1.65 | −0.05% | 10.4% |
+| + S27 wages indexed to CPI again | 1.14 | 2.85 | 2.05 | 1.20 | 1.84 | −0.04% | 10.3% |
 
 ## What we have learned
 
@@ -230,6 +233,18 @@ Paper settings added cumulatively to the defaults as they were with 5% price noi
   tightness (G8), investment limited by financing (G9), and desired capital based on a
   steadier view of demand (G10).
 
+### Brakes on the investment engine (exp007, exp008, 5 seeds, 20 quarters)
+
+- **Wages were frozen in nominal terms (S27)**, a regression from the S12 fix. With wages
+  paid at the current CPI again, the engine's bust halves (−1.4%/q instead of −5.6%).
+- **A wage tightness markup (G8) does not brake** while firms do not pass costs into
+  prices (P5): higher wages raise household spending.
+- **Smoothed desired capital (G10) does:** with `demand_smoothing` 0.10, growth is a
+  steady 0.7%/q (data 0.6%), with no bust. Unemployment then runs down to 0% because
+  work effort lets output grow without workers (G12), and investment grows 2%/q (data 0.8%).
+- **Financing limits (G9)** cause a recession with today's bank lending limits (firm
+  debt/equity 0.03; paper 1.0).
+
 ### Current state of `main`
 
 Default settings (price noise 0.0005), 10 seeds, 12 quarters, France 2014:
@@ -285,10 +300,11 @@ commit messages (e.g. `G1:`).
 | G5 | One firm per industry by default, and `default_data_configuration` ignores its `single_firm_per_industry` argument | Bug | ours | `configuration_utils.py:74` | workaround in `scoring.load_data` | P2 |
 | G6 | Spare capacity overshoots: unemployment falls to 5.8% (data 9.4%) | Question | ours | exp004 step 2 | open | P2 |
 | G7 | Many-firm runs crashed (per-firm prices used as per-industry) | Bug | ours | — | done `31f797a` | — |
-| G8 | Wages do not respond to labour-market tightness (`labour_market_tightness_markup_scale = 0`), so a boom drives unemployment to 0–4% with no wage or price brake | Spec | ours | exp006 | open: Phillips-curve wage response | P1 |
-| G9 | Capital purchases are not limited by financing (`credit_gap_fraction = 0`): firms invest whatever they can fund or not | Spec | ours | exp006 | open | P1 |
-| G10 | Desired capital follows current planned output, booms included, rather than a steadier view of demand: multiplier–accelerator cycles (λ = 0.25: +2.1%/q, then −5.6%/q, unemployment 34%) | Spec | ours | exp006 | open | P1 |
+| G8 | Wages did not respond to labour-market tightness (existing employees' markup scale 0) | Spec | ours | exp007: a tightness markup raises wages, but with prices not passing costs through it adds demand instead of braking | partial: needs cost pass-through in prices (P5) | P1 |
+| G9 | Capital purchases are not limited by financing (`credit_gap_fraction = 0`) | Spec | ours | exp008: switching it on with today's bank lending limits (firm debt/equity 0.03; paper 1.0) starves investment and causes a recession | open: needs realistic bank limits first | P1 |
+| G10 | Desired capital followed current planned output, booms included: multiplier–accelerator cycles | Spec | ours | exp008: sizing desired capital on smoothed planned output (`demand_smoothing` 0.10) gives steady growth of 0.7%/q (data 0.6%) with no bust | fix built (option) | — |
 | G11 | Spare capacity alone sends unemployment from 10% to 4% within five years | Question | ours | exp006 step 2 (see G6) | open: check labour demand vs planned output | P2 |
+| G12 | Work effort can raise output per worker by up to 50% (`max_increase_in_work_effort = 1.5`), so output keeps growing after unemployment reaches 0% | Spec | ours | exp007, exp008 | open: labour scarcity must cap output | P1 |
 
 ### P. Prices, expectations and monetary policy
 
@@ -298,6 +314,7 @@ commit messages (e.g. `G1:`).
 | P2 | Realised inflation equals the AR(1) forecast (self-fulfilling; referee R2.4) | Question | ours | exp003 | open | P2 |
 | P3 | Forecast noise draw roughly doubles the inflation error: keep (paper) or drop? | Question | ours | exp003: CPI ratio 1.8 → 0.95 without it | decision pending | P2 |
 | P4 | Taylor rule inert (zero by quarter 3), constant rate by default, and a TODO says `xi_pi` is estimated wrongly | Bug | ours | exp001; `default_synthetic_central_bank.py:168` | open; see upstream #83 | P2 |
+| P5 | Firms do not pass cost increases into prices (cost-push weight 0), so higher wages raise demand rather than prices | Spec | ours | exp007 | open: Phase 3 | P1 |
 
 ### S. Initial state and stock-flow consistency
 
@@ -329,6 +346,7 @@ commit messages (e.g. `G1:`).
 | S24 | At t=0, 2.7% of households were underwater and held 40% of household debt: mortgages with no matching property (spoofed HFCS) | Data | ours | — | done (MD7): mortgages capped at property value; now 0.8% underwater holding 14% of debt; mortgages 698 bn (was 1,315; France ~850 bn) | — |
 | S25 | Household default rule wrote off a household's whole debt at its first overdraft when underwater | Spec | ours | — | partial (MD8): default only when unable to pay; still 10–18 defaults/quarter (~2%/yr, real <1%); no collateral recovered yet | P2 |
 | S26 | Household consumption jumps about 4.6% in the first quarter, then settles | Question | ours | exp001 figure; household consumption ratio 2.96 under MD9 | open: initial consumption vs income | P2 |
+| S27 | Regression from S12: firms' wage bill lost its CPI factor, so nominal wages were frozen and real wages fell with prices | Bug | ours | the wage setter pays real wages; the CPI factor belonged on the employees' side | done: employees receive real wage × CPI, firms pay the gross-up of that | — |
 
 ### M. Markets and trade
 

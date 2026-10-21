@@ -353,8 +353,9 @@ class PartialAdjustmentTargetCapitalInputsSetter(FinancialTargetCapitalInputsSet
 
     Each period a firm buys the capital worn out producing its planned output, plus a fraction
     `capital_gap_adjustment_speed` of the gap between the capital it wants and the capital it has. Desired capital
-    keeps the initial capital-to-output ratio at planned output, so firms keep their normal spare capacity as
-    expected demand grows. Closing only part of the gap each period avoids the runaway of closing it in full (G2).
+    keeps the initial capital-to-output ratio at (smoothed, `demand_smoothing`) planned output, so firms keep their
+    normal spare capacity as expected demand grows. Closing only part of the gap each period avoids the runaway of
+    closing it in full (G2).
 
     Plan on expected demand (capital purchase target not capped by current capacity) for firms to expand.
     """
@@ -362,6 +363,7 @@ class PartialAdjustmentTargetCapitalInputsSetter(FinancialTargetCapitalInputsSet
     def __init__(
         self,
         capital_gap_adjustment_speed: float = 0.25,
+        demand_smoothing: float = 1.0,
         target_capital_inputs_fraction: float = 0.0,
         credit_gap_fraction: float = 0.0,
     ):
@@ -369,6 +371,9 @@ class PartialAdjustmentTargetCapitalInputsSetter(FinancialTargetCapitalInputsSet
             target_capital_inputs_fraction=target_capital_inputs_fraction, credit_gap_fraction=credit_gap_fraction
         )
         self.capital_gap_adjustment_speed = capital_gap_adjustment_speed
+        # Weight on the latest planned output in the smoothed demand that sizes desired capital (1.0: no smoothing)
+        self.demand_smoothing = demand_smoothing
+        self._smoothed_planned_production: Optional[np.ndarray] = None
 
     def compute_unconstrained_target_capital_inputs(
         self,
@@ -399,8 +404,19 @@ class PartialAdjustmentTargetCapitalInputsSetter(FinancialTargetCapitalInputsSet
             np.ndarray: Target capital purchases by firm and good
         """
         replacement = current_target_production[:, None] * capital_inputs_depreciation_matrix
+        # Desired capital follows a smoothed view of planned output, so a temporary boom (partly the firms' own
+        # investment orders) does not set the capital stock firms aim for (G10)
+        if self._smoothed_planned_production is None or self._smoothed_planned_production.shape != (
+            current_target_production.shape
+        ):
+            self._smoothed_planned_production = current_target_production.astype(float).copy()
+        else:
+            self._smoothed_planned_production = (
+                self.demand_smoothing * current_target_production
+                + (1.0 - self.demand_smoothing) * self._smoothed_planned_production
+            )
         planned_scale = np.divide(
-            current_target_production,
+            self._smoothed_planned_production,
             initial_production,
             out=np.zeros_like(current_target_production, dtype=float),
             where=initial_production != 0.0,
