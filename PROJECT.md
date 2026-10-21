@@ -131,6 +131,7 @@ mean quarterly real GDP growth (data: +0.64%) and the median unemployment rate a
 | + MD9 realistic initial wages (default) | 1.15 | 2.96 | 1.98 | 1.11 | 1.65 | −0.05% | 10.4% |
 | + S27 wages indexed to CPI again | 1.14 | 2.85 | 2.05 | 1.20 | 1.84 | −0.04% | 10.3% |
 | + MD14 cost pass-through, yearly wage catch-up, no consumption floor | 1.26 | **1.52** | 2.26 | **1.13** | 1.20 | −0.13% | 11.2% |
+| + income-weighted average saving rate (S26) | **1.18** | **1.38** | 2.20 | 1.14 | **1.09** | −0.07% | 10.7% |
 
 ## What we have learned
 
@@ -258,14 +259,14 @@ Paper settings added cumulatively to the defaults as they were with 5% price noi
 - **Financing limits (G9)** cause a recession with today's bank lending limits (firm
   debt/equity 0.03; paper 1.0).
 
-### Current state of `main` (MD14)
+### Current state of `main` (MD14, income-weighted saving rate)
 
 Default settings, 10 seeds, 12 quarters, France 2014:
-- **Scorecard** (`sim / AR(1)`): GDP 1.26, HH cons. 1.52, gov. cons. 2.26, investment 1.13, CPI 1.20.
-  Every ratio is still above 1.
-- **No growth**: real GDP −0.13%/q (data +0.64%, overstated by R4). The growth engine (MD10–MD13) is
+- **Scorecard** (`sim / AR(1)`): GDP 1.18, HH cons. 1.38, gov. cons. 2.20, investment 1.14, CPI 1.09.
+  Every ratio is still above 1; all but government consumption are at their best so far.
+- **No growth**: real GDP −0.07%/q (data +0.64%, overstated by R4). The growth engine (MD10–MD13) is
   built as options and tracks unemployment, but grows only 0.2%/q in its first three years (exp016).
-- **Unemployment** 11.2% after 12 quarters (data ~9.4%): inside the sanity gate's 2 pp.
+- **Unemployment** 10.7% after 12 quarters (data ~9.4%): inside the sanity gate's 2 pp.
 - **Accounts**: every loan and deposit ledger agrees exactly (S28 fixed); unexplained money at most 1.5%
   of GDP; the by-design unbacked flows (S9, S10, S13) remain.
 - Runs are deterministic per seed: about 1 s per 12 quarters with 18 firms, about 10 s with 408, mostly
@@ -485,7 +486,7 @@ commit messages (e.g. `G1:`).
 | S23 | A transient unexplained money residual in the early quarters | Question | ours | `money.unexplained`: at most 1.1% of GDP after the upstream merges (was 4%) | open | P3 |
 | S24 | At t=0, 2.7% of households were underwater and held 40% of household debt: mortgages with no matching property (spoofed HFCS) | Data | ours | — | done (MD7): mortgages capped at property value; now 0.8% underwater holding 14% of debt; mortgages 698 bn (was 1,315; France ~850 bn) | — |
 | S25 | Household default rule wrote off a household's whole debt at its first overdraft when underwater | Spec | ours | — | partial (MD8): default only when unable to pay; still 10–18 defaults/quarter (~2%/yr, real <1%); no collateral recovered yet | P2 |
-| S26 | Household consumption jumped about 7% in the first quarter | Spec | ours | the consumption floor (1 − saving rate) × benefits counted every adult as receiving unemployment benefit, exceeded the income of 39.5% of households, and was not in the initial state | done: floor off by default (MD14); exp016 | — |
+| S26 | Household consumption jumped about 7% in the first quarter | Spec | ours | the consumption floor (1 − saving rate) × benefits counted every adult as receiving unemployment benefit, exceeded the income of 39.5% of households, and was not in the initial state; without it consumption fell 1.5% instead, because every household was given the simple mean of the data's saving rates (0.432) where the income-weighted mean (0.421) reproduces initial consumption | done: floor off (MD14); income-weighted average saving rate, with test | — |
 | S27 | Regression from S12: firms' wage bill lost its CPI factor, so nominal wages were frozen and real wages fell with prices | Bug | ours | the wage setter pays real wages; the CPI factor belonged on the employees' side | done: employees receive real wage × CPI, firms pay the gross-up of that | — |
 | S28 | Firm-loan ledger residual (3.5% of GDP, seed 7, one quarter): a firm's written-off loans stayed in its own debt records until the next quarter (households' were fixed in S20) | Bug | ours | seed 7, t = 7 | done: insolvency clears the firm's debt records, with test | — |
 | S29 | With the Taylor rule (`PolednaPolicyRate`) on the engine, unexplained money reaches 15.6% of GDP | Question | ours | exp012; probe (seed 0, 20q): interest the central bank pays on bank reserves (policy rate × reserves, money it creates, missing from the money identity) explains about 75%; bank reserves grow to 5× quarterly GDP, itself implausible; on defaults the rule falls to 0 (P4) | open: add central-bank interest to the money identity; find why reserves balloon | P2 |

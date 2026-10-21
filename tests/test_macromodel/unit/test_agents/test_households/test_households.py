@@ -44,6 +44,15 @@ class TestHouseholds:
         ]:
             assert state in test_households.states.keys()
 
+    def test_average_saving_rate_reproduces_initial_consumption(self, test_households, datawrapper):
+        """Regression (S26): with the simple mean of household saving rates, one rate for everyone gave aggregate
+        consumption 2% below the initial state's; the income-weighted mean reproduces it."""
+        household_data = datawrapper.synthetic_countries["FRA"].population.household_data
+        income = household_data["Income"].to_numpy()
+        with_one_rate = ((1.0 - test_households.states["average_saving_rate"]) * income).sum()
+        with_household_rates = ((1.0 - household_data["Saving Rate"].to_numpy()) * income).sum()
+        assert np.isclose(with_one_rate, with_household_rates)
+
     # def test__households_ts(self, test_households):
     #     for ts_key in [
     #         "n_households",

@@ -214,7 +214,11 @@ class Households(Agent):
             "saving_rates_model": synthetic_population.saving_rates_model,
             "social_transfers_model": synthetic_population.social_transfers_model,
             "wealth_distribution_model": synthetic_population.wealth_distribution_model,
-            "average_saving_rate": synthetic_population.household_data["Saving Rate"].mean(),
+            # Income-weighted, so that one saving rate for everyone reproduces the initial aggregate consumption (S26)
+            "average_saving_rate": np.average(
+                synthetic_population.household_data["Saving Rate"],
+                weights=np.maximum(synthetic_population.household_data["Income"], 0.0),
+            ),
             "coefficient_fa_income": synthetic_population.coefficient_fa_income,
             "dividend_payout_ratio": synthetic_country.dividend_payout_ratio,
             "investment_rate": synthetic_population.household_data["Investment Rate"].values,
