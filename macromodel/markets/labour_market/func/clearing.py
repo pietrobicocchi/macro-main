@@ -1144,7 +1144,10 @@ class SearchFrictionsLabourMarketClearer(LabourMarketClearer):
 
 
 def record_new_hires(firms: Firms, individuals: Individuals, new_hires: list) -> None:
-    """Add new hires to their firms' employee lists and update everyone's activity status.
+    """Mark new hires employed, rebuild the firms' employee lists and update everyone's activity status.
+
+    Layoffs only reset `Corresponding Firm ID`, so the employee lists are rebuilt from it; extending them with the
+    hires left laid-off workers on their old firm's list (and on two lists once rehired).
 
     Args:
         firms: Firm agents
@@ -1153,9 +1156,12 @@ def record_new_hires(firms: Firms, individuals: Individuals, new_hires: list) ->
     """
     current_individuals_activity = individuals.states["Activity Status"]
     individuals_corresponding_firm = individuals.states["Corresponding Firm ID"]
-    for employment, hires in zip(firms.states["Employments"], new_hires):
-        employment.extend(hires)
+    for hires in new_hires:
         current_individuals_activity[hires] = ActivityStatus.EMPLOYED
+    employees = np.flatnonzero(individuals_corresponding_firm >= 0)
+    employees_by_firm = employees[np.argsort(individuals_corresponding_firm[employees], kind="stable")]
+    boundaries = np.cumsum(np.bincount(individuals_corresponding_firm[employees], minlength=len(new_hires)))[:-1]
+    firms.states["Employments"] = [firm.tolist() for firm in np.split(employees_by_firm, boundaries)]
 
     # Sanity check
     no_zero_employees = np.all(

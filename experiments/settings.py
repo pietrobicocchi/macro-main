@@ -217,3 +217,11 @@ def growth_forecast_slack_aware(c: CountryConfiguration, sensitivity: float = 0.
     `sensitivity` times the gap. 0.2 = Okun coefficient 2 times a 10% quarterly closing of the output gap."""
     c.economy.functions.growth.name = "SlackAwareGrowthForecastingAutoReg"
     c.economy.functions.growth.parameters = {"lags": 1, "slack_sensitivity": sensitivity}
+
+
+def no_consumption_floor(c: CountryConfiguration) -> None:
+    """Drop the consumption floor of (1 - saving rate) x benefits (S26): it counts every adult as receiving
+    unemployment benefit, exceeds the income of 40% of households, and was not in the initial state, so consumption
+    jumped 7% in the first quarter."""
+    p = c.households.functions.consumption.parameters
+    c.households.functions.consumption.parameters = {**p, "minimum_consumption_fraction": 0.0}

@@ -107,6 +107,7 @@ looking at the result. This is the raw material for the rewritten model section.
 | exp012 | Do wages and prices that respond to tightness brake the growth engine? | done | No: unemployment 2.3–3.5% after five years with any brake; the model has no channel through which higher prices or interest rates cut spending (G17). Cost pass-through improves the inflation fit (CPI ratio 1.93 → 1.38). `outputs/exp012_price_wage_brakes/` |
 | exp013 | Do wages that catch up with prices gradually let price rises brake the engine? | done | No: unemployment 3.0–3.5% after five years; the boom raises inflation only to 0.3–0.4%/q, so there is little to brake. On today's defaults, cost pass-through with yearly wage catch-up improves or matches every ratio (CPI 0.98). `outputs/exp013_wage_indexation/` |
 | exp014 | Does anchoring firms' growth expectations stop the engine running unemployment down? | done | Partly: a slack-aware forecast keeps unemployment at 5.5–6.9% after five years (engine alone 2.4%); with cost pass-through and yearly wage catch-up the engine is within the sanity gate's tolerances at 12 quarters (unemployment 7.7% vs 9.4%, growth 0.4% vs 0.64%/q). The data-only forecast barely helps (3.6%). `outputs/exp014_growth_expectations/` |
+| exp015 | How does the candidate model score against today's defaults, and what does each part contribute? | done | A (cost pass-through + yearly wage catch-up) improves HH cons., investment and CPI (1.84 → 1.06), worsens gov. cons.; B (A + engine) grows but stalls after three years and misses the unemployment gate by 0.6 pp. The slack-aware forecast is B's key part; the work-effort cap has no effect. `outputs/exp015_candidate_model/` |
 
 ### Baseline scorecard history
 
@@ -350,14 +351,35 @@ On exp011's engine (frictions, productivity +0.25%/q), with two forecasts of gro
   Within the sanity gate's tolerances at 12 quarters, though unemployment is still falling slowly and
   investment grows 1.0%/q (data 0.8%). The first configuration with growth and plausible unemployment.
 
+### Candidate model (exp015, 10 seeds, 20 quarters, ratios over the first 12)
+
+| | GDP | HH cons. | Gov. cons. | Invest. | CPI | Growth/q (12q) | Unemp. q12 / q20 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| defaults | 1.14 | 2.85 | 2.05 | 1.20 | 1.84 | −0.0% | 10.3 / 10.4% |
+| A: + cost pass-through 0.5, yearly wage catch-up | 1.14 | 2.73 | 2.28 | 1.15 | **1.06** | −0.0% | 10.3 / 10.4% |
+| B: A + growth engine (MD10–MD13) | 1.22 | 2.79 | 2.62 | 3.13 | 1.16 | 0.5% | 6.8 / 7.0% |
+| data | | | | | | 0.64% | 9.4 / 8.4% |
+
+- **A is better than today's defaults** on three aggregates, equal on GDP, worse on government
+  consumption (deflated by the CPI, whose path changes). It does not touch growth or unemployment.
+- **B is not ready:** growth stops after three years (0.0%/q in the last two), unemployment is 2.6 pp
+  below the data at 12 quarters (gate: 2 pp), and the investment forecast is poor (3.13).
+- **Ablations of B:** without the slack-aware forecast unemployment falls to 2.5%; without productivity
+  growth, growth halves; without prices and wages, CPI goes back to 1.85; without search frictions
+  unemployment is *higher* (7.7%), with almost no flows; the work-effort cap (1.1 vs 1.5) changes nothing.
+
 ### Next step
 
-1. **A candidate model:** defaults + MD10–MD13 + cost pass-through + yearly wage catch-up. Score it with
-   10 seeds and 12/20 quarters against the baseline, check the accounts, and decide which parts become
-   defaults (needs approval).
-2. **R4:** deflate output and expectations properly; the growth target may be half what the scorecard says.
-3. **G9** with realistic bank limits; investment that responds to the real interest rate (G17).
-4. **S28, S29**, and MD6 (dividends) before anything is published.
+1. **Make A the default** (MD14): done if the change is approved; see the scorecard history.
+2. **B's start-up shock:** B's stall is the slack-aware forecast absorbing a one-off burst at the start:
+   household consumption +6% in quarter 1 (S26) and the 15% spare capacity released at once (GDP +2.1%,
+   investment +6.3% in quarter 2; G6) take unemployment from 10.3% to 7.7% in five quarters; growth then
+   pauses until the gap stops widening and recovers to 0.25–0.4%/q by quarters 19–20, unemployment
+   steady near 7%. Fix the start (S26; spare capacity that does not all become demand at once), not the
+   forecast.
+3. **R4:** deflate output and expectations properly; the growth target may be half what the scorecard says.
+4. **S29:** interest the central bank pays on reserves explains about two-thirds of it; find the rest.
+5. **G9** with realistic bank limits; investment that responds to the real interest rate (G17); MD6.
 
 Every known problem, fixed or open, is in the Issue register below.
 
@@ -402,7 +424,7 @@ commit messages (e.g. `G1:`).
 | G9 | Capital purchases are not limited by financing (`credit_gap_fraction = 0`) | Spec | ours | exp008: switching it on with today's bank lending limits (firm debt/equity 0.03; paper 1.0) starves investment and causes a recession | open: needs realistic bank limits first | P1 |
 | G10 | Desired capital followed current planned output, booms included: multiplier–accelerator cycles | Spec | ours | exp008: sizing desired capital on smoothed planned output (`demand_smoothing` 0.10) gives steady growth of 0.7%/q (data 0.6%) with no bust | fix built (option) | — |
 | G11 | Spare capacity alone sends unemployment from 10% to 4% within five years | Question | ours | exp006 step 2 (see G6) | open: check labour demand vs planned output | P2 |
-| G12 | Work effort can raise output per worker by up to 50% (`max_increase_in_work_effort = 1.5`) | Spec | ours | exp009: not why unemployment hits 0% (caps of 1.05–1.2 change little within 5 years); effort rises 7% once all workers are hired | open: set a realistic cap (~1.1) with G13 | P2 |
+| G12 | Work effort can raise output per worker by up to 50% (`max_increase_in_work_effort = 1.5`) | Spec | ours | exp009; exp015: a cap of 1.1 changes nothing in the candidate model | low priority: effort is not what drives employment | P3 |
 | G13 | The labour market has no frictions: firms fill every vacancy within the quarter (`hiring_speed = 1`), nobody separates (`random_firing_probability = 0`), no quits; so a boom hires the whole unemployed pool and unemployment goes to 0% | Spec | ours | exp009: employment +11.5% in two years, unemployment 10.3% → 0% | partial: `SearchFrictionsLabourMarketClearer` (MD11, option); exp010: unemployment 10.3% → 2% under the engine, because of G14 | P1 |
 | G14 | Labour productivity does not grow (`NoOpTFPGrowth`), so every percent of output growth needs a percent more workers from a fixed labour force | Spec | ours | exp010; exp011: labour-augmenting progress cuts labour demand on capacity-capped defaults (unemployment 10.3% → 14.4% at 0.25%/q), but under the engine output grows faster instead (G16) | partial: `LabourAugmentingGrowth` (MD12, option) | P1 |
 | G15 | The TFP module (`SimpleTFPGrowth`) counts all net capital investment as productivity investment, so with the investment engine TFP grows about 3%/q (multiplier 1.88 after 20 quarters at a 0.25%/q base); TFP also scales intermediate and capital capacity, not labour demand | Spec | ours | G14 probes | open: not used | P2 |
@@ -449,10 +471,10 @@ commit messages (e.g. `G1:`).
 | S23 | A transient unexplained money residual in the early quarters | Question | ours | `money.unexplained`: at most 1.1% of GDP after the upstream merges (was 4%) | open | P3 |
 | S24 | At t=0, 2.7% of households were underwater and held 40% of household debt: mortgages with no matching property (spoofed HFCS) | Data | ours | — | done (MD7): mortgages capped at property value; now 0.8% underwater holding 14% of debt; mortgages 698 bn (was 1,315; France ~850 bn) | — |
 | S25 | Household default rule wrote off a household's whole debt at its first overdraft when underwater | Spec | ours | — | partial (MD8): default only when unable to pay; still 10–18 defaults/quarter (~2%/yr, real <1%); no collateral recovered yet | P2 |
-| S26 | Household consumption jumps about 4.6% in the first quarter, then settles | Question | ours | exp001 figure; household consumption ratio 2.96 under MD9 | open: initial consumption vs income | P2 |
+| S26 | Household consumption jumps about 7% in the first quarter, then settles | Spec | ours | probe: the consumption floor (1 − saving rate) × benefits counts every adult as receiving unemployment benefit (about €800 a month each), exceeds the income of 39.5% of households, and is not in the initial state; without it the first-quarter change is −0.6% | fix built (`settings.no_consumption_floor`); exp016 | P1 |
 | S27 | Regression from S12: firms' wage bill lost its CPI factor, so nominal wages were frozen and real wages fell with prices | Bug | ours | the wage setter pays real wages; the CPI factor belonged on the employees' side | done: employees receive real wage × CPI, firms pay the gross-up of that | — |
-| S28 | The baseline's accounting report shows a firm-loan borrower ledger residual of 3.5% of GDP (seed 7, t = 8) and unexplained money of 1.4%, although "Current state" says every ledger agrees exactly and unexplained money is at most 1.2% | Question | ours | `make baseline` at `7a8ac4d` and after MD11 (identical) | open | P2 |
-| S29 | With the Taylor rule (`PolednaPolicyRate`) on, unexplained money reaches 15.6% of GDP | Question | ours | exp012 step 5 | open | P2 |
+| S28 | Firm-loan ledger residual (3.5% of GDP, seed 7, one quarter): a firm's written-off loans stayed in its own debt records until the next quarter (households' were fixed in S20) | Bug | ours | seed 7, t = 7 | done: insolvency clears the firm's debt records, with test | — |
+| S29 | With the Taylor rule (`PolednaPolicyRate`) on the engine, unexplained money reaches 15.6% of GDP | Question | ours | exp012; probe: the interest the central bank pays on bank reserves (policy rate × reserves, money it creates) explains about two-thirds, and reserves grow to 5× GDP; on defaults the rule falls to 0 (P4) | open: add central-bank interest to the money identity; find the rest | P2 |
 
 ### M. Markets and trade
 
@@ -469,6 +491,7 @@ commit messages (e.g. `G1:`).
 | M9 | Houses change hands far too often: about 12% of the stock per quarter (real: about 1%), 800–1,400 bn of sales per quarter | Spec | ours | Phase 1 decomposition | open | P2 |
 | M10 | Interest on existing loans was an annual rate charged every quarter (4×) | Bug | upstream | now: firm loans 1.0%/yr, consumer loans 4.8%/yr, mortgages 2.3%/yr | done: upstream #83 and #85 merged (`40c8a1e`, `f12f78b`) | — |
 | M11 | Poledna layoffs reported the sum of every firm's excess employees, negative ones included, as the number fired (−hires under search frictions); only the reported flows (`num_individuals_newly_fired`, `job_reallocation_rate`) were wrong | Bug | ours | exp010 | done: counts the workers actually fired, with test | — |
+| M12 | Layoffs only reset a worker's firm ID, so firms' employee lists kept laid-off workers (and listed rehired workers twice); the lists guard random separations | Bug | ours | engine + frictions, 16 quarters: 95 stale entries, 60 duplicates | done: lists rebuilt after every clearing, with test; defaults unaffected (no random separations) | — |
 
 ### F. Government and finance
 

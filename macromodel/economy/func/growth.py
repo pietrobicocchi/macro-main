@@ -185,7 +185,9 @@ class DataOnlyGrowthForecastingAutoReg(GrowthManualForecastingAutoReg):
         data_growth: np.ndarray = None,
         **kwargs,
     ) -> np.ndarray:
-        horizon = len(historic_growth) - len(data_growth) + 1
+        # historic_growth is the data window, then the initial quarter and the simulated ones: in the first simulated
+        # quarter the forecast is one quarter ahead of the data
+        horizon = max(1, len(historic_growth) - len(data_growth))
         return self.forecaster.forecast(data_growth, horizon, assume_zero_noise=assume_zero_noise)[-1:]
 
 

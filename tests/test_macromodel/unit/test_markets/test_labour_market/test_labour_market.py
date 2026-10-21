@@ -129,6 +129,19 @@ class TestLabourMarket:
         assert num_hired == num_separated
         assert len(firms.states["Employments"][0]) == 40
 
+    def test_employee_lists_follow_layoffs_and_hires(self):
+        """Regression: laid-off workers stayed on their old firm's list (and on two lists once rehired)."""
+        clearer = SearchFrictionsLabourMarketClearer(
+            matching_efficiency=100.0, matching_elasticity=0.5, **CLEARER_PARAMETERS
+        )
+        firms, households, individuals = _one_firm_market(n_employed=6, n_unemployed=4, desired_labour=3.0)
+
+        clearer.clear(firms=firms, households=households, individuals=individuals)
+
+        corresponding_firm = individuals.states["Corresponding Firm ID"]
+        assert sorted(firms.states["Employments"][0]) == list(np.flatnonzero(corresponding_firm == 0))
+        assert len(firms.states["Employments"][0]) == 3
+
     def test_poledna_clear_marks_unassigned_active_individuals_as_unemployed(self):
         clearer = PolednaLabourMarketClearer(
             hiring_speed=0.0,

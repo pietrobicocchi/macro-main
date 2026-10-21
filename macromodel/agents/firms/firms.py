@@ -1774,6 +1774,12 @@ class Firms(Agent):
         insolvent_firms = np.where(self.states["is_insolvent"])[0]
         bad_firm_loans = credit_market.remove_loans_to_firm(insolvent_firms)
 
+        # The written-off loans are gone from the firms' own books too (S28)
+        for key in ["short_term_loan_debt", "long_term_loan_debt", "debt"]:
+            cleared = self.ts.current(key).copy()
+            cleared[insolvent_firms] = 0.0
+            self.ts.override_current(key, cleared)
+
         # Update deposits. The lending bank keeps a positive balance against the written-off loans and loses an
         # overdraft, so the net is a loss (or a recovery) for that bank.
         new_firm_deposits = self.ts.current("deposits")

@@ -78,6 +78,27 @@ def test_written_off_loans_are_bank_losses(audited_run):
     np.testing.assert_allclose(credit_market.take_loan_losses(), 0.0)
 
 
+def test_insolvent_firms_debt_records_match_the_credit_market(datawrapper):
+    """Regression (S28): a firm's written-off loans stayed in its own debt records until the next quarter."""
+    from macromodel.accounting import residuals, snapshot
+
+    configuration = SimulationConfiguration(country_configurations={"FRA": CountryConfiguration()}, t_max=1, seed=0)
+    simulation = Simulation.from_datawrapper(datawrapper=datawrapper, simulation_configuration=configuration)
+    simulation.run()
+    country = simulation.countries["FRA"]
+    firms = country.firms
+    borrower = int(np.argmax(firms.ts.current("debt")))
+    assert firms.ts.current("debt")[borrower] > 0.0
+
+    insolvent = np.zeros_like(firms.states["is_insolvent"])
+    insolvent[borrower] = True
+    firms.functions["demography"].handle_firm_insolvency = lambda **_: insolvent
+    firms.handle_insolvency(credit_market=country.credit_market)
+
+    assert firms.ts.current("debt")[borrower] == 0.0
+    assert abs(residuals(snapshot(country), None)["loans.firms.borrowers"]) < 1e-6
+
+
 def test_firm_shares_mode_conserves_money(datawrapper):
     """With other financial assets as shares in firms, dividends and share purchases have counterparts: the only
     flow left without one is interest on government debt, and nothing else is unexplained."""

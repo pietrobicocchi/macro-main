@@ -7,6 +7,7 @@ from macromodel.economy.func.growth import (
 )
 
 DATA = 0.005 + 0.002 * np.sin(np.arange(40))
+INITIAL = [0.004]  # the economy's growth history starts with the initial quarter
 
 
 def _forecast(rule, historic_growth, **kwargs) -> float:
@@ -24,19 +25,22 @@ class TestDataOnlyGrowthForecasting:
     def test_ignores_simulated_growth(self):
         """A simulated boom must not move the forecast: it depends only on the data and the horizon."""
         rule = DataOnlyGrowthForecastingAutoReg(lags=1)
-        boom = _forecast(rule, np.concatenate([DATA, [0.03, 0.03, 0.03]]))
-        bust = _forecast(rule, np.concatenate([DATA, [-0.03, -0.03, -0.03]]))
+        boom = _forecast(rule, np.concatenate([DATA, INITIAL, [0.03, 0.03, 0.03]]))
+        bust = _forecast(rule, np.concatenate([DATA, INITIAL, [-0.03, -0.03, -0.03]]))
         assert boom == bust
 
     def test_first_quarter_matches_the_default_forecast(self):
         default = GrowthManualForecastingAutoReg(lags=1)
         expected = default.forecast_growth(DATA, np.zeros(1), 0, assume_zero_noise=True)[0]
-        assert np.isclose(_forecast(DataOnlyGrowthForecastingAutoReg(lags=1), DATA), expected)
+        assert np.isclose(
+            _forecast(DataOnlyGrowthForecastingAutoReg(lags=1), np.concatenate([DATA, INITIAL])), expected
+        )
 
     def test_horizon_grows_with_simulated_quarters(self):
         rule = DataOnlyGrowthForecastingAutoReg(lags=1)
         expected = rule.forecaster.forecast(DATA, 4, assume_zero_noise=True)[-1]
-        assert np.isclose(_forecast(rule, np.concatenate([DATA, np.zeros(3)])), expected)
+        # three simulated quarters after the initial one: the fourth quarter is forecast four quarters ahead
+        assert np.isclose(_forecast(rule, np.concatenate([DATA, INITIAL, np.zeros(3)])), expected)
 
 
 class TestSlackAwareGrowthForecasting:
