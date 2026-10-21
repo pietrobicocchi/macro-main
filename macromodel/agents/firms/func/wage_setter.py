@@ -25,6 +25,8 @@ class FirmWageSetter(ABC):
             labor market tightness markup
         max_increase_in_work_effort (float): Maximum allowed increase in
             work effort-based wage adjustments
+        cpi_indexation_speed (float): Fraction of the gap between the wage price index and the latest CPI that
+            nominal wages close each quarter (1 = wages follow last quarter's CPI fully)
     """
 
     def __init__(
@@ -32,6 +34,7 @@ class FirmWageSetter(ABC):
         labour_market_tightness_markup_scale: float,
         markup_time_span: int,
         max_increase_in_work_effort: float,
+        cpi_indexation_speed: float = 1.0,
     ):
         """Initialize the wage setter with markup parameters.
 
@@ -46,6 +49,25 @@ class FirmWageSetter(ABC):
         self.labour_market_tightness_markup_scale = labour_market_tightness_markup_scale
         self.markup_time_span = markup_time_span
         self.max_increase_in_work_effort = max_increase_in_work_effort
+        self.cpi_indexation_speed = cpi_indexation_speed
+
+    def wage_price_index(self, historic_cpi: np.ndarray) -> float:
+        """Price level nominal wages are indexed to (G17).
+
+        Starts at the initial CPI and each quarter closes `cpi_indexation_speed` of the gap to the latest CPI, so
+        wages catch up with prices gradually, as with periodic wage rounds, and a burst of inflation lowers real
+        wages for a while.
+
+        Args:
+            historic_cpi (np.ndarray): CPI from the initial quarter to the latest one
+
+        Returns:
+            float: Wage price index
+        """
+        index = historic_cpi[0]
+        for cpi in historic_cpi[1:]:
+            index += self.cpi_indexation_speed * (cpi - index)
+        return float(index)
 
     @abstractmethod
     def compute_wage_tightness_markup(

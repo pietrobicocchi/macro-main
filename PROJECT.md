@@ -104,6 +104,7 @@ looking at the result. This is the raw material for the rewritten model section.
 | exp010 | Do search frictions keep unemployment plausible while the economy grows? | done | No: 10.3% → 2% instead of 0%. Labour demand outgrows the labour force because labour productivity does not grow (G14). `outputs/exp010_search_frictions/` |
 | exp011 | Does labour-augmenting productivity growth keep unemployment plausible while the economy grows? | done | No: unemployment 2.2–4.0% after five years at g = 0.15–0.5%/q; the engine grows faster instead, because growth expectations feed on the model's own growth (G16). `outputs/exp011_labour_productivity/` |
 | exp012 | Do wages and prices that respond to tightness brake the growth engine? | done | No: unemployment 2.3–3.5% after five years with any brake; the model has no channel through which higher prices or interest rates cut spending (G17). Cost pass-through improves the inflation fit (CPI ratio 1.93 → 1.38). `outputs/exp012_price_wage_brakes/` |
+| exp013 | Do wages that catch up with prices gradually let price rises brake the engine? | done | No: unemployment 3.0–3.5% after five years; the boom raises inflation only to 0.3–0.4%/q, so there is little to brake. On today's defaults, cost pass-through with yearly wage catch-up improves or matches every ratio (CPI 0.98). `outputs/exp013_wage_indexation/` |
 
 ### Baseline scorecard history
 
@@ -320,17 +321,29 @@ place of half of expected inflation (P5), demand-pull pricing (0.25) and the Tay
   2.85, 2.05, 1.20, 1.84), unemployment unchanged at 10.3%.
 - With the Taylor rule, unexplained money reaches 15.6% of GDP (S29).
 
+### Gradual wage indexation (exp013, 5 seeds, 20 quarters)
+
+Nominal wages now close a fraction of the gap to the CPI each quarter (`cpi_indexation_speed`; 1 is today's
+rule, wages at last quarter's CPI; `settings.lagged_wage_indexation`).
+- **It does not brake the engine:** unemployment 3.0–3.5% after five years at speeds 1, 0.5 and 0.25,
+  with or without wage tightness. The boom raises inflation only to 0.3–0.4%/q (data 0.2%): unit costs
+  barely rise while productivity grows and firms have capacity, so prices do not surge and real wages do
+  not fall. The brakes in exp012–exp013 act on inflation, and the boom is not inflationary.
+- **On today's defaults it improves the forecasts:** with cost pass-through 0.5 and indexation 0.25,
+  GDP 1.14, HH cons. 2.69, gov. cons. 1.96, invest. 1.17, CPI **0.98** (baseline 1.14, 2.85, 2.05, 1.20,
+  1.84; 5 seeds, 20 quarters scored on the first 12). Unemployment unchanged at 10.3%. The first ratio
+  below 1 for any aggregate.
+
 ### Next step
 
-The engine needs at least one working channel from prices or interest rates to spending, and anchored
-expectations. Each is an existing rule to change, not a new mechanism:
-1. **G17 wages:** nominal wages adjust to past inflation, partially (indexation with a lag), so a price
-   rise squeezes real income until wages catch up.
-2. **G17 investment / G9:** desired capital falls with the real interest rate (user cost of capital),
-   and financing limits once bank limits are realistic.
-3. **G16:** growth expectations from the data only, or responding to slack.
-4. **R4:** deflate output and expectations properly.
-5. Make **MD10–MD12** and the fixed cost pass-through the defaults once unemployment stays plausible.
+1. **G16 (the remaining lever):** the engine's demand growth is not anchored, and since the boom is not
+   inflationary, price and wage brakes cannot stop it. Change the growth forecast firms use: from the
+   data only (not the model's own growth), or one that falls when the economy is tight.
+2. **Candidate default:** cost pass-through 0.5 with yearly wage catch-up (0.25), after a 10-seed
+   baseline run. Needs approval (default change).
+3. **R4:** deflate output and expectations properly.
+4. **G9** with realistic bank limits; investment that responds to the real interest rate.
+5. Make **MD10–MD12** the defaults once unemployment stays plausible under growth.
 
 Every known problem, fixed or open, is in the Issue register below.
 
@@ -380,7 +393,7 @@ commit messages (e.g. `G1:`).
 | G14 | Labour productivity does not grow (`NoOpTFPGrowth`), so every percent of output growth needs a percent more workers from a fixed labour force | Spec | ours | exp010; exp011: labour-augmenting progress cuts labour demand on capacity-capped defaults (unemployment 10.3% → 14.4% at 0.25%/q), but under the engine output grows faster instead (G16) | partial: `LabourAugmentingGrowth` (MD12, option) | P1 |
 | G15 | The TFP module (`SimpleTFPGrowth`) counts all net capital investment as productivity investment, so with the investment engine TFP grows about 3%/q (multiplier 1.88 after 20 quarters at a 0.25%/q base); TFP also scales intermediate and capital capacity, not labour demand | Spec | ours | G14 probes | open: not used | P2 |
 | G16 | Demand growth is not anchored: firms scale demand by forecast growth, an AR(1) over the data history and the model's own realised growth, so extra supply (spare capacity, productivity) becomes faster growth | Spec | ours | exp011: with g = 0.25%/q, last-two-year growth 0.6%/q vs 0.2%/q without, unemployment unchanged at about 2%; `Economy.set_estimates` | open: decide how expectations are anchored | P1 |
-| G17 | Nothing transmits higher prices or interest rates to spending: wages are paid at the current CPI (real wages fixed), households spend a fixed share of nominal income, investment ignores interest rates and financing | Spec | ours | exp012: wage, cost, demand-pull and Taylor-rule brakes leave unemployment at 2–3.5% and growth at 0.7%/q | open | P1 |
+| G17 | Nothing transmits higher prices or interest rates to spending: wages are paid at the current CPI (real wages fixed), households spend a fixed share of nominal income, investment ignores interest rates and financing | Spec | ours | exp012: brakes leave unemployment at 2–3.5%; exp013: gradual wage indexation (`cpi_indexation_speed`) works but the boom is not inflationary (0.3–0.4%/q), so there is little to transmit | partial: wage channel built (option); consumption and investment channels open | P1 |
 
 ### P. Prices, expectations and monetary policy
 

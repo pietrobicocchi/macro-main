@@ -196,3 +196,10 @@ def price_brakes(c: CountryConfiguration, cost_pass_through: float = 0.5, demand
         "price_setting_speed_cp": cost_pass_through,
         "price_setting_speed_dp": demand_pull,
     }
+
+
+def lagged_wage_indexation(c: CountryConfiguration, speed: float = 0.25) -> None:
+    """Nominal wages catch up with prices gradually (G17): each quarter they close `speed` of the gap between their
+    price index and the latest CPI (default 1: last quarter's CPI in full). 0.25 is about one wage round a year."""
+    p = c.firms.functions.wage_setter.parameters
+    c.firms.functions.wage_setter.parameters = {**p, "cpi_indexation_speed": speed}

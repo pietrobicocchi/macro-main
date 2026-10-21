@@ -30,3 +30,24 @@ class TestFirmWageSetter:
             prev_labour_productivity_factor=np.ones(2),
             current_wage_tightness_markup=np.zeros(2),
         )
+
+
+class TestWagePriceIndex:
+    @staticmethod
+    def _setter(speed: float) -> WorkEffortFirmWageSetter:
+        return WorkEffortFirmWageSetter(
+            labour_market_tightness_markup_scale=0.0,
+            markup_time_span=4,
+            max_increase_in_work_effort=1.5,
+            cpi_indexation_speed=speed,
+        )
+
+    def test_full_indexation_follows_the_latest_cpi(self):
+        assert self._setter(1.0).wage_price_index(np.array([1.0, 1.02, 1.05])) == 1.05
+
+    def test_partial_indexation_closes_part_of_the_gap_each_quarter(self):
+        # 1.0 -> 1.0 + 0.5 * (1.02 - 1.0) = 1.01 -> 1.01 + 0.5 * (1.05 - 1.01) = 1.03
+        assert np.isclose(self._setter(0.5).wage_price_index(np.array([1.0, 1.02, 1.05])), 1.03)
+
+    def test_stable_prices_leave_the_index_at_the_cpi(self):
+        assert np.isclose(self._setter(0.25).wage_price_index(np.full(8, 1.1)), 1.1)

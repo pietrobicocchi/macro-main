@@ -261,6 +261,7 @@ class WageSetter(BaseModel):
         "labour_market_tightness_markup_scale": 0.0,
         "markup_time_span": 4,
         "max_increase_in_work_effort": 1.5,
+        "cpi_indexation_speed": 1.0,
     }
 
 
