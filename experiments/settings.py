@@ -183,3 +183,16 @@ def labour_productivity_growth(c: CountryConfiguration, rate: float = 0.0025) ->
     2000s-2010s (to verify against OECD data: the bundled sample has no employment series)."""
     c.firms.functions.productivity_growth.name = "LabourAugmentingGrowth"
     c.firms.functions.productivity_growth.parameters = {"labour_productivity_growth": rate}
+
+
+def price_brakes(c: CountryConfiguration, cost_pass_through: float = 0.5, demand_pull: float = 0.0) -> None:
+    """Prices follow costs and demand, not only the inflation forecast (P5): a share `cost_pass_through` of unit-cost
+    growth replaces the same share of expected inflation (weights sum to one, so steady inflation is unchanged), and
+    firms with excess demand raise prices by `demand_pull` times it."""
+    p = c.firms.functions.prices.parameters
+    c.firms.functions.prices.parameters = {
+        **p,
+        "price_setting_speed_gf": 1.0 - cost_pass_through,
+        "price_setting_speed_cp": cost_pass_through,
+        "price_setting_speed_dp": demand_pull,
+    }

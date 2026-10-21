@@ -119,3 +119,19 @@ class TestSectorExogenousPriceSetter:
         result = setter.compute_price(**PRICE_KWARGS)
 
         assert np.allclose(result, default_prices)
+
+
+class TestDefaultPriceSetterCostPush:
+    def test_prices_pass_on_unit_cost_growth(self):
+        """Full cost pass-through: unit costs up 2% → price up 2%."""
+        setter = DefaultPriceSetter(**{**DEFAULT_PARAMS, "price_setting_speed_cp": 1.0})
+        prices = setter.compute_price(**{**PRICE_KWARGS, "curr_unit_costs": np.full(N_FIRMS, 1.02)})
+        assert np.allclose(prices, 1.02)
+
+    def test_steady_costs_below_price_leave_price_unchanged(self):
+        """Regression: cost-push compared unit costs with the price level, so a margin (costs 0.9 of price) cut prices
+        by 10% a quarter."""
+        setter = DefaultPriceSetter(**{**DEFAULT_PARAMS, "price_setting_speed_cp": 1.0})
+        costs = np.full(N_FIRMS, 0.9)
+        prices = setter.compute_price(**{**PRICE_KWARGS, "curr_unit_costs": costs, "prev_unit_costs": costs})
+        assert np.allclose(prices, 1.0)

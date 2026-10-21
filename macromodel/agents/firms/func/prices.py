@@ -187,13 +187,14 @@ class DefaultPriceSetter(PriceSetter):
         )
         demand_pull_inflation = np.maximum(min_inflation, np.minimum(max_inflation, demand_pull_inflation))
 
-        # Cost-push inflation
+        # Cost-push inflation: the growth of the firm's unit costs since last quarter (it compared unit costs with the
+        # sector's price level, which pulled prices down to costs and erased margins)
         cost_push_inflation = (
             np.divide(
                 curr_unit_costs,
-                average_price_by_firm,
+                prev_unit_costs,
                 out=np.ones_like(curr_unit_costs),
-                where=average_price_by_firm != 0.0,
+                where=prev_unit_costs != 0.0,
             )
             - 1.0
         )

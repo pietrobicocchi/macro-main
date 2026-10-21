@@ -103,6 +103,7 @@ looking at the result. This is the raw material for the rewritten model section.
 | exp009 | Does a realistic work-effort cap keep unemployment plausible? | done | No: the labour market has no frictions (G13). `outputs/exp009_work_effort/` |
 | exp010 | Do search frictions keep unemployment plausible while the economy grows? | done | No: 10.3% → 2% instead of 0%. Labour demand outgrows the labour force because labour productivity does not grow (G14). `outputs/exp010_search_frictions/` |
 | exp011 | Does labour-augmenting productivity growth keep unemployment plausible while the economy grows? | done | No: unemployment 2.2–4.0% after five years at g = 0.15–0.5%/q; the engine grows faster instead, because growth expectations feed on the model's own growth (G16). `outputs/exp011_labour_productivity/` |
+| exp012 | Do wages and prices that respond to tightness brake the growth engine? | done | No: unemployment 2.3–3.5% after five years with any brake; the model has no channel through which higher prices or interest rates cut spending (G17). Cost pass-through improves the inflation fit (CPI ratio 1.93 → 1.38). `outputs/exp012_price_wage_brakes/` |
 
 ### Baseline scorecard history
 
@@ -298,15 +299,38 @@ caps hires; μ makes the initial 10.3% unemployment a steady state (job-finding 
   labour market compared last quarter's inputs with this quarter's productivity, and firms over-hired by
   exactly g. Productivity now grows between clearing and the measurement of labour inputs.
 
+### Price and wage brakes (exp012, 5 seeds, 20 quarters)
+
+On exp011's engine (frictions, productivity +0.25%/q), the brakes that are off by default were switched on:
+wages that rise with hiring shortfalls (G8, scale 0.5), prices that pass on half of unit-cost growth in
+place of half of expected inflation (P5), demand-pull pricing (0.25) and the Taylor rule.
+- **Cost-push pricing was broken (P6):** it compared unit costs with the sector's price level, not cost
+  growth. Unit costs are on average 0.895 of the price, so switching it on cut prices about 10% a
+  quarter until margins vanished (probably Sam's "prices cause shit to break"). Fixed: it now passes on
+  unit-cost growth, as its docstring says.
+- **No brake moves unemployment:** 2.3–3.5% after five years with any combination, against 2.4% without.
+  GDP grows 0.7%/q in every case; the Taylor rule raises the policy rate to 1.7% with no effect.
+- **Why: nothing in the model transmits the brakes to spending (G17).** Wages are paid as real wage
+  times the *current* CPI, so a price rise is handed back to workers within the quarter and real incomes
+  never fall. Households spend a fixed share of nominal income, whatever the interest rate or prices.
+  Investment follows the capital gap and ignores interest rates and financing (G9 off). And expected
+  growth still feeds on realised growth (G16).
+- **Cost pass-through improves the fit anyway:** CPI `sim / AR(1)` 1.93 → 1.38 on the engine. All brakes
+  on today's defaults: GDP 1.14, HH cons. 2.78, gov. cons. 2.54, invest. 1.14, CPI 1.21 (baseline: 1.14,
+  2.85, 2.05, 1.20, 1.84), unemployment unchanged at 10.3%.
+- With the Taylor rule, unexplained money reaches 15.6% of GDP (S29).
+
 ### Next step
 
-1. **G16**: what anchors demand growth. Options: growth expectations from the data only, without the
-   model's own growth; a forecast that responds to slack; or capacity-constrained demand. Needs a
-   decision: it changes how the paper's expectations work.
-2. **R4**: deflate output and growth expectations properly, so the engine aims at French real growth.
-3. **P5** (Phase 3): cost pass-through in prices, so wage tightness (G8) brakes the engine.
-4. **G9**: realistic bank lending limits.
-5. Make **MD10–MD12** the defaults once unemployment stays plausible under growth.
+The engine needs at least one working channel from prices or interest rates to spending, and anchored
+expectations. Each is an existing rule to change, not a new mechanism:
+1. **G17 wages:** nominal wages adjust to past inflation, partially (indexation with a lag), so a price
+   rise squeezes real income until wages catch up.
+2. **G17 investment / G9:** desired capital falls with the real interest rate (user cost of capital),
+   and financing limits once bank limits are realistic.
+3. **G16:** growth expectations from the data only, or responding to slack.
+4. **R4:** deflate output and expectations properly.
+5. Make **MD10–MD12** and the fixed cost pass-through the defaults once unemployment stays plausible.
 
 Every known problem, fixed or open, is in the Issue register below.
 
@@ -356,6 +380,7 @@ commit messages (e.g. `G1:`).
 | G14 | Labour productivity does not grow (`NoOpTFPGrowth`), so every percent of output growth needs a percent more workers from a fixed labour force | Spec | ours | exp010; exp011: labour-augmenting progress cuts labour demand on capacity-capped defaults (unemployment 10.3% → 14.4% at 0.25%/q), but under the engine output grows faster instead (G16) | partial: `LabourAugmentingGrowth` (MD12, option) | P1 |
 | G15 | The TFP module (`SimpleTFPGrowth`) counts all net capital investment as productivity investment, so with the investment engine TFP grows about 3%/q (multiplier 1.88 after 20 quarters at a 0.25%/q base); TFP also scales intermediate and capital capacity, not labour demand | Spec | ours | G14 probes | open: not used | P2 |
 | G16 | Demand growth is not anchored: firms scale demand by forecast growth, an AR(1) over the data history and the model's own realised growth, so extra supply (spare capacity, productivity) becomes faster growth | Spec | ours | exp011: with g = 0.25%/q, last-two-year growth 0.6%/q vs 0.2%/q without, unemployment unchanged at about 2%; `Economy.set_estimates` | open: decide how expectations are anchored | P1 |
+| G17 | Nothing transmits higher prices or interest rates to spending: wages are paid at the current CPI (real wages fixed), households spend a fixed share of nominal income, investment ignores interest rates and financing | Spec | ours | exp012: wage, cost, demand-pull and Taylor-rule brakes leave unemployment at 2–3.5% and growth at 0.7%/q | open | P1 |
 
 ### P. Prices, expectations and monetary policy
 
@@ -365,7 +390,8 @@ commit messages (e.g. `G1:`).
 | P2 | Realised inflation equals the AR(1) forecast (self-fulfilling; referee R2.4) | Question | ours | exp003 | open | P2 |
 | P3 | Forecast noise draw roughly doubles the inflation error: keep (paper) or drop? | Question | ours | exp003: CPI ratio 1.8 → 0.95 without it | decision pending | P2 |
 | P4 | Taylor rule inert (zero by quarter 3), constant rate by default, and a TODO says `xi_pi` is estimated wrongly | Bug | ours | exp001; `default_synthetic_central_bank.py:168` | open; see upstream #83 | P2 |
-| P5 | Firms do not pass cost increases into prices (cost-push weight 0), so higher wages raise demand rather than prices | Spec | ours | exp007 | open: Phase 3 | P1 |
+| P5 | Firms do not pass cost increases into prices (cost-push weight 0), so higher wages raise demand rather than prices | Spec | ours | exp007; exp012: with the fixed cost-push term (P6), half pass-through improves CPI `sim / AR(1)` 1.93 → 1.38 on the engine, 1.84 → 1.21 on defaults (with all brakes) | partial: `settings.price_brakes`; candidate default | P1 |
+| P6 | Cost-push inflation compared unit costs with the sector's price level, so it pulled prices down to costs (−10%/q) instead of passing on cost changes | Bug | ours | unit cost / price 0.895 at t=1; Sam's prior notes "prices cause shit to break" | done: uses unit-cost growth, with test | — |
 
 ### S. Initial state and stock-flow consistency
 
@@ -399,6 +425,7 @@ commit messages (e.g. `G1:`).
 | S26 | Household consumption jumps about 4.6% in the first quarter, then settles | Question | ours | exp001 figure; household consumption ratio 2.96 under MD9 | open: initial consumption vs income | P2 |
 | S27 | Regression from S12: firms' wage bill lost its CPI factor, so nominal wages were frozen and real wages fell with prices | Bug | ours | the wage setter pays real wages; the CPI factor belonged on the employees' side | done: employees receive real wage × CPI, firms pay the gross-up of that | — |
 | S28 | The baseline's accounting report shows a firm-loan borrower ledger residual of 3.5% of GDP (seed 7, t = 8) and unexplained money of 1.4%, although "Current state" says every ledger agrees exactly and unexplained money is at most 1.2% | Question | ours | `make baseline` at `7a8ac4d` and after MD11 (identical) | open | P2 |
+| S29 | With the Taylor rule (`PolednaPolicyRate`) on, unexplained money reaches 15.6% of GDP | Question | ours | exp012 step 5 | open | P2 |
 
 ### M. Markets and trade
 
