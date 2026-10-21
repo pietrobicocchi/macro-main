@@ -143,3 +143,9 @@ def wage_brake(c: CountryConfiguration, tightness_scale: float = 0.5) -> None:
     """Existing employees' wages rise with their firm's recent hiring shortfalls (G8), as offered wages already do."""
     p = c.firms.functions.wage_setter.parameters
     c.firms.functions.wage_setter.parameters = {**p, "labour_market_tightness_markup_scale": tightness_scale}
+
+
+def work_effort_cap(c: CountryConfiguration, cap: float = 1.1) -> None:
+    """Most extra output per worker from effort and overtime (G12; default allows +50%)."""
+    p = c.firms.functions.labour_productivity.parameters
+    c.firms.functions.labour_productivity.parameters = {**p, "max_increase_in_work_effort": cap}

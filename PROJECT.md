@@ -98,6 +98,7 @@ looking at the result. This is the raw material for the rewritten model section.
 | exp006 | Does a flexible-accelerator investment rule give a stable growth engine? | done | Growth, but boom–bust: needs wage, financing and expectation brakes (G8–G10). `outputs/exp006_investment_engine/` |
 | exp007 | Do wages that follow prices and labour-market tightness stabilise the engine? | done | Indexation (S27) halves the bust; tightness adds demand without cost pass-through. `outputs/exp007_wage_brake/` |
 | exp008 | Which brakes turn the boom–bust into steady growth? | done | Smoothed desired capital (G10): steady 0.7%/q growth; financing (G9) needs realistic bank limits. `outputs/exp008_investment_brakes/` |
+| exp009 | Does a realistic work-effort cap keep unemployment plausible? | done | No: the labour market has no frictions (G13). `outputs/exp009_work_effort/` |
 
 ### Baseline scorecard history
 
@@ -304,7 +305,8 @@ commit messages (e.g. `G1:`).
 | G9 | Capital purchases are not limited by financing (`credit_gap_fraction = 0`) | Spec | ours | exp008: switching it on with today's bank lending limits (firm debt/equity 0.03; paper 1.0) starves investment and causes a recession | open: needs realistic bank limits first | P1 |
 | G10 | Desired capital followed current planned output, booms included: multiplier–accelerator cycles | Spec | ours | exp008: sizing desired capital on smoothed planned output (`demand_smoothing` 0.10) gives steady growth of 0.7%/q (data 0.6%) with no bust | fix built (option) | — |
 | G11 | Spare capacity alone sends unemployment from 10% to 4% within five years | Question | ours | exp006 step 2 (see G6) | open: check labour demand vs planned output | P2 |
-| G12 | Work effort can raise output per worker by up to 50% (`max_increase_in_work_effort = 1.5`), so output keeps growing after unemployment reaches 0% | Spec | ours | exp007, exp008 | open: labour scarcity must cap output | P1 |
+| G12 | Work effort can raise output per worker by up to 50% (`max_increase_in_work_effort = 1.5`) | Spec | ours | exp009: not why unemployment hits 0% (caps of 1.05–1.2 change little within 5 years); effort rises 7% once all workers are hired | open: set a realistic cap (~1.1) with G13 | P2 |
+| G13 | The labour market has no frictions: firms fill every vacancy within the quarter (`hiring_speed = 1`), nobody separates (`random_firing_probability = 0`), no quits; so a boom hires the whole unemployed pool and unemployment goes to 0% | Spec | ours | exp009: employment +11.5% in two years, unemployment 10.3% → 0% | open: search frictions (separations and a matching function calibrated to French flows) | P1 |
 
 ### P. Prices, expectations and monetary policy
 
