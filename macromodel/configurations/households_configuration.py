@@ -77,7 +77,7 @@ class FinancialAssetsFunction(BaseModel):
     """
 
     path_name: str = "financial_assets"
-    name: Literal["DefaultFinancialAssets"] = "DefaultFinancialAssets"
+    name: Literal["DefaultFinancialAssets", "FirmSharesFinancialAssets"] = "DefaultFinancialAssets"
     parameters: dict[str, Any] = {"income_from_fa_noise_std": 0.0}
 
 

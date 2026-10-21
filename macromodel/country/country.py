@@ -224,7 +224,6 @@ class Country:
         industries: list[str],
         initial_year: int,
         t_max: int,
-        time_unit: int,
         running_multiple_countries: bool,
         time_unit: int,
         emission_factors_usd: np.ndarray,
@@ -735,9 +734,15 @@ class Country:
             )
         )
         self.households.ts.total_income_rental.append([self.households.ts.current("income_rental").sum()])
-        self.households.ts.expected_income_financial_assets.append(
-            self.households.compute_expected_income_from_financial_assets()
-        )
+        if self._financial_assets_paid_by_firms():
+            # Households expect last period's dividends
+            self.households.ts.expected_income_financial_assets.append(
+                self.households.ts.current("income_financial_assets").copy()
+            )
+        else:
+            self.households.ts.expected_income_financial_assets.append(
+                self.households.compute_expected_income_from_financial_assets()
+            )
         self.households.ts.expected_income.append(self.households.compute_expected_income())
 
         # Household target consumption
@@ -1268,7 +1273,10 @@ class Country:
         self.households.ts.total_income_social_transfers.append(
             [self.households.ts.current("income_social_transfers").sum()]
         )
-        self.households.ts.income_financial_assets.append(self.households.compute_income_from_financial_assets())
+        if self._financial_assets_paid_by_firms():
+            self.households.ts.income_financial_assets.append(self._pay_dividends())
+        else:
+            self.households.ts.income_financial_assets.append(self.households.compute_income_from_financial_assets())
         self.households.ts.total_income_financial_assets.append(
             [self.households.ts.current("income_financial_assets").sum()]
         )
@@ -1314,6 +1322,8 @@ class Country:
             tau_cf=self.central_government.states["Capital Formation Tax"],
             tau_vat=self.central_government.states["Value-added Tax"],
         )
+        if self._financial_assets_paid_by_firms():
+            self._settle_share_purchases()
         self.households.ts.wealth_histogram.append(get_histogram(self.households.ts.current("wealth"), self.scale))
         self.households.ts.net_wealth.append(self.households.compute_net_wealth())
 
@@ -1384,7 +1394,9 @@ class Country:
             current_total_rent_paid=self.households.ts.current("rent")[
                 self.households.states["Tenure Status of the Main Residence"] == 3
             ].sum(),
-            current_income_financial_assets=self.households.ts.current("income_financial_assets"),
+            current_income_financial_assets=self.households.states.get(
+                "gross_income_financial_assets", self.households.ts.current("income_financial_assets")
+            ),
             current_ind_activity=self.individuals.states["Activity Status"],
             current_ind_realised_cons=self.households.ts.current("consumption"),
             current_bank_profits=self.banks.ts.current("profits"),
@@ -1471,6 +1483,34 @@ class Country:
                 goods market transactions
         """
         return [self.firms, self.households, self.government_entities]
+
+    def _financial_assets_paid_by_firms(self) -> bool:
+        """Whether households' other financial assets are shares in firms (FirmSharesFinancialAssets)."""
+        return getattr(self.households.functions["financial_assets"], "paid_by_firms", False)
+
+    def _pay_dividends(self) -> np.ndarray:
+        """Firms pay dividends out of deposits; households receive them net of income tax, by share holdings.
+
+        Returns:
+            np.ndarray: Net dividend income by household
+        """
+        shares = self.households.functions["financial_assets"]
+        after_tax_profits = self.firms.ts.current("profits") - self.firms.ts.current("corporate_taxes_paid")
+        dividends = shares.dividends_by_firm(after_tax_profits, self.households.states["dividend_payout_ratio"])
+        for key in ["deposits", "equity"]:
+            self.firms.ts.override_current(key, self.firms.ts.current(key) - dividends)
+        gross = shares.allocate(dividends.sum(), self.households.ts.current("wealth_other_financial_assets"))
+        self.households.states["gross_income_financial_assets"] = gross
+        return (1.0 - self.central_government.states["Income Tax"]) * gross
+
+    def _settle_share_purchases(self) -> None:
+        """Households' net purchases of shares are paid to firms, by firm equity; net sales are paid by firms."""
+        shares = self.households.functions["financial_assets"]
+        holdings = self.households.ts.historic("wealth_other_financial_assets")
+        net_purchases = float(np.sum(holdings[-1]) - np.sum(holdings[-2]))
+        by_firm = shares.allocate(net_purchases, self.firms.ts.current("equity"))
+        for key in ["deposits", "equity"]:
+            self.firms.ts.override_current(key, self.firms.ts.current(key) + by_firm)
 
     def save_to_h5(self, h5_file: h5py.File) -> None:
         """Save complete country state to HDF5.

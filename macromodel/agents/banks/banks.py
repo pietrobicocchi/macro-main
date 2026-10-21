@@ -512,21 +512,19 @@ class Banks(Agent):
         Returns:
             float: Total losses from insolvency
         """
-        equity_injection, average_equity = self.functions["demography"].handle_bank_insolvency(
+        equity_injection, target_equity = self.functions["demography"].handle_bank_insolvency(
             current_bank_equity=self.ts.current("equity"),
             current_bank_loans=self.ts.current("total_outstanding_loans"),
             current_bank_deposits=self.ts.current("deposits"),
             is_insolvent=self.states["is_insolvent"],
         )
 
-        # Recapitalise: the government tops equity up to `average_equity` (the injection, counted in its deficit).
-        # Loans and deposits stay: borrowers still owe what they borrowed and depositors keep their money. Deleting
-        # the loan book and zeroing reserves, as before, created money with no counterpart.
+        # Recapitalise: equity is set to the demography rule's target, and the government pays the injection (counted
+        # in its deficit). Loans and deposits stay: borrowers still owe what they borrowed and depositors keep their
+        # money. Deleting the loan book and zeroing reserves, as before, created money with no counterpart.
         insolvent = self.states["is_insolvent"]
-        new_equity = self.ts.current("equity").copy()
-        new_equity[insolvent] = np.maximum(new_equity[insolvent], average_equity)
         self.ts.equity.pop()
-        self.ts.equity.append(new_equity)
+        self.ts.equity.append(target_equity)
         new_reserves = self.ts.current("deposits").copy()
         new_reserves[insolvent] = self.compute_deposits()[insolvent]
         self.ts.deposits.pop()

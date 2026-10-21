@@ -76,3 +76,22 @@ def test_written_off_loans_are_bank_losses(audited_run):
     credit_market.remove_loans_to_households(borrowers)
     np.testing.assert_allclose(credit_market.take_loan_losses(), expected)
     np.testing.assert_allclose(credit_market.take_loan_losses(), 0.0)
+
+
+def test_firm_shares_mode_conserves_money(datawrapper):
+    """With other financial assets as shares in firms, dividends and share purchases have counterparts: the only
+    flow left without one is interest on government debt, and nothing else is unexplained."""
+    country_configuration = CountryConfiguration()
+    country_configuration.households.functions.financial_assets.name = "FirmSharesFinancialAssets"
+    configuration = SimulationConfiguration(country_configurations={"FRA": country_configuration}, t_max=3, seed=0)
+    simulation = Simulation.from_datawrapper(datawrapper=datawrapper, simulation_configuration=configuration)
+    monitor = AccountingMonitor()
+    monitor.record(simulation, t=-1)
+    simulation.posthooks.append(monitor)
+    simulation.run()
+    report = monitor.report()
+
+    ledgers = report[report["check"].isin(LEDGER_CHECKS)]
+    assert ledgers["share_of_gdp"].abs().max() < 1e-9
+    unexplained = report[report["check"] == "money.unexplained"]
+    assert unexplained["share_of_gdp"].abs().max() < UNEXPLAINED_MONEY_TOLERANCE

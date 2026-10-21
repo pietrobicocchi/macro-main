@@ -82,7 +82,9 @@ class DemographyFunction(BaseModel):
     """
 
     path_name: str = "demography"
-    name: Literal["NoBankDemography", "DefaultBankDemography"] = "DefaultBankDemography"
+    name: Literal["NoBankDemography", "DefaultBankDemography", "MinimumCapitalBankDemography"] = (
+        "MinimumCapitalBankDemography"
+    )
     parameters: dict[str, Any] = {"solvency_ratio": 0.05}
 
 

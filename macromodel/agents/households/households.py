@@ -216,6 +216,7 @@ class Households(Agent):
             "wealth_distribution_model": synthetic_population.wealth_distribution_model,
             "average_saving_rate": synthetic_population.household_data["Saving Rate"].mean(),
             "coefficient_fa_income": synthetic_population.coefficient_fa_income,
+            "dividend_payout_ratio": synthetic_country.dividend_payout_ratio,
             "investment_rate": synthetic_population.household_data["Investment Rate"].values,
         }
 

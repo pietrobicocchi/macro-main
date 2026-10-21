@@ -55,7 +55,7 @@ class BankDemography(ABC):
         current_bank_loans: np.ndarray,
         current_bank_deposits: np.ndarray,
         is_insolvent: np.ndarray,
-    ) -> Tuple[float, float]:
+    ) -> Tuple[float, np.ndarray]:
         """Handle insolvent banks.
 
         Args:
@@ -65,8 +65,7 @@ class BankDemography(ABC):
             is_insolvent (np.ndarray): Current insolvency status by bank
 
         Returns:
-            Tuple[float, float]: (Total equity injection needed,
-                Average equity of solvent banks)
+            Tuple[float, np.ndarray]: (Total equity injection, equity of each bank after any injection)
         """
         pass
 
@@ -87,7 +86,7 @@ class NoBankDemography(BankDemography):
         current_bank_loans: np.ndarray,
         current_bank_deposits: np.ndarray,
         is_insolvent: np.ndarray,
-    ) -> Tuple[float, float]:
+    ) -> Tuple[float, np.ndarray]:
         """Handle insolvency with no intervention.
 
         Returns system average equity without any intervention.
@@ -96,10 +95,9 @@ class NoBankDemography(BankDemography):
             [same as parent class]
 
         Returns:
-            Tuple[float, float]: (0.0 for no injection,
-                System-wide average equity)
+            Tuple[float, np.ndarray]: (0.0 for no injection, unchanged equity)
         """
-        return 0.0, float(np.mean(current_bank_equity))
+        return 0.0, current_bank_equity.copy()
 
 
 class DefaultBankDemography(BankDemography):
@@ -124,7 +122,7 @@ class DefaultBankDemography(BankDemography):
         current_bank_loans: np.ndarray,
         current_bank_deposits: np.ndarray,
         is_insolvent: np.ndarray,
-    ) -> Tuple[float, float]:
+    ) -> Tuple[float, np.ndarray]:
         """Handle insolvent banks actively.
 
         Identifies insolvent banks and calculates needed equity
@@ -138,8 +136,8 @@ class DefaultBankDemography(BankDemography):
             [same as parent class]
 
         Returns:
-            Tuple[float, float]: (Total equity injection needed,
-                Average equity of solvent banks)
+            Tuple[float, np.ndarray]: (Total equity injection, equity of each bank after the injection: insolvent
+                banks are topped up to the average equity of solvent banks)
         """
         insolvent_banks = (
             np.divide(
@@ -157,5 +155,47 @@ class DefaultBankDemography(BankDemography):
             average_equity = float(np.mean(current_bank_equity[~insolvent_banks]))
         else:
             average_equity = float(np.mean(current_bank_equity))
-        equity_injection = np.maximum(0.0, average_equity - current_bank_equity[insolvent_banks]).sum()
-        return equity_injection, average_equity
+        target_equity = current_bank_equity.copy()
+        target_equity[insolvent_banks] = np.maximum(current_bank_equity[insolvent_banks], average_equity)
+        return float((target_equity - current_bank_equity).sum()), target_equity
+
+
+class MinimumCapitalBankDemography(DefaultBankDemography):
+    """Recapitalise failing banks to the minimum capital ratio.
+
+    A bank is insolvent when equity / (customer deposits + equity) falls below the solvency ratio (as in
+    DefaultBankDemography). The government then injects exactly the equity that restores that ratio. Unlike topping
+    up to the average of the healthy banks, this also works when there is a single bank.
+    """
+
+    def handle_bank_insolvency(
+        self,
+        current_bank_equity: np.ndarray,
+        current_bank_loans: np.ndarray,
+        current_bank_deposits: np.ndarray,
+        is_insolvent: np.ndarray,
+    ) -> Tuple[float, np.ndarray]:
+        """Find insolvent banks and the injection that restores the solvency ratio.
+
+        Args:
+            current_bank_equity (np.ndarray): Current equity by bank
+            current_bank_loans (np.ndarray): Current loans by bank
+            current_bank_deposits (np.ndarray): Current reserve position by bank (deposits + equity - loans)
+            is_insolvent (np.ndarray): Insolvency status by bank, updated in place
+
+        Returns:
+            Tuple[float, np.ndarray]: (Total equity injection, equity of each bank after the injection)
+        """
+        funding = current_bank_loans + current_bank_deposits  # customer deposits + equity
+        insolvent_banks = (
+            np.divide(current_bank_equity, funding, out=np.zeros(current_bank_equity.shape), where=funding != 0.0)
+            < self.solvency_ratio
+        )
+        is_insolvent[insolvent_banks] = True
+
+        # Equity E* with E* / (D + E*) = solvency ratio, where D are customer deposits
+        customer_deposits = funding - current_bank_equity
+        required_equity = self.solvency_ratio * customer_deposits / (1.0 - self.solvency_ratio)
+        target_equity = current_bank_equity.copy()
+        target_equity[insolvent_banks] = np.maximum(current_bank_equity, required_equity)[insolvent_banks]
+        return float((target_equity - current_bank_equity).sum()), target_equity
