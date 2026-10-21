@@ -216,9 +216,11 @@ class TargetCapitalInputs(BaseModel):
     Options: UnconstrainedTargetCapitalInputsSetter, FinancialTargetCapitalInputsSetter
     """
 
-    name: Literal["FinancialTargetCapitalInputsSetter", "BundleWeightedTargetCapitalInputsSetter"] = (
-        "FinancialTargetCapitalInputsSetter"
-    )
+    name: Literal[
+        "FinancialTargetCapitalInputsSetter",
+        "BundleWeightedTargetCapitalInputsSetter",
+        "PartialAdjustmentTargetCapitalInputsSetter",
+    ] = "FinancialTargetCapitalInputsSetter"
     path_name: str = "target_capital_inputs"
     parameters: dict[str, Any] = {"target_capital_inputs_fraction": 0.0, "credit_gap_fraction": 0.0}
 

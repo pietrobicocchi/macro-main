@@ -21,14 +21,10 @@ import numpy as np
 import pandas as pd
 from provenance import record_run
 from scoring import COUNTRY, ROOT, START, accounts_summary, load_data, observed, plot, scorecard, simulate
+from settings import firm_shares
 
 from macromodel.configurations import CountryConfiguration, SimulationConfiguration
 from macromodel.simulation import Simulation
-
-
-def firm_shares(c: CountryConfiguration) -> None:
-    c.households.functions.financial_assets.name = "FirmSharesFinancialAssets"
-
 
 VARIANTS = {
     "A_today": (False, None),

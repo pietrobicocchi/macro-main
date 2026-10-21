@@ -75,7 +75,8 @@ looking at the result. This is the raw material for the rewritten model section.
 | MD6 | Households' other financial assets are shares in domestic firms: purchases fund firms, firms pay dividends (Eurostat payout ratio) out of after-tax profits (`FirmSharesFinancialAssets`) | Income must have a payer and savings a receiver; shares in firms are the main household financial asset with a domestic counterpart | claims on the rest of the world; government bonds | Phase 1: money conserved; but dividends are ~2 bn/q against 107 bn/q of the old income, so consumption drops ~19% | built, off by default until firm profits are realistic (S2) |
 | MD7 | Initial mortgages are capped at the value of the property they finance (`cap_mortgages_at_property_value`, data config, default on) | A mortgage is secured on a property; the spoofed survey breaks that link | wait for real data; cap at a loan-to-value above 1 | Phase 1: underwater households 77 → 24 | none; switch off with real HFCS |
 | MD8 | Households default when they cannot pay: underwater and an overdraft above one quarter of income (`UnableToPayHouseholdInsolvencyHandler`, default) | Underwater households that keep paying do not default; the old rule defaulted at the first overdraft | old rule (still selectable); recovery of the house by the bank (not yet) | Phase 1: quarter-1 write-offs 400 → 110 bn, no bank bail-out needed | describe household default |
-| MD9 | Initial wages keep each industry's SEA labour share of value added; capital compensation stays equal to investment (steady capital stock), and the rest is profit (`labour_share_from_sea`) | Value added = wages + depreciation + profits + taxes; the old rule gave profits to workers | keep the old rule (current default) | exp005: profits 3.9% → 24.5% of GDP, wages match France, GDP and CPI scores hold or improve | proposed default; describe the initial income split |
+| MD9 | Initial wages keep each industry's SEA labour share of value added; capital compensation stays equal to investment (steady capital stock), and the rest is profit (`labour_share_from_sea`) | Value added = wages + depreciation + profits + taxes; the old rule gave profits to workers | keep the old rule (current default) | exp005: profits 3.9% → 24.5% of GDP, wages match France, GDP and CPI scores hold or improve | default since 2026-10-21; describe the initial income split |
+| MD10 | Investment as a flexible accelerator: replacement plus a fraction λ of the gap to desired capital (initial capital/output ratio at planned output), planned on expected demand (`PartialAdjustmentTargetCapitalInputsSetter`) | Standard investment theory; closing only part of the gap avoids the paper's runaway top-up | paper's full top-up (G2) | exp006: growth appears but cycles without brakes (G8–G10) | candidate, option until stable |
 
 ## Baselines
 
@@ -94,6 +95,7 @@ looking at the result. This is the raw material for the rewritten model section.
 | exp003 | Can the model grow, and where does its inflation come from? | done | Inflation = the noisy AR(1) forecast; no growth in any cell. `outputs/exp003_growth_inflation/` |
 | exp004 | Does the paper's capacity setup let the growth loop run? | done | Spare capacity gives growth; the stock top-up explodes. `outputs/exp004_growth_loop/` |
 | exp005 | Do realistic initial wages give firms realistic profits, and can profits pay households? | done | Yes (B); paying them as dividends (C) needs firms to invest retained profits first. `outputs/exp005_firm_profits/` |
+| exp006 | Does a flexible-accelerator investment rule give a stable growth engine? | done | Growth, but boom–bust: needs wage, financing and expectation brakes (G8–G10). `outputs/exp006_investment_engine/` |
 
 ### Baseline scorecard history
 
@@ -112,6 +114,7 @@ mean quarterly real GDP growth (data: +0.64%) and the median unemployment rate a
 | + Phase 1 round 2 (S11, S12, S14, S22) | 1.16 | 2.56 | 1.94 | 1.13 | 1.92 | −0.05% | 10.4% |
 | + upstream #83, #85 (quarterly rates), MD5 | 1.14 | 2.57 | 1.92 | 1.12 | 1.89 | −0.04% | 10.4% |
 | + MD7 mortgage cap, MD8 default rule | 1.17 | 2.59 | 2.06 | 1.17 | 1.76 | −0.05% | 10.4% |
+| + MD9 realistic initial wages (default) | 1.15 | 2.96 | 1.98 | 1.11 | 1.65 | −0.05% | 10.4% |
 
 ## What we have learned
 
@@ -216,6 +219,17 @@ Paper settings added cumulatively to the defaults as they were with 5% price noi
   reaches 19% after five years. Retained profits must finance investment: this is the
   growth engine (G1–G3).
 
+### Investment engine (exp006, 5 seeds, 20 quarters)
+
+- Spare capacity plus growth expectations gives growth (+0.4%/q over three years; data
+  +0.6%) but unemployment falls from 10% to 4% (G11).
+- A flexible-accelerator investment rule (MD10) adds a multiplier–accelerator cycle:
+  λ = 0.10 grows then contracts (−0.9%/q in the last two years); λ = 0.25 booms (+2.1%/q)
+  and busts (−5.6%/q, unemployment 34%); λ = 0.50 explodes (investment +7.6%/q).
+- The missing brakes are standard: wages and prices that respond to labour-market
+  tightness (G8), investment limited by financing (G9), and desired capital based on a
+  steadier view of demand (G10).
+
 ### Current state of `main`
 
 Default settings (price noise 0.0005), 10 seeds, 12 quarters, France 2014:
@@ -264,13 +278,17 @@ commit messages (e.g. `G1:`).
 
 | ID | Problem | Kind | Source | Evidence | Status | Pri |
 | --- | --- | --- | --- | --- | --- | --- |
-| G1 | No growth: firms start at full capacity (ω = 1; paper 0.85) and capital purchases only replace depreciation (φ^K = 0; paper 1) | Spec | ours | exp003, exp004: every firm at capital capacity; ω = 0.85 gives +0.3%/q | open | P1 |
-| G2 | The paper's stock top-up (φ^K = φ^M = 1) explodes like an accelerator | Spec | ours | exp004 step 3: investment +15%/q | open | P1 |
-| G3 | Growth expectations off by default (`sectoral_growth_adjustment_speed = 0`; paper weight 1) | Spec | ours | exp002, exp003 | open; with G1 | P1 |
+| G1 | No growth: firms start at full capacity and capital purchases only replace depreciation, capped at current capacity | Spec | ours | exp003, exp004, exp006 | partial: investment engine built (`PartialAdjustmentTargetCapitalInputsSetter`, MD10 candidate, option); unstable without G7–G9 | P1 |
+| G2 | The paper's stock top-up (φ^K = φ^M = 1) explodes like an accelerator | Spec | ours | exp004 | superseded by the partial-adjustment rule (G1), which still cycles without stabilisers | — |
+| G3 | Growth expectations off by default | Spec | ours | exp002, exp003, exp006 | open: part of the engine; no effect on its own | P1 |
 | G4 | χ caps input purchases and hiring, not target production as in the paper | Spec | ours | exp002; Sam's `target_production_considers_*` | open | P2 |
 | G5 | One firm per industry by default, and `default_data_configuration` ignores its `single_firm_per_industry` argument | Bug | ours | `configuration_utils.py:74` | workaround in `scoring.load_data` | P2 |
 | G6 | Spare capacity overshoots: unemployment falls to 5.8% (data 9.4%) | Question | ours | exp004 step 2 | open | P2 |
 | G7 | Many-firm runs crashed (per-firm prices used as per-industry) | Bug | ours | — | done `31f797a` | — |
+| G8 | Wages do not respond to labour-market tightness (`labour_market_tightness_markup_scale = 0`), so a boom drives unemployment to 0–4% with no wage or price brake | Spec | ours | exp006 | open: Phillips-curve wage response | P1 |
+| G9 | Capital purchases are not limited by financing (`credit_gap_fraction = 0`): firms invest whatever they can fund or not | Spec | ours | exp006 | open | P1 |
+| G10 | Desired capital follows current planned output, booms included, rather than a steadier view of demand: multiplier–accelerator cycles (λ = 0.25: +2.1%/q, then −5.6%/q, unemployment 34%) | Spec | ours | exp006 | open | P1 |
+| G11 | Spare capacity alone sends unemployment from 10% to 4% within five years | Question | ours | exp006 step 2 (see G6) | open: check labour demand vs planned output | P2 |
 
 ### P. Prices, expectations and monetary policy
 
@@ -286,7 +304,7 @@ commit messages (e.g. `G1:`).
 | ID | Problem | Kind | Source | Evidence | Status | Pri |
 | --- | --- | --- | --- | --- | --- | --- |
 | S1 | Stock-flow consistency: `macromodel/accounting.py` checks every quarter that the loan and deposit ledgers agree, bank equity and government debt move only by their flows, and money changes only by the deficit plus net exports; it separates the by-design unbacked flows from leaks | Gap | both | exp001 `accounts.csv`: all ledgers exact; money residual ≈ unbacked flows (up to 11% of GDP); unexplained ≤ 4% of GDP, early quarters only (S23) | partial: done once S9, S10, S13, S23 are closed | P1 |
-| S2 | Firms made about zero profit: initial wages were set to value added minus investment (labour share 85%; SEA and France ≈ 59%), so net operating surplus was zero by construction (`icio_sea_matching._match_country_iot_with_sea`) | Bug | ours | exp005: with SEA labour shares, firm profits 3.9% → 24.5% of GDP, wages 65% → 46% (France ≈ 52%) | fix built: `labour_share_from_sea` data option (MD9, default pending) | P1 |
+| S2 | Firms made about zero profit: initial wages were value added minus investment (labour share 85%; SEA and France ≈ 59%) | Bug | ours | exp005 | done: `labour_share_from_sea` is the default (MD9); firm profits ≈ 24% of GDP | — |
 | S3 | The re-initialisation path double-counts bank deposits (liabilities 1.65e16) | Bug | ours | exp004 | workaround: build data with matching settings | P2 |
 | S4 | Bank deposits are negative on the normal path (−1.17e12) | Question | ours | probe | open | P2 |
 | S5 | Initial Demand = Production + Inventory | Question | ours | `firm_tools.py:487` | open | P3 |
@@ -310,6 +328,7 @@ commit messages (e.g. `G1:`).
 | S23 | A transient unexplained money residual in the early quarters | Question | ours | `money.unexplained`: at most 1.1% of GDP after the upstream merges (was 4%) | open | P3 |
 | S24 | At t=0, 2.7% of households were underwater and held 40% of household debt: mortgages with no matching property (spoofed HFCS) | Data | ours | — | done (MD7): mortgages capped at property value; now 0.8% underwater holding 14% of debt; mortgages 698 bn (was 1,315; France ~850 bn) | — |
 | S25 | Household default rule wrote off a household's whole debt at its first overdraft when underwater | Spec | ours | — | partial (MD8): default only when unable to pay; still 10–18 defaults/quarter (~2%/yr, real <1%); no collateral recovered yet | P2 |
+| S26 | Household consumption jumps about 4.6% in the first quarter, then settles | Question | ours | exp001 figure; household consumption ratio 2.96 under MD9 | open: initial consumption vs income | P2 |
 
 ### M. Markets and trade
 

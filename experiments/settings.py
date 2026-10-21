@@ -109,3 +109,22 @@ def stock_top_up(c: CountryConfiguration) -> None:
 def no_forecast_noise(c: CountryConfiguration) -> None:
     """Drop the random draw added to the AR(1) growth and inflation forecasts (P3)."""
     c.assume_zero_noise = True
+
+
+def investment_engine(c: CountryConfiguration, adjustment_speed: float = 0.25) -> None:
+    """Flexible-accelerator investment (MD10 candidate): capital purchases are replacement plus a fraction of the gap
+    to desired capital, planned on expected demand rather than capped by current capacity."""
+    c.firms.functions.target_capital_inputs.name = "PartialAdjustmentTargetCapitalInputsSetter"
+    c.firms.functions.target_capital_inputs.parameters = {"capital_gap_adjustment_speed": adjustment_speed}
+    p = c.firms.functions.target_production.parameters
+    c.firms.functions.target_production.parameters = {
+        **p,
+        "capital_inputs_target_considers_labour_inputs": 0.0,
+        "capital_inputs_target_considers_intermediate_inputs": 0.0,
+        "capital_inputs_target_considers_capital_inputs": 0.0,
+    }
+
+
+def firm_shares(c: CountryConfiguration) -> None:
+    """Households' other financial assets are shares in firms paying dividends (MD6)."""
+    c.households.functions.financial_assets.name = "FirmSharesFinancialAssets"

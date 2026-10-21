@@ -346,3 +346,66 @@ class BundleWeightedTargetCapitalInputsSetter(FinancialTargetCapitalInputsSetter
         weighted_targets = base_targets * normalized_weights
 
         return weighted_targets
+
+
+class PartialAdjustmentTargetCapitalInputsSetter(FinancialTargetCapitalInputsSetter):
+    """Investment as a flexible accelerator: replacement plus a fraction of the gap to desired capital.
+
+    Each period a firm buys the capital worn out producing its planned output, plus a fraction
+    `capital_gap_adjustment_speed` of the gap between the capital it wants and the capital it has. Desired capital
+    keeps the initial capital-to-output ratio at planned output, so firms keep their normal spare capacity as
+    expected demand grows. Closing only part of the gap each period avoids the runaway of closing it in full (G2).
+
+    Plan on expected demand (capital purchase target not capped by current capacity) for firms to expand.
+    """
+
+    def __init__(
+        self,
+        capital_gap_adjustment_speed: float = 0.25,
+        target_capital_inputs_fraction: float = 0.0,
+        credit_gap_fraction: float = 0.0,
+    ):
+        super().__init__(
+            target_capital_inputs_fraction=target_capital_inputs_fraction, credit_gap_fraction=credit_gap_fraction
+        )
+        self.capital_gap_adjustment_speed = capital_gap_adjustment_speed
+
+    def compute_unconstrained_target_capital_inputs(
+        self,
+        current_target_production: np.ndarray,
+        capital_inputs_depreciation_matrix: np.ndarray,
+        prev_capital_inputs_stock: np.ndarray,
+        initial_capital_inputs_stock: np.ndarray,
+        prev_production: np.ndarray,
+        initial_production: np.ndarray,
+        previous_good_prices: np.ndarray,
+        substitution_bundle_matrix: np.ndarray,
+        extra_taxes: Optional[np.ndarray] = None,
+    ) -> np.ndarray:
+        """Real capital purchases by firm and capital good: replacement plus partial closing of the capital gap.
+
+        Args:
+            current_target_production (np.ndarray): Planned production by firm
+            capital_inputs_depreciation_matrix (np.ndarray): Capital used up per unit of output
+            prev_capital_inputs_stock (np.ndarray): Current capital stock by firm and good
+            initial_capital_inputs_stock (np.ndarray): Initial capital stock by firm and good
+            prev_production (np.ndarray): Current production (unused)
+            initial_production (np.ndarray): Initial production by firm
+            previous_good_prices (np.ndarray): Previous prices (unused)
+            substitution_bundle_matrix (np.ndarray): Substitution bundles (unused in Leontief technology)
+            extra_taxes (Optional[np.ndarray]): Additional taxes on inputs (unused)
+
+        Returns:
+            np.ndarray: Target capital purchases by firm and good
+        """
+        replacement = current_target_production[:, None] * capital_inputs_depreciation_matrix
+        planned_scale = np.divide(
+            current_target_production,
+            initial_production,
+            out=np.zeros_like(current_target_production, dtype=float),
+            where=initial_production != 0.0,
+        )
+        desired_stock = planned_scale[:, None] * initial_capital_inputs_stock
+        return np.maximum(
+            0.0, replacement + self.capital_gap_adjustment_speed * (desired_stock - prev_capital_inputs_stock)
+        )
