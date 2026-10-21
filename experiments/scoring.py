@@ -42,7 +42,7 @@ def load_data(
     many_firms: bool = False,
     utilisation_rate: float = 1.0,
     inventory_fraction: float = 0.0,
-    labour_share_from_sea: bool = False,
+    labour_share_from_sea: bool = True,
 ) -> DataWrapper:
     """France 2014 initial state. many_firms uses business-demography firm counts instead of one per industry.
 

@@ -249,7 +249,7 @@ class DataConfiguration(BaseModel):
     aggregation_structure: Optional[dict[Country, list[Country | Region]]] = None
     # Initial wages from the SEA labour share of value added (S2). When False, wages are value added minus
     # investment, which leaves firms no operating profit.
-    labour_share_from_sea: bool = False
+    labour_share_from_sea: bool = True
 
     def model_post_init(self, __context: Any) -> None:
         """
