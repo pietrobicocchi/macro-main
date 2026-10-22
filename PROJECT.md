@@ -240,6 +240,7 @@ scored against PPI- or CPI-deflated data.
 | + M16 housing matching respects willingness to pay (bug fix) | 0.97 | **0.95** | 1.53 | 1.20 | 0.86 | +0.31% | 9.0% |
 | R7: same model, inflation and unemployment against seasonally adjusted quarterly data (q12: 9.7%) | 0.97 | 0.95 | 1.53 | 1.20 | **0.74** | +0.31% | 9.0% |
 | + MD17 cash benefits, MD18 Taylor rule, MD19 the paper's target-production caps | 1.03 | 1.04 | 1.69 | **1.08** | **0.74** | +0.21% | 10.0% |
+| + P8 house price forecasts no longer pinned at the 22%/q cap (bug fix) | 1.03 | 1.05 | **1.66** | 1.11 | 0.74 | +0.21% | 10.0% |
 
 ## What we have learned
 
@@ -266,19 +267,19 @@ differ from the submitted one.
   consumption, real government consumption and real GFCF, then forecasts 3 years
   ahead. The paper-figure notebook path suggests a fourth repo, `inet-macro-dev`.
 
-### Current state of `main` (MD19, R7 targets)
+### Current state of `main` (MD19, R7 targets, P8)
 
 Default settings, 10 seeds, 12 quarters, France 2014, real aggregates against chain-linked volumes, inflation and
 unemployment against seasonally adjusted quarterly data:
-- **Scorecard** (`sim / AR(1)`): GDP 1.03, HH cons. 1.04, gov. cons. 1.69, investment 1.08, CPI **0.74**
-  (`sim / VAR`: 0.98, 1.03, 1.42, 1.06, 0.98). The paper reports 0.40–0.75. MD17–MD19 cost about 0.05 on GDP and
+- **Scorecard** (`sim / AR(1)`): GDP 1.03, HH cons. 1.05, gov. cons. 1.66, investment 1.11, CPI **0.74**
+  (`sim / VAR`: 0.98, 1.04, 1.39, 1.09, 0.97; after the P8 fix). The paper reports 0.40–0.75. MD17–MD19 cost about 0.05 on GDP and
   HH cons. against the M16 baseline and bring the model closer to the paper and to France's accounts. Nothing is
   calibrated yet, the firm and household data are spoofed (D1), and tax rates are statutory (F7).
 - **Sanity gate passed**: growth +0.21%/q (data +0.28%); unemployment 10.0% after 12 quarters (data 9.7%).
 - **Inflation is three times the data**: 0.22%/q against 0.07%/q (adjusted deflator, 2014–16), so the VAR (the
   sample mean) scores as well as the model on CPI. The policy rate is at zero from quarter 4 (MD18), as the ECB's
   was, so monetary policy cannot respond.
-- **Government consumption** (1.69) is the worst ratio: the plan is smooth, but realised spending is the
+- **Government consumption** (1.66) is the worst ratio: the plan is smooth, but realised spending is the
   plan at expected industry prices, scored as nominal over the CPI.
 - **Accounts**: every loan and deposit ledger agrees exactly; unexplained money at most 0.3% of GDP; the
   by-design unbacked flows (S9, S10, S13) remain.
@@ -439,6 +440,7 @@ commit messages (e.g. `G1:`).
 | P5 | Firms did not pass cost increases into prices (cost-push weight 0) | Spec | ours | exp007; exp012, exp013, exp015 | done: half pass-through by default (MD14) | — |
 | P6 | Cost-push inflation compared unit costs with the sector's price level, so it pulled prices down to costs (−10%/q) instead of passing on cost changes | Bug | ours | unit cost / price 0.895 at t=1; Sam's prior notes "prices cause shit to break" | done: uses unit-cost growth, with test | — |
 | P7 | `InflationForecasting.forecast_inflation` applied its upper bound with `np.maximum`, raising every forecast to the cap | Bug | upstream | code reading, 2026-10-22 | fixed, with test; latent: no caller passes bounds (`Economy` clips the forecast itself), so no run changes | — |
+| P8 | `HPIForecasting.forecast_hpi_growth` applied its upper bound with `np.maximum` (as P7), and the economy passes `max_hpi_growth = 0.2`: every house price forecast was log growth 0.2, i.e. 22.1% a quarter. Sellers asked 22% above value and buying looked like a 122% yearly return, so every household deciding chose to buy (M2) | Bug | upstream | M2 probe, 2026-10-22: expected HPI growth 0.2214 at every t | fixed, with test: −0.38% at t = 1, then about +0.07%. Baseline: HH 1.04 → 1.05, gov. 1.66, invest. 1.11; still no rentals (M2) | — |
 
 ### S. Initial state and stock-flow consistency
 
@@ -482,7 +484,7 @@ commit messages (e.g. `G1:`).
 | ID | Problem | Kind | Source | Evidence | Status | Pri |
 | --- | --- | --- | --- | --- | --- | --- |
 | M1 | Housing market initialises and executes poorly (tenure mix, stock quality) | Spec | both | CB7; upstream #93 | partial: #93 merged | P2 |
-| M2 | Rental market nearly dead (0–1 rentals/q vs 400–500 sales); some rent/value above 1 | Question | ours | rent probe; possibly spoofed data; I1 cause: the buy-or-rent logit is saturated. Its argument is temperature × (annual cost of renting − annual cost of buying) / 10,000 in model money units (each agent stands for `scale` households), with temperature 1: at t = 1 it ranges from 18,500 to 637,000 for the 1,362 deciding households, so every one of them buys (P(buy) = 1) and no household asks to rent while 844 homes are offered. The cost of buying also leaves out mortgage interest (the paper's formula has it) and subtracts expected appreciation on the whole value | open: diagnosed; fix in phase 4 (a cost comparison relative to the cost of renting, interest in the cost of buying, a temperature with units) | P2 |
+| M2 | Rental market nearly dead (0–1 rentals/q vs 400–500 sales); some rent/value above 1 | Question | ours | rent probe; possibly spoofed data; I1 cause: the buy-or-rent logit is saturated. Its argument is temperature × (annual cost of renting − annual cost of buying) / 10,000 in model money units (each agent stands for `scale` households), with temperature 1: at t = 1 it ranges from 18,500 to 637,000 for the 1,362 deciding households, so every one of them buys (P(buy) = 1) and no household asks to rent while 844 homes are offered. The cost of buying also leaves out mortgage interest (the paper's formula has it) and subtracts expected appreciation on the whole value | open: diagnosed. Part was P8 (expected house price growth pinned at 22%/q, fixed). After it, per real household the median decider compares renting at €6,137 a year with buying at about €1,000: buying counts only the loan's principal (43% need no loan) and no interest or forgone return on own wealth, so even the paper's φ^B = 0.001 per euro gives P(buy) ≈ 0.99, and no house is newly rented in 12 quarters. The code's sensitivity is 1 per euro (`/ 10000` assumes scale 10,000), 1,000 times the paper's; its μ^PS is 0.1 (paper 0.4). The paper's formula has a sign slip (p^B falls when renting is dearer) and an annuity typo (exponent +m_l; the annuity already includes principal). Fix in phase 4: a user cost of owning (interest or forgone return on the whole value, minus expected appreciation), φ^B per real household | P2 |
 | M3 | Consumer credit decays towards 0 even after #104 | Question | ours | probes; I1: the stock falls from 322 to 196 bn in quarter 1 (repayment over 12 quarters plus quarter-1 write-offs, MD8) and to 1 bn by q12, while households ask for 60–120 bn a quarter and receive under 0.5 bn: the cap is 0.5 × average *quarterly* income minus *total* debt, mortgages included (`credit_market/func/clearing.py`), so any household with a mortgage, or with debt above half a quarter's income, gets nothing. Mortgages are rationed too (270 bn asked, 55 bn granted in quarter 1) | open: diagnosed; the code follows the paper's LTI-C rule (the average of the last two quarterly incomes, minus household debt), so the restriction is the paper's: with ρ = 0.5 (paper 0.36) a household may borrow at most half a quarter's income net of all its debt. A ratio on annual income, or on consumer debt only, is a modelling decision; phase 4 | P2 |
 | M4 | Government consumption still about 2× the AR(1) error | Question | ours | baseline | fixed by MD16 (1.90 → 1.42; F5) | — |
 | M5 | Imports, exports and exchange rates need review | Spec | CB7 | see S6 | open | P3 |
@@ -498,6 +500,7 @@ commit messages (e.g. `G1:`).
 | M15 | The rest of the world sets exports and imports from AR(1) forecasts that still draw noise (`row_configuration.assume_zero_noise=False`); the paper indexes them to modelled production and prices | Spec | upstream | model map; I1 | partial: exp022: the rest of the world's forecast noise changes nothing; trade indexation still differs from the paper | P3 |
 | M16 | The automatic housing clearer matched households with homes priced above their willingness to pay: its cost was \|willingness − price\|, never negative, so the `cost < 0` guard never fired, and the optimal assignment paired every household with demand to some home | Bug | upstream | I1 (profiling the housing market); regression test | fixed `e82f780`: sales fall from about 12% to 3–6% of the stock a quarter; baseline GDP 0.94 → 0.97, HH cons. 1.04 → 0.95, gov. cons. 1.42 → 1.53, invest. 1.13 → 1.20; report upstream (E9) | — |
 | M17 | The firm return-on-assets test compares expected *quarterly* profit over debt plus equity with `firm_loans_return_on_assets_ratio` 0.05: the median firm earns 1.6% a quarter (about 6.4% a year) and fails; if the 5% is annual (as interest rates were, M10), the test is four times too strict | Question | upstream | exp028 diagnostics | checked 2026-10-22: the code is the paper's rule (`appendix_model_description.tex` l. 415–421: expected profit Π̄_f(t) over L_f(t−1) + E_f(t−1) ≥ ρ^RoA = 0.05, no time unit, so quarterly in a quarterly model). ρ^RoA = 0.05 and ρ^RoE = 0.15 read like annual ratios, so the paper's calibration is likely four times too strict. A modelling decision (annualise the profit in both tests) and a sentence for the paper; matters only once firms ask for credit (G9, F2) | P2 |
+| M18 | Property values never change: `DefaultPropertyValueSetter` adds noise with std 0 and sales do not revalue the property, so the house price index is constant and realised HPI growth is 0 every quarter; the HPI forecast then decays towards 0 | Spec | ours | housing probe after P8 | open: the paper defines the HPI from values V_p(t) (`appendix_model_description.tex` l. 123–126) but not how values move; candidates: revalue sold properties at their transaction price, or index values to recent sales. Phase 4 | P2 |
 
 ### F. Government and finance
 
@@ -602,7 +605,7 @@ with what this repository has for it. France on sample data is a diagnostic, nev
 
 | Claim or entry (referee IDs) | Paper location | Evidence here | Status |
 | --- | --- | --- | --- |
-| Beats AR(1) and IIASA on forecasting RMSE | `table:forecasting_gdp` | `make baseline`: France, sample data, uncalibrated: GDP 1.03, HH cons. 1.04, gov. cons. 1.69, invest. 1.08, CPI 0.74 | needs D1, calibration (phase 5), 38 countries |
+| Beats AR(1) and IIASA on forecasting RMSE | `table:forecasting_gdp` | `make baseline`: France, sample data, uncalibrated: GDP 1.03, HH cons. 1.05, gov. cons. 1.66, invest. 1.11, CPI 0.74 | needs D1, calibration (phase 5), 38 countries |
 | E1 growth mechanism (R1.2) | §4, App. A.2 | MD10–MD15: spare capacity, partial-adjustment investment, labour-augmenting productivity (+0.25%/q, exogenous) | E1's planned text ("no exogenous TFP, growth endogenous") is no longer true: rewrite once MD12 is settled |
 | E2 target vs actual production, the χ parameters (R1.GEN.3) | §3, App. A | MD19: target production is capped as in the paper, at its posterior χ (0.53, 0.03, 0.18); the code also caps intermediate purchases by capital capacity, and investment is not capped (MD15). exp026: χ = 1 stops growth | the text can describe the paper's rule plus the purchase cap. Check: the revision plan's E2 quotes χ^K ≈ 0.56 where `table:prior` has 0.18 |
 | E8 live vs dormant mechanisms (R1.1, R2.1, R2.7) | §3 table | "Model map" above: every rule in use and its status; dormant: φ^FM = φ^FK = 0, h^U = h^E = 0, φ^WN = 0, inventory target off | ready; separations and productivity growth are now live (MD11, MD12) |
