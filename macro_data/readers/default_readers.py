@@ -242,6 +242,7 @@ class DataReaders:
         simulation_quarter: int = 1,
         labour_share_from_sea: bool = False,
         cash_social_benefits: bool = False,
+        investment_shares_from_capital_compensation: bool = False,
     ):
         if regions_dict:
             all_regions = [region for regions in regions_dict.values() for region in regions]
@@ -436,6 +437,7 @@ class DataReaders:
             country_names=country_names,
             regions_dict=regions_dict,
             yearly_factor=yearly_factor,
+            investment_shares_from_capital_compensation=investment_shares_from_capital_compensation,
         )
 
         match_iot_with_sea(

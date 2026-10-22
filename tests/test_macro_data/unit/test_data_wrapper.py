@@ -523,3 +523,18 @@ def check_country_rent_consistency(country: SyntheticCountry):
     assert 0.005 <= rent_to_income_ratio <= 0.40, (
         f"Rent-to-income ratio {rent_to_income_ratio:.3f} is outside reasonable bounds [0.005, 0.40]"
     )
+
+
+def test_investment_split_by_capital_compensation_leaves_no_industry_loss_making(data_config_path):
+    """S32: split over investment by product, utilities, mining and accommodation start with losses."""
+    with open(data_config_path, "r") as f:
+        configuration = DataConfiguration(**yaml.safe_load(f))
+    configuration.prune_date = None
+    configuration.seed = 0
+    configuration.investment_shares_from_capital_compensation = True
+    creator = DataWrapper.from_config(
+        configuration=configuration,
+        raw_data_path=TEST_PATH / "unit" / "sample_raw_data",
+        single_hfcs_survey=True,
+    )
+    assert np.all(creator.synthetic_countries["FRA"].firms.firm_data["Profits"].values > 0)

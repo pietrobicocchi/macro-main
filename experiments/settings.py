@@ -589,6 +589,8 @@ def government_no_growth(c: CountryConfiguration) -> None:
 NATIONAL_ACCOUNTS_RETURN = {"financial_income_from_national_accounts": True}
 # Data built with the effective profit tax (F7): corporate tax receipts over the model's initial profits
 EFFECTIVE_PROFIT_TAX = {"effective_profit_tax": True}
+# Data built with firms' investment split by capital compensation (S32), not over investment by product
+INVESTMENT_BY_CAPITAL_COMPENSATION = {"investment_shares_from_capital_compensation": True}
 
 
 def paper_bank_limits(c: CountryConfiguration) -> None:

@@ -36,24 +36,39 @@ def add_investment_matrix_to_icio(
     country_names: list[str | Country],
     yearly_factor: float = 4.0,
     regions_dict: Optional[dict[Country, list[Region]]] = None,
+    investment_shares_from_capital_compensation: bool = False,
 ) -> None:
+    shares = investment_shares_from_capital_compensation
     for country_name in country_names:
         if regions_dict is None:
-            _add_country_investment(country_name, icio_reader, sea_reader, yearly_factor)
+            _add_country_investment(country_name, icio_reader, sea_reader, yearly_factor, shares)
         else:
             # check if country is in regions_dict
             if country_name in regions_dict:
                 for region in regions_dict[country_name]:
-                    _add_country_investment(region, icio_reader, sea_reader, yearly_factor)
+                    _add_country_investment(region, icio_reader, sea_reader, yearly_factor, shares)
             else:
-                _add_country_investment(country_name, icio_reader, sea_reader, yearly_factor)
+                _add_country_investment(country_name, icio_reader, sea_reader, yearly_factor, shares)
 
 
 def _add_country_investment(
-    country_name: Country | Region, icio_reader: ICIOReader, sea_reader: WIODSEAReader, yearly_factor: float = 4.0
+    country_name: Country | Region,
+    icio_reader: ICIOReader,
+    sea_reader: WIODSEAReader,
+    yearly_factor: float = 4.0,
+    investment_shares_from_capital_compensation: bool = False,
 ):
+    """Firms' investment matrix: entry (i, j) is industry j's purchases of capital good i, gfcf_i times industry j's
+    share of investment. The share is proportional to j's capital compensation in SEA. By default it is capital
+    compensation over gfcf_j, the investment *in product* j (S32): industries whose products are rarely capital goods
+    (accommodation, utilities, mining) get most of the investment, up to the cap below (about 93% of their value added
+    as capital costs), and start loss-making. `investment_shares_from_capital_compensation` uses capital compensation
+    over its total."""
     gfcf = icio_reader.column_allc(country_name, "Firm Fixed Capital Formation") / icio_reader.yearly_factor
-    cap_factors = sea_reader.get_values_in_usd(country_name, "Capital Compensation") / gfcf
+    if investment_shares_from_capital_compensation:
+        cap_factors = sea_reader.get_values_in_usd(country_name, "Capital Compensation").astype(float)
+    else:
+        cap_factors = sea_reader.get_values_in_usd(country_name, "Capital Compensation") / gfcf
     value_added = icio_reader.get_value_added(country_name) * yearly_factor
 
     # replace nans with 0

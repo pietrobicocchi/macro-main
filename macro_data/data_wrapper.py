@@ -253,6 +253,7 @@ class DataWrapper:
             simulation_quarter=quarter,
             labour_share_from_sea=configuration.labour_share_from_sea,
             cash_social_benefits=configuration.cash_social_benefits,
+            investment_shares_from_capital_compensation=configuration.investment_shares_from_capital_compensation,
         )
 
         if regions_dict:

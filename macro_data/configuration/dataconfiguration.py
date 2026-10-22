@@ -262,6 +262,10 @@ class DataConfiguration(BaseModel):
     # False, SOCX total public social spending, whose in-kind part (health, care) is also government consumption, so
     # it is counted twice.
     cash_social_benefits: bool = True
+    # S32: firms' investment split across industries by their share of SEA capital compensation. When False, by capital
+    # compensation over the investment in each industry's *product*, which loads utilities, mining and accommodation
+    # with capital costs of about 93% of value added and starts them loss-making.
+    investment_shares_from_capital_compensation: bool = False
 
     def model_post_init(self, __context: Any) -> None:
         """
