@@ -966,11 +966,7 @@ class Country:
         self.government_entities.prepare_goods_market_clearing(
             n_industries=self.economy.n_industries,
             exchange_rate_usd_to_lcu=self.exchange_rate_usd_to_lcu,
-            exogenous_gov_consumption_before=(
-                None
-                if "Real Government Consumption (Value)" not in self.exogenous.national_accounts_before.columns
-                else self.exogenous.national_accounts_before["Real Government Consumption (Value)"].values.flatten()
-            ),
+            exogenous_gov_consumption_before=self.real_government_consumption_before(),
             exogenous_gov_consumption_during=(
                 None
                 if "Real Government Consumption (Value)" not in self.exogenous.national_accounts_during.columns
@@ -979,12 +975,24 @@ class Country:
             initial_good_prices=self.economy.ts.initial("good_prices"),
             current_good_prices=self.economy.ts.current("good_prices"),
             historic_ppi=np.array(self.economy.ts.historic("ppi")).flatten(),
+            historic_cpi=np.array(self.economy.ts.historic("cpi")).flatten(),
             expected_inflation=self.economy.ts.current("estimated_ppi_inflation")[0],
             expected_growth=self.economy.ts.current("estimated_growth")[0],
             forecasting_window=self.forecasting_window,
             assume_zero_growth=self.assume_zero_growth,
             assume_zero_noise=self.assume_zero_noise,
         )
+
+    def real_government_consumption_before(self) -> Optional[np.ndarray]:
+        """Government consumption before the simulation, deflated by the price index its consumption rule uses."""
+        before = self.exogenous.national_accounts_before
+        if self.government_entities.functions["consumption"].deflator == "cpi":
+            if not {"Government Consumption (Value)", "CPI (Value)"} <= set(before.columns):
+                return None
+            return (before["Government Consumption (Value)"] / before["CPI (Value)"]).values.flatten()
+        if "Real Government Consumption (Value)" not in before.columns:
+            return None
+        return before["Real Government Consumption (Value)"].values.flatten()
 
     def update_realised_metrics(self) -> None:
         """Update realized economic outcomes after market clearing.

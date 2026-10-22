@@ -118,6 +118,7 @@ looking at the result. This is the raw material for the rewritten model section.
 | exp018 | With many firms, is the growth engine's investment less lumpy? | done | Barely: investment ratio 2.50 → 2.39 with 408 firms, so the poor investment forecast is the engine's dynamics (early burst, 1.1%/q vs 0.8%), not lumpiness; unemployment 9.6% at q12 and 8.4% at q20 (data 9.4%, 8.4%). `outputs/exp018_engine_many_firms/` |
 | exp019 | Do financing limits with realistic bank lending limits tame the engine's investment? | done | No: with the paper's bank limits alone the investment ratio is 2.34 (2.50 without); with capital purchases cut by unmet credit the economy goes into recession (unemployment 16–18%). Only 2 of 18 firms want long-term credit and both already owe more than their capital is worth (spoofed balance sheets, D1). `outputs/exp019_financing_limits/` |
 | exp020 | Why is the growth engine's investment forecast poor? | done | The random draw in firms' growth forecast and in the government's spending path (P3): without it investment volatility falls from 2.5% to 0.7%/q within a run; with a slower gap adjustment (λ 0.10) too (candidate C), scored against volumes: GDP **0.98**, HH cons. 1.08, gov. cons. 1.89, invest. 1.08, CPI **0.86**, unemployment 10.0% / 9.4% at q12 / q20. `outputs/exp020_engine_investment/` |
+| exp021 | Can the government's spending plan track 2014–16? | done | Yes, mostly: planning on an AR(1) of past growth rates of CPI-deflated spending (in place of log levels deflated by PPI, which mean-revert and fell with oil) takes gov. cons. 1.90 → 1.42, GDP 0.99 → 0.94; growth 0.3%/q, unemployment 9.4% / 8.1% at q12 / q20 (data 9.4%, 8.4%); investment 1.09 → 1.13. `outputs/exp021_government_consumption/` |
 
 ### Baseline scorecard history
 
@@ -454,11 +455,29 @@ On exp011's engine (frictions, productivity +0.25%/q), with two forecasts of gro
   CPI 0.86); `outputs/exp020_engine_investment/summary.csv` was written on that target, before R4, and the
   table above rescores its saved series.
 
+### Government spending plan (exp021, 10 seeds, 20 quarters, ratios over the first 12)
+
+| Plan fitted on | GDP | HH cons. | Gov. cons. | Invest. | CPI | Growth/q (12q / 20q) | Unemp. q12 / q20 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| log levels / PPI (default) | 0.99 | 1.08 | 1.90 | 1.09 | 0.86 | 0.2 / 0.2% | 10.0 / 9.4% |
+| log levels / CPI | 0.99 | 1.06 | 1.67 | 1.08 | 0.86 | 0.2 / 0.3% | 9.9 / 9.2% |
+| growth rates / PPI | 0.93 | 1.04 | 1.63 | 1.10 | 0.86 | 0.3 / 0.4% | 9.1 / 7.7% |
+| **growth rates / CPI** | **0.94** | **1.04** | **1.42** | 1.13 | **0.86** | 0.3 / 0.3% | **9.4 / 8.1%** |
+| data | | | | | | 0.28 / 0.39% | 9.4 / 8.4% |
+
+- **Hypothesis (recorded before running) confirmed:** the default plan is an AR(1) on the log level of past
+  real spending; with a coefficient below 1 the forecast reverts to a constant, so planned growth fades
+  (0.10%/q realised against 0.34%/q in the data). Fitting the AR(1) on growth rates keeps the trend, and the
+  CPI is closer to the price of what governments buy than the PPI, which fell with oil in 2014–16.
+- Offline, from pre-2014 data only, the four plans score 1.69, 1.35, 1.29 and 1.03 times the AR(1) RMSE; in
+  the model, growth rates / CPI scores 1.42. The rest is start-up and measurement: realised spending is the
+  plan at expected industry prices, scored as nominal over the CPI (within-run s.d. 0.20%/q, data 0.16%).
+- Built as `AutoregressiveGrowthGovernmentConsumptionSetter` with `deflator` (`settings.government_consumption_plan`).
+  The existing class compounded exp(growth) and planned 20 quarters only; both fixed, with tests.
+
 ### Next step
 
-1. **Government consumption** (1.90): its spending path is an AR(1) on its own history from 2000–2013, which
-   misses the 2014–16 path; check the levels it is fitted on (nominal over PPI) and whether it should
-   follow the economy's growth forecast instead.
+1. **Decision (needs approval): make the growth-rate / CPI spending plan the default** (exp021).
 2. **Robustness of MD15**: 20 quarters and many firms on the new defaults; sensitivity to λ, the separation
    rate, the productivity growth rate and the slack sensitivity, before calibration (phase 5).
 3. **Firms' growth expectations** still learn from the PPI-deflated data history (R4); switch them to the
@@ -586,6 +605,7 @@ commit messages (e.g. `G1:`).
 | F2 | Corporate equity not wired between firms and households (profits not redistributed) | Gap | CB7 | Andrea's module; relates to S2 | open | P2 |
 | F3 | Government debt, bond issuance, QE | Gap | CB7 | Tom's UK prototype | open | P3 |
 | F4 | Fiscal rules | Gap | CB7 | — | open | P3 |
+| F5 | The government's spending plan is an AR(1) on log levels of PPI-deflated spending, so planned growth fades (0.10%/q against 0.34%/q) | Spec | ours | exp021: growth rates / CPI takes gov. cons. 1.90 → 1.42 | fix built (option): `AutoregressiveGrowthGovernmentConsumptionSetter`, `deflator="cpi"`; default pending | P1 |
 
 ### E. Engineering and workflow
 

@@ -57,6 +57,7 @@ class GovernmentConsumptionSetter(ABC):
         self,
         consistency: float,
         default_growth: Optional[float] = None,
+        deflator: str = "ppi",
     ):
         """Initialize consumption setter.
 
@@ -66,10 +67,14 @@ class GovernmentConsumptionSetter(ABC):
                 adjustments (0.0)
             default_growth (float, optional): Default growth rate to use
                 when historical data is unavailable
+            deflator (str): Price index ("ppi" or "cpi") that turns past nominal consumption into the real
+                consumption the plan is fitted on
         """
         assert consistency == 1.0 or consistency == 0.0
+        assert deflator in ("ppi", "cpi")
         self.consistency = consistency
         self.default_growth = default_growth
+        self.deflator = deflator
         self.fixed_total_government_consumption = None
         self.buffer = 20
 
@@ -369,27 +374,26 @@ class AutoregressiveGrowthGovernmentConsumptionSetter(GovernmentConsumptionSette
         if historic_total_consumption[-1] == 0.0:
             return np.zeros(previous_desired_government_consumption.shape)
 
-        # Fitting based on target consumption
+        # Fitting based on target consumption: a plan for the next `buffer` quarters from an AR(1) on past growth
+        # rates, made again from the latest history when it runs out
         if self.consistency == 1.0:
-            if self.fixed_total_government_consumption is None:
+            if self.fixed_total_government_consumption is None or current_time - self._plan_start >= len(
+                self.fixed_total_government_consumption
+            ):
                 historic_total_consumption_growth = (
                     historic_total_consumption[1:] / historic_total_consumption[:-1] - 1.0
                 )
-                self.fixed_total_government_consumption = (
-                    np.exp(
-                        ManualAutoregForecaster().forecast(
-                            data=historic_total_consumption_growth,
-                            t=20,
-                            assume_zero_noise=assume_zero_noise,
-                        )
-                    )
-                    - 1
+                planned_growth = ManualAutoregForecaster().forecast(
+                    data=historic_total_consumption_growth,
+                    t=self.buffer,
+                    assume_zero_noise=assume_zero_noise,
                 )
                 self.fixed_total_government_consumption = (
-                    np.cumprod(1 + self.fixed_total_government_consumption) * historic_total_consumption[-1]
+                    np.cumprod(1 + planned_growth) * historic_total_consumption[-1]
                 )
+                self._plan_start = current_time
 
-            consumption = self.fixed_total_government_consumption[current_time - 1]
+            consumption = self.fixed_total_government_consumption[current_time - self._plan_start]
 
         # Fitting based on historic consumption
         else:

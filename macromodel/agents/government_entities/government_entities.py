@@ -181,6 +181,7 @@ class GovernmentEntities(Agent):
         forecasting_window: int,
         assume_zero_growth: bool,
         assume_zero_noise: bool,
+        historic_cpi: Optional[np.ndarray] = None,
     ) -> None:
         """Prepare government entities for goods market participation.
 
@@ -199,6 +200,8 @@ class GovernmentEntities(Agent):
             initial_good_prices (np.ndarray): Initial price levels
             current_good_prices (np.ndarray): Current price levels
             historic_ppi (np.ndarray): Historical producer price index
+            historic_cpi (np.ndarray, optional): Historical consumer price index, for a consumption rule that
+                deflates by the CPI
             expected_growth (float): Expected economic growth rate
             expected_inflation (float): Expected inflation rate
             forecasting_window (int): Window for consumption forecasting
@@ -206,13 +209,14 @@ class GovernmentEntities(Agent):
             assume_zero_noise (bool): Whether to assume deterministic
                 consumption paths
         """
+        historic_prices = historic_cpi if self.functions["consumption"].deflator == "cpi" else historic_ppi
         if exogenous_gov_consumption_before is None:
-            historic_total_consumption = np.array(self.ts.historic("total_consumption")).flatten() / historic_ppi
+            historic_total_consumption = np.array(self.ts.historic("total_consumption")).flatten() / historic_prices
         else:
             historic_total_consumption = np.concatenate(
                 (
                     exogenous_gov_consumption_before[-forecasting_window:],
-                    np.array(self.ts.historic("total_consumption")).flatten() / historic_ppi,
+                    np.array(self.ts.historic("total_consumption")).flatten() / historic_prices,
                 )
             )
         if assume_zero_growth:
@@ -272,6 +276,7 @@ class GovernmentEntities(Agent):
         forecasting_window: int,
         assume_zero_growth: bool,
         assume_zero_noise: bool,
+        historic_cpi: Optional[np.ndarray] = None,
     ) -> None:
         """Prepare for goods market clearing.
 
@@ -292,6 +297,7 @@ class GovernmentEntities(Agent):
             initial_good_prices=initial_good_prices,
             current_good_prices=current_good_prices,
             historic_ppi=historic_ppi,
+            historic_cpi=historic_cpi,
             expected_growth=expected_growth,
             expected_inflation=expected_inflation,
             forecasting_window=forecasting_window,

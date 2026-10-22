@@ -267,3 +267,15 @@ def pre_md15_no_growth_engine(c: CountryConfiguration) -> None:
     c.economy.functions.growth.name = "GrowthManualForecastingAutoReg"
     c.economy.functions.growth.parameters = {"value": 0.0, "lags": 1}
     c.assume_zero_noise = False
+
+
+def government_consumption_plan(c: CountryConfiguration, growth_rates: bool = True, deflator: str = "cpi") -> None:
+    """The government plans real consumption from an AR(1) fitted on its past growth rates (`growth_rates`) rather
+    than on log levels, which mean-revert so planned growth fades; history deflated by `deflator` ("cpi" or "ppi").
+    The default fits log levels deflated by the PPI, which fell with oil prices in 2014-16."""
+    c.government_entities.functions.consumption.name = (
+        "AutoregressiveGrowthGovernmentConsumptionSetter"
+        if growth_rates
+        else "AutoregressiveGovernmentConsumptionSetter"
+    )
+    c.government_entities.functions.consumption.parameters = {"consistency": 1.0, "deflator": deflator}
