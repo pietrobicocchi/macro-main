@@ -125,6 +125,7 @@ def mechanism_dashboard(sim: pd.DataFrame, title: str, path: Path) -> None:
             [
                 ("real wage growth", "real wage per worker", COLORS["households"]),
                 ("CPI Inflation", "CPI inflation", COLORS["data"]),
+                ("expected inflation", "expected CPI inflation", COLORS["AR(1)"]),
             ],
             "Wages and prices",
             "% per quarter",
@@ -153,7 +154,8 @@ def mechanism_dashboard(sim: pd.DataFrame, title: str, path: Path) -> None:
     ]
     for ax, series, panel_title, unit in panels:
         for column, label, color in series:
-            _band(ax, sim, column, 100, color, label)
+            if column in sim:  # series written before a column existed lack it
+                _band(ax, sim, column, 100, color, label)
         ax.set_title(panel_title)
         ax.set_ylabel(unit)
         if len(series) > 1:
