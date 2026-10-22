@@ -1199,7 +1199,7 @@ class Country:
         )
         self.firms.ts.capital_inputs_stock.append(self.firms.compute_capital_inputs_stock())
         self.firms.ts.capital_inputs_stock_value.append(
-            self.firms.compute_intermediate_inputs_stock_value(
+            self.firms.compute_capital_inputs_stock_value(
                 current_good_prices=self.economy.ts.current("good_prices"),
             )
         )

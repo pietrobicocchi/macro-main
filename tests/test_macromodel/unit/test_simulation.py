@@ -267,6 +267,19 @@ def test_default_configurations_build_the_same_initial_stocks():
         assert check_compatibility(SimpleNamespace(firms_configuration=data_firms), simulation_configuration)
 
 
+def test_capital_stock_value_is_the_capital_stock_at_current_prices(datawrapper):
+    """Regression: each quarter the value of the intermediate-input stock was recorded as the capital stock's value,
+    which banks use as collateral for firm loans (about a ninth of the true value)."""
+    configuration = SimulationConfiguration(country_configurations={"FRA": CountryConfiguration()}, seed=0)
+    simulation = Simulation.from_datawrapper(datawrapper=datawrapper, simulation_configuration=configuration)
+    simulation.iterate()
+    firms = simulation.countries["FRA"].firms
+    prices = simulation.countries["FRA"].economy.ts.current("good_prices")
+
+    expected = firms.ts.current("capital_inputs_stock") @ prices
+    assert np.allclose(firms.ts.current("capital_inputs_stock_value"), expected)
+
+
 def test_random_seed(datawrapper):
     configuration = SimulationConfiguration(country_configurations={"FRA": CountryConfiguration()})
 

@@ -12,6 +12,7 @@ with matching values, or the simulation takes the broken re-initialisation path 
 """
 
 from macromodel.configurations import CountryConfiguration
+from macromodel.configurations.row_configuration import RestOfTheWorldConfiguration
 
 # Paper posterior (Table table:prior)
 PHI_STY, CHI_H, CHI_M, CHI_K = 0.10, 0.53, 0.03, 0.18
@@ -92,10 +93,10 @@ def taylor_rule(c: CountryConfiguration) -> None:
     c.central_bank.functions.policy_rate.name = "PolednaPolicyRate"
 
 
-def spare_capacity(c: CountryConfiguration) -> None:
-    """Paper: omega^K = omega^M = 0.85. Changes initial stocks (see module docstring)."""
-    c.firms.parameters.capital_inputs_utilisation_rate = OMEGA
-    c.firms.parameters.intermediate_inputs_utilisation_rate = OMEGA
+def spare_capacity(c: CountryConfiguration, rate: float = OMEGA) -> None:
+    """Paper: omega^K = omega^M = 0.85 (default since MD15). Changes initial stocks (see module docstring)."""
+    c.firms.parameters.capital_inputs_utilisation_rate = rate
+    c.firms.parameters.intermediate_inputs_utilisation_rate = rate
 
 
 def stock_top_up(c: CountryConfiguration) -> None:
@@ -284,3 +285,28 @@ def government_consumption_plan(c: CountryConfiguration, growth_rates: bool = Tr
 def pre_md16_government_consumption(c: CountryConfiguration) -> None:
     """The default before MD16 (2026-10-22): the government plans an AR(1) on log levels of PPI-deflated spending."""
     government_consumption_plan(c, growth_rates=False, deflator="ppi")
+
+
+def separation_rate(c: CountryConfiguration, rate: float) -> None:
+    """Share of employees separating into unemployment each quarter (MD11, default 0.03); the matching efficiency is
+    recalibrated so the initial unemployment rate stays a steady state."""
+    p = c.labour_market.functions.clearing.parameters
+    c.labour_market.functions.clearing.parameters = {
+        **p,
+        "random_firing_probability": rate,
+        "matching_efficiency": None,
+    }
+
+
+def no_growth(c: CountryConfiguration) -> None:
+    """No source of growth: no productivity growth and a constant zero growth forecast. The initial state should then
+    be (close to) a fixed point."""
+    c.firms.functions.productivity_growth.name = "NoOpTFPGrowth"
+    c.firms.functions.productivity_growth.parameters = {}
+    c.economy.functions.growth.name = "GrowthForecastingConstant"
+    c.economy.functions.growth.parameters = {"value": 0.0, "lags": 1}
+
+
+def row_no_forecast_noise(r: RestOfTheWorldConfiguration) -> None:
+    """The rest of the world's forecasts without a random draw, like the country's since MD15 (P3)."""
+    r.assume_zero_noise = True
