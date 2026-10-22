@@ -430,7 +430,7 @@ commit messages (e.g. `G1:`).
 | ID | Problem | Kind | Source | Evidence | Status | Pri |
 | --- | --- | --- | --- | --- | --- | --- |
 | M1 | Housing market initialises and executes poorly (tenure mix, stock quality) | Spec | both | CB7; upstream #93 | partial: #93 merged | P2 |
-| M2 | Rental market nearly dead (0–1 rentals/q vs 400–500 sales); some rent/value above 1 | Question | ours | rent probe; possibly spoofed data | open | P2 |
+| M2 | Rental market nearly dead (0–1 rentals/q vs 400–500 sales); some rent/value above 1 | Question | ours | rent probe; possibly spoofed data; I1 cause: the buy-or-rent logit is saturated. Its argument is temperature × (annual cost of renting − annual cost of buying) / 10,000 in model money units (each agent stands for `scale` households), with temperature 1: at t = 1 it ranges from 18,500 to 637,000 for the 1,362 deciding households, so every one of them buys (P(buy) = 1) and no household asks to rent while 844 homes are offered. The cost of buying also leaves out mortgage interest (the paper's formula has it) and subtracts expected appreciation on the whole value | open: diagnosed; fix in phase 4 (a cost comparison relative to the cost of renting, interest in the cost of buying, a temperature with units) | P2 |
 | M3 | Consumer credit decays towards 0 even after #104 | Question | ours | probes | open | P2 |
 | M4 | Government consumption still about 2× the AR(1) error | Question | ours | baseline | fixed by MD16 (1.90 → 1.42; F5) | — |
 | M5 | Imports, exports and exchange rates need review | Spec | CB7 | see S6 | open | P3 |
