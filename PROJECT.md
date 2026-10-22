@@ -313,6 +313,8 @@ The intermezzo (phase 2½) is done: audit (I1), runner and figures (I2, I4), mod
      cons. 1.53 → 1.30, unemployment closer to the data (exp024); changes the initial state;
    - the paper's Taylor rule (P4): gov. cons. 1.47, invest. 1.14 (exp025); matches the paper;
    - seasonally adjusted CPI and quarterly unemployment as targets (R7): CPI ratio 0.86 → 0.74; changes the metric;
+   - the paper's caps on target production (G4, `paper_target_production`): unemployment 9.7% / 8.6% (data 9.4% /
+     8.4%), investment 1.07, gov. cons. 1.93 (exp026); makes the code match the paper's equation (E2);
    - effective tax rates (F7, not built): revenue 41.5% → about 54% of GDP; changes the initial state;
    - E1's planned text ("no exogenous TFP") is contradicted by MD12.
 2. **Household side** (S9, S31, G18): unpaid financial income and a 40% saving rate; household consumption drifts
