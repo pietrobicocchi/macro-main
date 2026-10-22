@@ -482,11 +482,10 @@ On exp011's engine (frictions, productivity +0.25%/q), with two forecasts of gro
 Roadmap phases 1 (accounts) and 2 (growth engine) are done, and phase 3 in part (cost pass-through, forecast
 noise decided). Every MD15–MD16 value was chosen while looking at the 2014–16 scores, so the ratios below 1 are
 in-sample until a held-out test (phase 5).
-1. **Robustness of the defaults**: 20 quarters and many firms; one-at-a-time sensitivity to λ, the separation
-   rate, productivity growth, the slack sensitivity, spare capacity and the government deflator. Shows
-   whether 0.94 / 0.86 is a plateau or a knife edge.
+1. **Intermezzo (phase 2½, I1–I5 in the Roadmap)**: economic-logic audit with the robustness sweep, paper ↔
+   model map, tidy, five figure families, workflow. It ends with the ablation ladder runnable on France.
 2. **Ablation ladder (phase 6, the Question's second half)**: from a Poledna-like model to today's defaults,
-   one decision at a time (MD1–MD16 are switches), scoring each rung.
+   one decision at a time, scoring each rung (`settings.LADDER` from I3).
 3. **Phase 3 rest**: a Taylor rule by default (P4; constant policy rate now) and inflation that responds to
    slack (P2).
 4. **Data (D1), blocking phase 5**: the full raw data for 2010–2017 and the real HFCS / Compustat; then
@@ -662,12 +661,29 @@ gets a modelling-decision row, a before/after scorecard and a register update.
 | --- | --- | --- | --- |
 | 1 | **Balanced accounts**: an automatic accountant (balance-sheet and flow checks every quarter), then fix what it finds | S1–S6, F2 | checks pass at t=0 and every quarter; GDP no longer forced to balance |
 | 2 | **A growth engine**: spare capacity, a gradual investment rule towards expected demand, growth expectations on, and a source of productivity growth | G1–G4, G6 | France grows at a plausible, steady rate over 20+ quarters with stable unemployment and no explosion |
+| 2½ | **Intermezzo: audit, tidy, visualise** (below): check the economic logic of the model as it now runs, clean and document what we own, a small set of standard figures, a paper ↔ model map, and a workflow that turns a change into a scored, plotted, paper-ready result in one step | I1–I5, E13, E7, E10 | each work package's "done when" below |
 | 3 | **Prices and money**: prices from costs and demand (not copied from the forecast); a working Taylor rule; decide forecast noise | P2–P4 | inflation emerges from the model and responds to slack; the policy rate reacts |
 | 4 | **Markets and government**: housing (rental market, speed), consumer credit, taxes and benefits, trade | M1–M5, F1, E12, E5 | each market passes a plausibility check; remaining upstream fixes merged |
 | 5 | **Calibration done properly**: choose parameters by sensitivity analysis, informed priors, fit on 2010–2013, score on held-out years | R2, R3, R4, E4 | sanity gate passed after calibration; target met for France, then several countries |
 | 6 | **Reviewer experiments**: ablation ladder (Poledna-like → full), simple-expectations / interactions-off, VAR benchmark, unemployment and growth in the results table, uncertainty | see `revision_plan.md` "Post" entries | the numbers the paper's Post entries wait for |
 
 In parallel: **D1** (full raw data for 2010–2017 and 38 countries), needed by phase 5.
+
+### Intermezzo: audit, tidy, visualise (phase 2½)
+
+Why now: phases 1–2 changed most of the model's behaviour, and phases 3–6 (Taylor rule, calibration, the
+38-country ablation ladder, the paper) multiply runs and readers. Pareto rule throughout: do what makes every
+later change cheaper or safer, skip polish nobody reads. Upstream-shaped code (`firms.py`, `country.py`) is
+not refactored wholesale (merge cost, E13); we clean what we own and document the rest. Order: I1 with I3 (one
+pass through the model), then I2, I4, I5.
+
+| # | Work package | What it delivers | Done when |
+| --- | --- | --- | --- |
+| I1 | **Economic-logic audit** | One walk through a quarter's sequence of events, agent by agent: for each rule in use, what it says, its units, its economic sense, the paper's equation and our MD. Includes the one-at-a-time sensitivity of the MD15–MD16 values (λ, separation rate, productivity growth, slack sensitivity, spare capacity, deflator), 20 quarters and many firms, and the zero-growth fixed point. Known suspects: ROW forecasts still draw noise (`row_configuration.assume_zero_noise=False`); the government plans in CPI terms but buys at expected PPI inflation; investment ignores interest rates (G17); dividends off (MD6); unbacked flows (S9, S10, S13) | every rule in use has a row in the model map (I3) and every doubt is in the register; the sensitivity shows a plateau or a knife edge for each value |
+| I2 | **Tidy what we own** | Experiments: one shared step runner in `scoring.py`, so an experiment is its question, its steps and nothing else (today each repeats ~100 lines). `settings.py` grouped and named by MD. Docstrings of our classes state economic meaning and units; dead code we added deleted. Tests: a fast unit subset for every commit, the slow simulation tests before a default change. PROJECT.md "What we have learned" condensed to one paragraph per mechanism | `make check` passes; a new experiment is ≤ 40 lines; PROJECT.md reads top to bottom as the current state |
+| I3 | **Paper ↔ model map** | One table in PROJECT.md (replacing "Where the defaults differed from the paper"): paper section / equation `\label` → code (class, file) → default in use → status (as in the paper / changed by MD# / not in the paper) → revision-plan entry (E#, referee IDs). Plus `settings.LADDER`: the ordered switches from a Poledna-like model to today's defaults, so the ablation ladder (phase 6) is one experiment | every equation of `appendix_model_description.tex` has a row; the ladder runs end to end on France |
+| I4 | **Visualisation, five figure families** | One plotting module (`experiments/plotting.py`; fixed colours and labels, PDF for the paper, PNG for reviewing), `make figures`: (a) **model map**, one diagram of agents, markets and the quarter's sequence with the rules in use and their MD#s (the paper's `structure.tikz`, updated); (b) **forecast fan**, model median and 10–90% band across seeds, data and AR(1), per aggregate; (c) **mechanism dashboard**, one page on what the economy is doing inside: sectoral net lending (stock-flow), capacity utilisation and the capital gap, labour flows (unemployment, vacancies, hires, separations), prices against unit costs and wages against the CPI, expected against realised growth, the government plan against realised spending, accounting residuals; (d) **comparison heatmap**, sim/AR(1) by step × aggregate, diverging at 1 (experiments, scorecard history, ablation ladder; country × aggregate once D1); (e) **country small multiples**, one row of fans per country (once D1). No interactive dashboard unless static figures prove insufficient | every experiment writes (b) and (c) without extra code; the scorecard history and the ladder render as (d) |
+| I5 | **Workflow for agents and for the paper** | AGENTS.md rewritten to be true and short (structure, the runner, figure rules, the experiment lifecycle: question and hypothesis before running → run → experiments row and section → MD row and baseline row if a default changes). "Claims → evidence" lists every revision-plan Post entry (ablation ladder, simplified expectations, VAR benchmark, uncertainty bands, recovery period, country vs area) with its experiment and figure. One checkpoint memory. Upstream-worthy fixes listed (E9) | a fresh session goes from AGENTS.md and PROJECT.md to a new ablation rung with its paper figure without reading the history |
 
 ## Claims → evidence
 
