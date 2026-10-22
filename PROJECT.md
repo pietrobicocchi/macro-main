@@ -99,13 +99,14 @@ posterior (Table `table:prior`) only the χ caps are used.
 
 **Against the paper's stated values** (`appendix_model_description.tex`, calibration paragraphs; audit 2026-10-22).
 Equal: target inflation 0.02, ω^M = ω^K = 0.85, h^max = 1.5, φ^FM = φ^FK = 0, φ^GM = 2, φ^ROW = 1,
-γ^F = γ^H = 1, h^U = h^E = 0, ρ^CAR = 0.08, ρ^RoA = 0.05 (units: M17). Different:
+γ^F = γ^H = 1, h^U = h^E = 0, φ^WN = 0 (`firms.wage_setter`; the 0.5 in `firms.offered_wage_setter` is never read, E15),
+ρ^CAR = 0.08, ρ^RoA = 0.05 (units: M17). Different:
 
 | Parameter | Paper | Code default | Where | Tested |
 | --- | --- | --- | --- | --- |
 | Owners / renters keep their home a quarter (p^OS, p^RS) | 79/80, 7/8 | 0.5, 0.5 | `households.property` | exp034: candidate |
 | Psychological pressure of renting μ^PS | 0.4 | 0.1 | `households.property` | exp034 |
-| exp035 | The paper's stated values for wages and banks (parameter audit) | done | No offered-wage markup (φ^WN = 0) and the solvency ratio 0.1: identical runs (dormant: firms meet their labour targets, the bank's equity stays above both thresholds). The paper's bank limits (firm debt-to-equity 1.0, return on equity 0.15, consumer loans 0.36): GDP 1.03 → 1.01, HH 1.05 → 1.06, gov. 1.66 → 1.81, invest. 1.11 → 1.00, CPI 0.75; growth and unemployment unchanged. `outputs/exp035_paper_parameters/` |
+| exp035 | The paper's stated values for wages and banks (parameter audit) | done | No offered-wage markup and the solvency ratio 0.1: identical runs. The first is not wired (`firms.offered_wage_setter` is never called; the markup in use is `wage_setter`'s, already 0 as in the paper); the second is dormant (the bank's equity stays above both thresholds). The paper's bank limits (firm debt-to-equity 1.0, return on equity 0.15, consumer loans 0.36): GDP 1.03 → 1.01, HH 1.05 → 1.06, gov. 1.66 → 1.81, invest. 1.11 → 1.00, CPI 0.75; growth and unemployment unchanged. `outputs/exp035_paper_parameters/` |
 | exp036 | The candidate decisions together (candidate F: S32, S9, moving probabilities, bank limits) | done; awaiting Pietro | In order: S32 GDP 1.03 → 1.01, invest. 1.11 → 1.03, gov. 1.66 → 1.87; + S9 HH 1.05 → 1.10, invest. 1.00; + moving probabilities GDP 0.99, HH 1.02, invest. 1.05, growth 0.25%/q; + bank limits (F) GDP **0.98**, HH **1.00**, gov. 1.83, invest. 1.10, CPI 0.75, growth 0.25%/q (data 0.28%), unemployment 9.9% / 8.7% at q12 / q20 (data 9.7% / 8.8%), house sales 0.11% of the stock a quarter. Not additive for investment (the bank limits help alone, exp035, and hurt here); government consumption is the cost (rationing noise). `outputs/exp036_candidate_f/` |
 | Buy-or-rent sensitivity φ^B | 0.001 per euro | 1 per euro (temperature 1, `/ 10000`) | `households.property` | M2 |
 | Rent indexation φ^PIR, lag | 1, 1 | 0 | `households.property` | exp034 |
@@ -116,7 +117,6 @@ Equal: target inflation 0.02, ω^M = ω^K = 0.85, h^max = 1.5, φ^FM = φ^FK = 0
 | Bank solvency ratio ρ^SR | 0.1 | 0.05 | `banks.functions.demography` | exp035: dormant |
 | Consumer loans ρ^LTI-C | 0.36 | 0.5 | `banks.parameters` | M3 |
 | Mortgages LTV, LTI, DSTI | ESRB national measures | 0.8, 3, 0.3 | `banks.parameters` | — |
-| Offered-wage markup when hiring falls short φ^WN | 0 | 0.5 (`labour_market_tightness_markup_scale`) | `firms.offered_wage_setter` | exp035: dormant |
 | Reservation-wage period T^RW | 8 quarters | 0 (off) | `individuals` | ladder rung P4: dormant |
 
 ## Modelling decisions
@@ -564,7 +564,7 @@ commit messages (e.g. `G1:`).
 | E12 | Housing market takes 92% of run time (row-wise pandas loops); blocks finer scales | Infra | ours | profile, 408 firms, 8 quarters: 8.2 of 8.9 s | partial: after M16 the optimal assignment takes 0.03 s instead of 0.8 s a call, and a 12-quarter run 5.2 s instead of 24.6 s (same load); housing is still about 80% of run time, mostly row-by-row pandas updates in `process_housing_market_clearing` and `_filter_feasible_current_sales`. Measured 2026-10-22: a 12-quarter run takes 0.8 s and housing is 45% of it, so it no longer blocks at scale 10,000 | P3 |
 | E13 | Plugging in behaviour means editing closed `Literal` lists and hard-wired argument passing in `country.py`; god objects (`firms.py` 2,256 lines, 196 time series) | Infra | ours | 54 behaviour slots, 27 with alternatives; 3 files use hooks | open | P3 |
 | E14 | Data and simulation configs duplicate firm settings, reconciled by a compatibility check and a re-initialisation path | Infra | ours | G5, S3, S8 all came from this | open | P2 |
-| E15 | Stale alternatives: `PolednaCreditMarketClearer` returns a DataFrame where the credit market now expects four loan arrays (fails at the first quarter); other unused rule classes are untested | Infra | upstream | building the Poledna-like ladder rung | open: fix or delete; the Poledna-like rung uses the default clearer without household loans. `ConstantGrowthGovernmentConsumptionSetter` counted the price level twice (real spending grew 1.4%/q at zero growth): fixed with a regression test | P3 |
+| E15 | Stale alternatives: `PolednaCreditMarketClearer` returns a DataFrame where the credit market now expects four loan arrays (fails at the first quarter); other unused rule classes are untested | Infra | upstream | building the Poledna-like ladder rung | open: fix or delete; the Poledna-like rung uses the default clearer without household loans. `ConstantGrowthGovernmentConsumptionSetter` counted the price level twice (real spending grew 1.4%/q at zero growth): fixed with a regression test Configured but never called (2026-10-22 scan): `firms.offered_wage_setter`, `households.rent` (rents are indexed by the property function, M14), `economy.sentiment`; their parameters change nothing. | P3 |
 
 ### D. Data
 
