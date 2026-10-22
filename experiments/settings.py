@@ -159,6 +159,67 @@ LADDER = [
 ]
 
 
+# Leave-one-out: today's defaults without one element (exp025), the order-free complement of the ladder
+
+
+def without_growth_expectations(c: CountryConfiguration) -> None:
+    c.firms.functions.demand_estimator.parameters = {
+        **c.firms.functions.demand_estimator.parameters,
+        "sectoral_growth_adjustment_speed": 0.0,
+    }
+
+
+def without_partial_adjustment_investment(c: CountryConfiguration) -> None:
+    c.firms.functions.target_capital_inputs.name = "FinancialTargetCapitalInputsSetter"
+    c.firms.functions.target_capital_inputs.parameters = {
+        "target_capital_inputs_fraction": 0.0,
+        "credit_gap_fraction": 0.0,
+    }
+    p = c.firms.functions.target_production.parameters
+    c.firms.functions.target_production.parameters = {**p, "capital_inputs_target_considers_capital_inputs": 1.0}
+
+
+def without_search_frictions(c: CountryConfiguration) -> None:
+    c.labour_market.functions.clearing.name = "PolednaLabourMarketClearer"
+    m = c.labour_market.functions.clearing.parameters
+    c.labour_market.functions.clearing.parameters = {
+        **{k: v for k, v in m.items() if k not in ("matching_efficiency", "matching_elasticity")},
+        "random_firing_probability": 0.0,
+    }
+
+
+def without_productivity_growth(c: CountryConfiguration) -> None:
+    c.firms.functions.productivity_growth.name = "NoOpTFPGrowth"
+    c.firms.functions.productivity_growth.parameters = {}
+
+
+def without_slack_aware_expectations(c: CountryConfiguration) -> None:
+    c.economy.functions.growth.name = "GrowthManualForecastingAutoReg"
+    c.economy.functions.growth.parameters = {"value": 0.0, "lags": 1}
+
+
+def with_forecast_noise(c: CountryConfiguration) -> None:
+    c.assume_zero_noise = False
+
+
+def substitutable_inputs(c: CountryConfiguration) -> None:
+    c.firms.functions.production.name = "Linear"
+
+
+def without_housing_market(c: CountryConfiguration) -> None:
+    c.housing_market.functions.clearing.name = "NoHousingMarketClearer"
+
+
+def without_household_credit(c: CountryConfiguration) -> None:
+    k = c.credit_market.functions.clearing.parameters
+    c.credit_market.functions.clearing.parameters = {**k, "allow_household_loans": False}
+
+
+def without_reservation_wages(c: CountryConfiguration) -> None:
+    m = c.labour_market.functions.clearing.parameters
+    c.labour_market.functions.clearing.parameters = {**m, "consider_reservation_wages": False}
+
+
 # 2. Reverts to earlier defaults --------------------------------------------------------------------------------------
 
 
