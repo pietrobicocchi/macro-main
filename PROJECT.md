@@ -106,6 +106,7 @@ Equal: target inflation 0.02, ω^M = ω^K = 0.85, h^max = 1.5, φ^FM = φ^FK = 0
 | Owners / renters keep their home a quarter (p^OS, p^RS) | 79/80, 7/8 | 0.5, 0.5 | `households.property` | exp034: candidate |
 | Psychological pressure of renting μ^PS | 0.4 | 0.1 | `households.property` | exp034 |
 | exp035 | The paper's stated values for wages and banks (parameter audit) | done | No offered-wage markup (φ^WN = 0) and the solvency ratio 0.1: identical runs (dormant: firms meet their labour targets, the bank's equity stays above both thresholds). The paper's bank limits (firm debt-to-equity 1.0, return on equity 0.15, consumer loans 0.36): GDP 1.03 → 1.01, HH 1.05 → 1.06, gov. 1.66 → 1.81, invest. 1.11 → 1.00, CPI 0.75; growth and unemployment unchanged. `outputs/exp035_paper_parameters/` |
+| exp036 | The candidate decisions together (candidate F: S32, S9, moving probabilities, bank limits) | done; awaiting Pietro | In order: S32 GDP 1.03 → 1.01, invest. 1.11 → 1.03, gov. 1.66 → 1.87; + S9 HH 1.05 → 1.10, invest. 1.00; + moving probabilities GDP 0.99, HH 1.02, invest. 1.05, growth 0.25%/q; + bank limits (F) GDP **0.98**, HH **1.00**, gov. 1.83, invest. 1.10, CPI 0.75, growth 0.25%/q (data 0.28%), unemployment 9.9% / 8.7% at q12 / q20 (data 9.7% / 8.8%), house sales 0.11% of the stock a quarter. Not additive for investment (the bank limits help alone, exp035, and hurt here); government consumption is the cost (rationing noise). `outputs/exp036_candidate_f/` |
 | Buy-or-rent sensitivity φ^B | 0.001 per euro | 1 per euro (temperature 1, `/ 10000`) | `households.property` | M2 |
 | Rent indexation φ^PIR, lag | 1, 1 | 0 | `households.property` | exp034 |
 | Price and rent cuts of unsold properties p^PM, p^RM | 0.1964, 0.2848 | 0 (off) | `households.property` | formula needs /100 (exp034) |
@@ -402,6 +403,7 @@ exp023 and exp025 rerun on them). Every MD15–MD19 value was chosen in-sample. 
 6. **Decisions waiting for Pietro** (built as data options, each changes the initial state): the national-accounts
    return on household financial assets (S9, exp031), and the investment split by capital compensation (S32,
    exp033, a bug in the split); and, a behaviour default, the paper's moving probabilities for housing (M9, exp034).
+   Together with the paper's bank limits (candidate F, exp036): GDP 0.98, HH 1.00, gov. 1.83, invest. 1.10.
    Adopting one means a ladder rung, `make baseline` and a scorecard row.
 7. **For the paper**: E1's text ("no exogenous TFP") is contradicted by MD12; the revision plan's χ^K ≈ 0.56
    against `table:prior`'s 0.18 (E2); the data section's benefits source changes (MD17).
