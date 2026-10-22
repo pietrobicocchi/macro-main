@@ -87,6 +87,49 @@ looking at the result. This is the raw material for the rewritten model section.
 | MD15 | The growth engine is the default: firms start with spare capacity (utilisation 0.85, data and simulation), expected demand grows with the growth forecast, investment closes λ = 0.10 of the gap to desired capital per quarter on smoothed demand (MD10), search frictions with μ calibrated at the first quarter so the initial unemployment rate is a steady state (MD11), labour productivity +0.25%/q (MD12), the slack-aware growth forecast (MD13); and forecasts carry no random draw (`assume_zero_noise=True`, P3) | Firms do not run at full capacity (French manufacturing utilisation was about 81% in 2014); a quarterly adjustment of 0.10 (about a third of the capital gap a year) is in the range of estimated adjustment speeds, where 0.25 (two thirds a year) is fast; expectations are forecasts, and survey expectations are much smoother than outcomes; government spending follows a budget, not a random path. Without the draw the accelerator no longer turns forecast noise into investment swings | keep the draw (the paper); λ 0.25; old defaults selectable (`settings.pre_md15_no_growth_engine`, with `load_data(utilisation_rate=1.0)`) | exp020, `make baseline` (10 seeds, against volumes): GDP 1.50 → **0.99**, HH cons. 2.32 → 1.08, gov. cons. 6.70 → 1.90, invest. 1.11 → 1.09, CPI 1.09 → **0.86**; growth −0.07 → +0.19%/q (data 0.28%); unemployment q12 10.7% → 10.0% (data 9.4%) | **default since 2026-10-21**; describe the growth engine and expectations |
 | MD16 | The government plans real consumption from an AR(1) on the growth rates of its past spending deflated by the CPI (`AutoregressiveGrowthGovernmentConsumptionSetter`, `deflator="cpi"`), in place of an AR(1) on log levels deflated by the PPI | Budgets extend the recent growth of spending; an AR(1) on log levels mean-reverts, so planned growth fades to zero; the CPI is closer to the price of what governments buy than the PPI, which fell with oil in 2014–16 | follow the economy's growth forecast; levels deflated by CPI (1.67); growth rates deflated by PPI (1.63); old rule selectable (`settings.pre_md16_government_consumption`) | exp021; `make baseline` (10 seeds): gov. cons. 1.90 → 1.42, GDP 0.99 → **0.94**, HH cons. 1.08 → 1.04, invest. 1.09 → 1.13; growth 0.28%/q (data 0.28%); unemployment q12 9.4% (data 9.4%) | **default since 2026-10-22**; describe government spending |
 
+## Model map: paper ↔ code
+
+Every rule the default model uses, against the paper's appendix (`appendix_model_description.tex`, labels in
+`code`). Status: **=** as in the paper; **≠ MD#** our decision; **≠ (ID)** an upstream default that departs
+from the paper, open in the register; **+** not in the paper. Config slots are `CountryConfiguration` paths;
+`make figures` draws this structure (I4). Revision-plan entries that wait on a row are in "Claims → evidence".
+
+| Block | Paper | Default in code | Status |
+| --- | --- | --- | --- |
+| Growth expectations | AR(1) on log real gross output, deterministic (`sec:expectations`) | `economy.growth` `SlackAwareGrowthForecastingAutoReg`: AR(1) on real growth rates, minus 0.2 × the unemployment gap | ≠ MD13 |
+| Inflation expectations | AR(1) on PPI / CPI / HPI / RPI, deterministic | `economy.inflation` `InflationManualForecastingAutoReg`; `assume_zero_noise=True` | = (MD15; ROW still draws noise: M15) |
+| Firm demand | sectoral growth × idiosyncratic growth (φ^Q_F) × previous demand (`eq:firm_exp_demand`) | `firms.demand_estimator` sectoral speed 1, firm speed 0 | = (φ^Q_F = 0; MD15 turned growth on) |
+| Target production | min of demand + inventory target, χ caps on labour, inputs, capital (`eq:firm_target_production`) | `firms.target_production`: no inventory target, χ caps on purchases and hiring, not on target production | ≠ (G4) |
+| Work effort, labour demand | h_max caps overtime (`eq:we`); Ĥ = Ŷ | `firms.labour_productivity` `WorkEffortLabourProductivitySetter`, h_max 1.5 | = (G12) |
+| Productivity | constant coefficients | `firms.productivity_growth` `LabourAugmentingGrowth` 0.25%/q | + MD12 |
+| Production | Leontief in labour, intermediate and capital stocks (`eq:firm_production`) | `firms.production` `PureLeontief`; capacity = stock × productivity; initial stocks sized for utilisation 0.85 | = (ω = 0.85 as the paper's appendix; MD15) |
+| Wages | (1 + E[π^PPI]) (1 + μ^WN) φ^WE w(t−1) (`eq:firm_wages`) | `firms.wage_setter`: index closes 25% of the gap to the realised CPI each quarter; tightness markup 0 | ≠ MD14 |
+| Prices | (1 + E[π^PPI]) (1 + φ^DP π^DP) (1 + φ^CP π^CP) P(t−1), π^CP = U/P − 1 (`eq:firm_prices`) | `firms.prices`: weights 0.5 on expected inflation and 0.5 on unit-cost growth, no demand pull; noise 0.05% | ≠ MD1, MD14, P6 |
+| Intermediate inputs | d · Ŷ minus φ^M × stock gap (`eq:firm_target_intermediate_inputs`) | `firms.target_intermediate_inputs`, φ^M = 0 | = |
+| Investment | d · Ŷ minus φ^K × stock gap (`eq:firm_target_capital_inputs`) | `firms.target_capital_inputs` `PartialAdjustmentTargetCapitalInputsSetter`: replacement + 0.10 × gap to desired capital on smoothed demand | ≠ MD10, MD15 |
+| Credit demand and frictions | financing gaps; purchases cut by φ^FM, φ^FK × unmet credit (`eq:ii_demand`, `eq:cap_demand`) | φ^FM = φ^FK = 0 | = (values; G9) |
+| Firm accounts, bankruptcy | `eq:firm_profits` – `eq:firm_equity`; replaced with zero deposits and debt | `firms.demography` `DefaultFirmDemography` | = (S28, S30 fixed) |
+| Government consumption | AR(1) on real consumption, at E[π^PPI] (`eq:gov_cons`) | `government_entities.consumption` `AutoregressiveGrowthGovernmentConsumptionSetter`: AR(1) on growth rates of CPI-deflated spending | ≠ MD16 |
+| Social benefits | w^U and sb^O grow with predicted growth (`eq:gov_ub`, `eq:gov_ob`); initial from SOCX | `central_government.social_benefits` `GrowthSocialBenefitsSetter`; initial = SOCX total public social expenditure | = rule; level ≠ (F6) |
+| Revenue, deficit, debt | fixed tax rates (`eq:gov_revenue` – `eq:gov_debt`) | as the paper; rates from OECD | = rule; levels ≠ (F7) |
+| Household income, consumption | max(floor, (1 − SR) E[Y], smoothing) (`eq:hh_consumption_full`); SR per household from HFCS | `households.consumption` floor 0 (MD14), smoothing 0; `households.saving_rates` `AverageSavingRatesSetter`: one income-weighted rate for all | ≠ MD14, (M13) |
+| Social transfers to households | by household type, income, wealth, debt | `households.social_transfers` `EqualSocialTransfersSetter`: equal per household | ≠ (M13) |
+| Financial assets | income φ^FA W^OFA | `households.financial_assets` `DefaultFinancialAssets` (MD6 shares in firms: option) | = (S9, S10 unbacked) |
+| Housing demand and rents | buy-or-rent logit; rents indexed φ^PIR, cut while vacant (`eq:mpp` – `eq:rent_red`) | `households.property` default; `households.rent` `ConstantRentSetter` (rents never change) | ≠ (M14) |
+| Housing market | random sequential matching | `housing_market.clearing` `AutomaticHousingMarketClearer` (optimal assignment) | ≠ (E12, M9) |
+| Individuals | labour quality drifts (h^U, h^E); reservation wage = max(benefit, past wages) (`eq:ind_reservation_wages`) | h^U = h^E = 0; `DefaultReservationWageSetter` | = |
+| Rest of the world | exports, imports, prices indexed to modelled production and prices (φ^ROW = 1) | `row_configuration`: exports and imports from AR(1) forecasts with a random draw | ≠ (M15) |
+| Goods market | random search and matching, priority by price (φ^GM = 2) and size (`eq:gm`) | `WaterBucketGoodsMarketClearer`, price temperature 2 | = |
+| Labour market | fire to target, hire in random order, no separations (`eq:lm_firing`, `eq:lm_hiring`) | `labour_market.clearing` `SearchFrictionsLabourMarketClearer`: 3% separations, matching function | ≠ MD11 |
+| Credit market | random order, n^LF / n^LH banks by rate | `WaterBucketCreditMarketClearer`, 5 banks | = |
+| Bank rates and limits | ARDL error correction on the policy rate (`eq:bank_ir`); DtE, RoE, RoA, LTV, LTI, DSTI limits | `banks.interest_rates` `DefaultInterestRatesSetter`; limits from `banks.parameters` (firm DtE 0.03; paper 1.0) | = rule; values ≠ (G9) |
+| Bank failure | bail-in by other banks | `banks.demography` `MinimumCapitalBankDemography`: government recapitalises to the minimum ratio | ≠ MD3, MD5 |
+| Central bank | Taylor rule estimated by OLS (`eq:cb_policy_rate`) | `central_bank.policy_rate` `ConstantPolicyRate` | ≠ (P4) |
+| Initial state | ICIO, SEA, HFCS, Compustat, OECD, World Bank | `macro_data`: wages from SEA labour shares (MD9), mortgages capped at property value (MD7), utilisation 0.85 (MD15) | ≠ MD7, MD9 |
+
+Lessons from exp002 (before MD1): the old 5% price noise per quarter was the main pathology; growth
+expectations, χ caps, bank limits, a Taylor rule or many firms changed little on the defaults of the time.
+
 ## Baselines
 
 | Baseline | Why it is the right comparison | Status |
@@ -171,45 +214,6 @@ differ from the submitted one.
   NPE and NRE on moments of real GDP, nominal GDP, the GDP deflator, real household
   consumption, real government consumption and real GFCF, then forecasts 3 years
   ahead. The paper-figure notebook path suggests a fourth repo, `inet-macro-dev`.
-
-### Where the defaults differed from the paper (exp002, before MD1; 5 seeds, 12 quarters)
-
-Paper settings added cumulatively to the defaults as they were with 5% price noise
-(`sim / AR(1)` RMSE ratios):
-
-| Step | GDP | HH cons. | Gov. cons. | Invest. | CPI | GDP growth | Unemp. q12 |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| defaults with old 5% price noise | 1.32 | 3.52 | 8.40 | 2.06 | 2.59 | −0.4% | 14.8% |
-| + growth expectations (sectoral speed 1) | 1.57 | 3.92 | 7.24 | 1.66 | 2.86 | −0.6% | 16.6% |
-| + input constraints χ (mapped) | 1.64 | 3.74 | 8.07 | 2.20 | 3.21 | −0.6% | 16.6% |
-| **+ no price noise** | **1.19** | **2.75** | **1.97** | **1.13** | **1.83** | 0.0% | **10.1%** |
-| + paper bank limits | 1.20 | 2.46 | 1.80 | 1.23 | 1.99 | −0.1% | 10.9% |
-| + Taylor rule | 1.24 | 2.33 | 2.14 | 1.23 | 2.14 | 0.0% | 10.8% |
-| + many firms (408) | 1.21 | 2.77 | 1.97 | 1.37 | 1.76 | −0.1% | 10.4% |
-| + inventory target (φ^StY 0.10, −S) | diverges | | | | | | |
-| data | | | | | | +0.6% | 9.4% |
-
-- **Price noise was the main pathology.** Firms multiplied their price by a random
-  shock with 5% standard deviation every quarter; the shocks compound as a random walk
-  and, with one firm per industry, move whole sectors. The paper's price equation has
-  none, and Sam's prior defaults it to 0. **The default is now 0.0005 (0.05%).**
-- **Growth expectations are off by default** (`sectoral_growth_adjustment_speed = 0`)
-  although in the paper firms always scale demand by predicted sectoral growth.
-  Switching them on does not help with today's other defaults.
-- **The χ structure differs:** the paper caps target production; the code caps labour
-  demand and intermediate/capital purchases separately, all fully by capital by default.
-- **One firm per industry by default** (18 firms for France). `default_data_configuration`
-  ignores its `single_firm_per_industry` argument (`create_country_configurations`
-  hard-codes the per-country flag), and many-firm mode crashed in
-  `compute_productivity_investment` (per-firm prices used as per-industry). Both are
-  worked around or fixed; many firms do not change the scorecard much.
-- **The inventory step diverged because of two bugs, not the paper's rule** (both
-  fixed after exp002, so its inventory row is stale): `FirmsConfiguration.reset_params`
-  passed `existing_inventory_fraction` (how much inventory target production subtracts)
-  as the *initial* inventory, so −S gave every firm a full quarter of output in stock;
-  and the resulting data reset ran the broken re-initialisation path (below).
-- Even at its best, the model has 0% GDP growth vs +0.6% in the data, and every
-  ratio is still above 1: no growth engine, and no calibration yet.
 
 ### Growth and inflation (exp003, exp004)
 
@@ -521,6 +525,7 @@ commit messages (e.g. `G1:`).
 | R4 | Scoring differs from the paper: GDP deflated by PPI (macro_data's "Real GDP" too, +2.6%/yr vs ~1% official), one country, one start date | Spec | ours | exp001; `exogenous_data.py:375` divides nominal growth by PPI inflation | fixed for scoring: real aggregates scored against Eurostat chain-linked volumes (`scoring.observed`, `volumes=False` for the old target); firms' growth expectations still use the PPI-deflated history; one country, one start date remain | P3 |
 | R5 | `macrocalib` is untested and excluded from the test suite | Infra | ours | pytest `addopts` | open | P3 |
 | R6 | Differentiable version of the model | Gap | CB7 | Matias investigating | not ours now | P3 |
+| R7 | Scoring targets: CPI is not seasonally adjusted (quarterly inflation swings −0.5% to +0.9%), and the unemployment series is annual (flat within each year) | Data | ours | I4 forecast fans | open: seasonally adjusted HICP (`prc_hicp_midx` SA or `ei_cphi_m`), quarterly unemployment (`une_rt_q`) | P2 |
 
 ### G. Growth and firm behaviour
 
@@ -550,7 +555,7 @@ commit messages (e.g. `G1:`).
 | --- | --- | --- | --- | --- | --- | --- |
 | P1 | 5% per-firm price noise dominated the dynamics | Spec | ours | exp002 | done `60948b7` (0.0005) | — |
 | P2 | Realised inflation equals the AR(1) forecast (self-fulfilling; referee R2.4) | Question | ours | exp003 | open | P2 |
-| P3 | Forecast noise draw roughly doubles the inflation error: keep (paper) or drop? | Question | ours | exp003: CPI ratio 1.8 → 0.95 without it; exp020: it drives the growth engine's investment volatility (quarter-1 investment −14% to +15% across seeds) and the government's spending path | decided: dropped by default (MD15); `assume_zero_noise=False` restores it | — |
+| P3 | Forecast noise draw roughly doubles the inflation error: keep or drop? The paper's expectations are a deterministic AR(1) (`sec:expectations`), so dropping it matches the paper | Question | ours | exp003: CPI ratio 1.8 → 0.95 without it; exp020: it drives the growth engine's investment volatility (quarter-1 investment −14% to +15% across seeds) and the government's spending path | decided: dropped by default (MD15); `assume_zero_noise=False` restores it | — |
 | P4 | Taylor rule inert (zero by quarter 3), constant rate by default, and a TODO says `xi_pi` is estimated wrongly | Bug | ours | exp001; `default_synthetic_central_bank.py:168` | open; see upstream #83 | P2 |
 | P5 | Firms did not pass cost increases into prices (cost-push weight 0) | Spec | ours | exp007; exp012, exp013, exp015 | done: half pass-through by default (MD14) | — |
 | P6 | Cost-push inflation compared unit costs with the sector's price level, so it pulled prices down to costs (−10%/q) instead of passing on cost changes | Bug | ours | unit cost / price 0.895 at t=1; Sam's prior notes "prices cause shit to break" | done: uses unit-cost growth, with test | — |
@@ -588,6 +593,7 @@ commit messages (e.g. `G1:`).
 | S27 | Regression from S12: firms' wage bill lost its CPI factor, so nominal wages were frozen and real wages fell with prices | Bug | ours | the wage setter pays real wages; the CPI factor belonged on the employees' side | done: employees receive real wage × CPI, firms pay the gross-up of that | — |
 | S28 | Firm-loan ledger residual (3.5% of GDP, seed 7, one quarter): a firm's written-off loans stayed in its own debt records until the next quarter (households' were fixed in S20) | Bug | ours | seed 7, t = 7 | done: insolvency clears the firm's debt records, with test | — |
 | S29 | Unexplained money grew with the policy rate: 15.6% of GDP with the Taylor rule on the engine (exp012, old defaults) | Question | ours | the interest the central bank pays on positive bank reserves (money it creates) was missing from the money identity; with it, the engine + Taylor run's worst unexplained money is 2.8% and the default run's halves (1.3% → 0.7% at q11); the rest grows with reserves, probably deposit interest booked differently by banks and depositors; bank reserves reach 3–5× quarterly GDP in engine runs | partial: identity fixed, with test; rest open | P2 |
+| S30 | The capital stock's value was recorded with the intermediate-input stock's function each quarter (about a ninth of the true value); banks use it as collateral for firm loans | Bug | upstream | I1 (mechanism dashboard); `country.py` | fixed `1af901a`, regression test; exp019's "debt above capital value" is suspect; report upstream (E9) | — |
 
 ### M. Markets and trade
 
@@ -596,7 +602,7 @@ commit messages (e.g. `G1:`).
 | M1 | Housing market initialises and executes poorly (tenure mix, stock quality) | Spec | both | CB7; upstream #93 | partial: #93 merged | P2 |
 | M2 | Rental market nearly dead (0–1 rentals/q vs 400–500 sales); some rent/value above 1 | Question | ours | rent probe; possibly spoofed data | open | P2 |
 | M3 | Consumer credit decays towards 0 even after #104 | Question | ours | probes | open | P2 |
-| M4 | Government consumption still about 2× the AR(1) error | Question | ours | baseline | partial: price noise fixed most | P2 |
+| M4 | Government consumption still about 2× the AR(1) error | Question | ours | baseline | fixed by MD16 (1.90 → 1.42; F5) | — |
 | M5 | Imports, exports and exchange rates need review | Spec | CB7 | see S6 | open | P3 |
 | M6 | Housing IDs set to −1 at initialisation | Bug | upstream | — | done: #93 merged `80d8b3d` | — |
 | M7 | Credit-supply units bug | Bug | upstream | — | done: #104 merged `a6dca3c` | — |
@@ -605,6 +611,9 @@ commit messages (e.g. `G1:`).
 | M10 | Interest on existing loans was an annual rate charged every quarter (4×) | Bug | upstream | now: firm loans 1.0%/yr, consumer loans 4.8%/yr, mortgages 2.3%/yr | done: upstream #83 and #85 merged (`40c8a1e`, `f12f78b`) | — |
 | M11 | Poledna layoffs reported the sum of every firm's excess employees, negative ones included, as the number fired (−hires under search frictions); only the reported flows (`num_individuals_newly_fired`, `job_reallocation_rate`) were wrong | Bug | ours | exp010 | done: counts the workers actually fired, with test | — |
 | M12 | Layoffs only reset a worker's firm ID, so firms' employee lists kept laid-off workers (and listed rehired workers twice); the lists guard random separations | Bug | ours | engine + frictions, 16 quarters: 95 stale entries, 60 duplicates | done: lists rebuilt after every clearing, with test; defaults unaffected (no random separations) | — |
+| M13 | Households all save at one average rate and receive equal social transfers; the paper sets both per household from HFCS characteristics | Spec | upstream | model map; `AverageSavingRatesSetter`, `EqualSocialTransfersSetter` | open: alternatives exist; matter for distribution, less for aggregates | P2 |
+| M14 | Rents never change (`ConstantRentSetter`); the paper indexes them partially to CPI and cuts vacant offers | Spec | upstream | model map | open | P3 |
+| M15 | The rest of the world sets exports and imports from AR(1) forecasts that still draw noise (`row_configuration.assume_zero_noise=False`); the paper indexes them to modelled production and prices | Spec | upstream | model map; I1 | open: exp022 tests the noise | P2 |
 
 ### F. Government and finance
 
@@ -615,6 +624,8 @@ commit messages (e.g. `G1:`).
 | F3 | Government debt, bond issuance, QE | Gap | CB7 | Tom's UK prototype | open | P3 |
 | F4 | Fiscal rules | Gap | CB7 | — | open | P3 |
 | F5 | The government's spending plan is an AR(1) on log levels of PPI-deflated spending, so planned growth fades (0.10%/q against 0.34%/q) | Spec | ours | exp021: growth rates / CPI takes gov. cons. 1.90 → 1.42 | fixed: `AutoregressiveGrowthGovernmentConsumptionSetter`, `deflator="cpi"`, default (MD16) | — |
+| F6 | "Other social benefits" are OECD SOCX total public social expenditure less unemployment benefits (29% of GDP for France), which includes in-kind services (health, care) already in government consumption; cash benefits are about 19%. Together with F7 the government runs a deficit of 18% of GDP each quarter (France ≈ 4%), and households net-lend 18% of GDP | Bug | both (paper too) | I1: government accounts at t = 1; `default_readers.get_benefits_inflation_data`, `oecd_econ.all_benefits_gdp_pct` | open: use cash benefits (SOCX cash, or Eurostat `gov_10a_main` D62); changes the initial state: ask first | P1 |
+| F7 | Tax revenue is 41% of GDP (France ≈ 53%): corporate tax 7.0% (France ≈ 2.5%), income tax 4.6% (France ≈ 9% with CSG), taxes on products below the data | Spec | both | I1: government accounts at t = 1 | open: check the OECD rates against national accounts receipts | P1 |
 
 ### E. Engineering and workflow
 
