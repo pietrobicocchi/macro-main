@@ -441,7 +441,7 @@ commit messages (e.g. `G1:`).
 | ID | Problem | Kind | Source | Evidence | Status | Pri |
 | --- | --- | --- | --- | --- | --- | --- |
 | F1 | Taxes and benefits need review | Spec | both | upstream `bug/government-expenditure` (benefits, deficit fixes; no PR) | open | P2 |
-| F2 | Corporate equity not wired between firms and households (profits not redistributed) | Gap | CB7 | Andrea's module; relates to S2 | open | P2 |
+| F2 | Corporate equity not wired between firms and households (profits not redistributed) | Gap | CB7 | Andrea's module; relates to S2; I1 dashboard: firms net-lend about 9.5% of GDP every quarter (profits ≈ 17% of GDP, no dividends; French firms are roughly balanced or net borrowers), and switching on MD6 at once removes 19% of GDP of household income (S9) and collapses demand (exp024) | open | P2 |
 | F3 | Government debt, bond issuance, QE | Gap | CB7 | Tom's UK prototype | open | P3 |
 | F4 | Fiscal rules | Gap | CB7 | — | open | P3 |
 | F5 | The government's spending plan is an AR(1) on log levels of PPI-deflated spending, so planned growth fades (0.10%/q against 0.34%/q) | Spec | ours | exp021: growth rates / CPI takes gov. cons. 1.90 → 1.42 | fixed: `AutoregressiveGrowthGovernmentConsumptionSetter`, `deflator="cpi"`, default (MD16) | — |
