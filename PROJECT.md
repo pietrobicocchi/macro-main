@@ -524,6 +524,20 @@ pass through the model), then I2, I4, I5.
 | I4 | **Visualisation, five figure families** | One plotting module (`experiments/plotting.py`; fixed colours and labels, PDF for the paper, PNG for reviewing), `make figures`: (a) **model map**, one diagram of agents, markets and the quarter's sequence with the rules in use and their MD#s (the paper's `structure.tikz`, updated); (b) **forecast fan**, model median and 10–90% band across seeds, data and AR(1), per aggregate; (c) **mechanism dashboard**, one page on what the economy is doing inside: sectoral net lending (stock-flow), capacity utilisation and the capital gap, labour flows (unemployment, vacancies, hires, separations), prices against unit costs and wages against the CPI, expected against realised growth, the government plan against realised spending, accounting residuals; (d) **comparison heatmap**, sim/AR(1) by step × aggregate, diverging at 1 (experiments, scorecard history, ablation ladder; country × aggregate once D1); (e) **country small multiples**, one row of fans per country (once D1). No interactive dashboard unless static figures prove insufficient | every experiment writes (b) and (c) without extra code; the scorecard history and the ladder render as (d) |
 | I5 | **Workflow for agents and for the paper** | AGENTS.md rewritten to be true and short (structure, the runner, figure rules, the experiment lifecycle: question and hypothesis before running → run → experiments row and section → MD row and baseline row if a default changes). "Claims → evidence" lists every revision-plan Post entry (ablation ladder, simplified expectations, VAR benchmark, uncertainty bands, recovery period, country vs area) with its experiment and figure. One checkpoint memory. Upstream-worthy fixes listed (E9) | a fresh session goes from AGENTS.md and PROJECT.md to a new ablation rung with its paper figure without reading the history |
 
+### Calibration plan (phase 5, prepared during the intermezzo)
+
+- **The paper's estimated parameters** (`table:prior`): φ^Q_F, φ^DP, φ^CP (discrete; posterior 0, 0, 0), φ^StY
+  (0.10), χ^H, χ^M, χ^K (0.53, 0.03, 0.18; caps on *target production*). The code has no χ on target production
+  (G4), and today's defaults use cost pass-through 0.5 (MD14) where the paper's posterior has φ^CP = 0. The
+  rewritten paper should say so; calibrating the paper's parameter set here first needs G4.
+- **Candidate parameter set for this model**: the values our decisions fixed by economic argument, in-sample:
+  λ and demand smoothing (MD10, sensitive: exp022), separation rate (MD11), productivity growth (MD12), slack
+  sensitivity (MD13), cost pass-through and wage catch-up speed (MD14), initial utilisation (MD15).
+- **Machinery**: `macrocalib.Sampler` (configuration updater + observer, parallel) and `training_pipeline`
+  (sbi NPE). Install the `calibration` extra (torch, sbi; not installed). The observer is `scoring.simulate`'s
+  scored series; the updater is a `settings`-style function of a parameter vector. Untested (R5).
+- **Data**: calibrate on 2010–2013 and score from 2014 on held-out start dates and countries: needs D1.
+
 ## Claims → evidence
 
 Every paper claim and revision-plan entry (`../paper-macro-model/docs/revision_plan.md`) that waits on a result,
