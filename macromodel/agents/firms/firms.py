@@ -669,6 +669,7 @@ class Firms(Agent):
             interest_on_overdraft_rates=-bank_overdraft_rate_on_firm_deposits[self.states["Corresponding Bank ID"]]
             * np.minimum(0.0, self.ts.current("deposits")),
             interest_paid_on_loans=self.ts.current("interest_paid_on_loans"),
+            current_limiting_labour_inputs=self.ts.current("labour_inputs"),
         )
 
     def compute_target_intermediate_inputs_production(self) -> np.ndarray:

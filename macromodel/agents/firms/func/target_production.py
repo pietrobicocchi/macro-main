@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 
 import numpy as np
 
@@ -77,26 +78,18 @@ class TargetProductionSetter(ABC):
         self.intermediate_inputs_target_considers_labour_inputs = clip(
             intermediate_inputs_target_considers_labour_inputs
         )
-        self.intermediate_inputs_target_considers_labour_inputs = intermediate_inputs_target_considers_labour_inputs
         self.intermediate_inputs_target_considers_intermediate_inputs = clip(
-            intermediate_inputs_target_considers_intermediate_inputs
-        )
-        self.intermediate_inputs_target_considers_intermediate_inputs = (
             intermediate_inputs_target_considers_intermediate_inputs
         )
         self.intermediate_inputs_target_considers_capital_inputs = clip(
             intermediate_inputs_target_considers_capital_inputs
         )
-        self.intermediate_inputs_target_considers_capital_inputs = intermediate_inputs_target_considers_capital_inputs
 
         self.capital_inputs_target_considers_labour_inputs = clip(capital_inputs_target_considers_labour_inputs)
-        self.capital_inputs_target_considers_labour_inputs = capital_inputs_target_considers_labour_inputs
         self.capital_inputs_target_considers_intermediate_inputs = clip(
             capital_inputs_target_considers_intermediate_inputs
         )
-        self.capital_inputs_target_considers_intermediate_inputs = capital_inputs_target_considers_intermediate_inputs
         self.capital_inputs_target_considers_capital_inputs = clip(capital_inputs_target_considers_capital_inputs)
-        self.capital_inputs_target_considers_capital_inputs = capital_inputs_target_considers_capital_inputs
 
     @abstractmethod
     def compute_target_production(
@@ -114,6 +107,7 @@ class TargetProductionSetter(ABC):
         current_firm_deposits: np.ndarray,
         interest_on_overdraft_rates: np.ndarray,
         interest_paid_on_loans: np.ndarray,
+        current_limiting_labour_inputs: Optional[np.ndarray] = None,
     ) -> np.ndarray:
         """Calculate target production levels for each firm.
 
@@ -220,6 +214,7 @@ class DefaultTargetProductionSetter(TargetProductionSetter):
         current_firm_deposits: np.ndarray,
         interest_on_overdraft_rates: np.ndarray,
         interest_paid_on_loans: np.ndarray,
+        current_limiting_labour_inputs: Optional[np.ndarray] = None,
     ) -> np.ndarray:
         """Calculate target production levels using the default strategy.
 
@@ -355,3 +350,37 @@ class DefaultTargetProductionSetter(TargetProductionSetter):
         )
 
         return current_target_production
+
+
+class PaperTargetProductionSetter(DefaultTargetProductionSetter):
+    """Target production capped by the firm's inputs as in the paper (`eq:firm_target_production`, G4).
+
+    Target production is the default target (expected demand, inventory), then at most
+    Q + chi (limit - Q) for each input, where Q is expected demand and the limit is the output the firm's labour,
+    intermediate-input or capital stock allows: chi = 0 ignores that input when planning, chi = 1 plans no more than
+    it allows (the IIASA model). The paper's posterior: chi^H 0.53, chi^M 0.03, chi^K 0.18.
+    """
+
+    def __init__(
+        self,
+        target_production_considers_labour_inputs: float = 0.0,
+        target_production_considers_intermediate_inputs: float = 0.0,
+        target_production_considers_capital_inputs: float = 0.0,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.target_production_considers_labour_inputs = clip(target_production_considers_labour_inputs)
+        self.target_production_considers_intermediate_inputs = clip(target_production_considers_intermediate_inputs)
+        self.target_production_considers_capital_inputs = clip(target_production_considers_capital_inputs)
+
+    def compute_target_production(self, **kwargs) -> np.ndarray:
+        target = super().compute_target_production(**kwargs)
+        demand = kwargs["current_estimated_demand"]
+        for weight, limit in [
+            (self.target_production_considers_labour_inputs, kwargs.get("current_limiting_labour_inputs")),
+            (self.target_production_considers_intermediate_inputs, kwargs["current_limiting_intermediate_inputs"]),
+            (self.target_production_considers_capital_inputs, kwargs["current_limiting_capital_inputs"]),
+        ]:
+            if weight > 0 and limit is not None:
+                target = np.minimum(target, demand + weight * (limit - demand))
+        return np.maximum(1e-12, target)

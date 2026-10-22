@@ -276,7 +276,7 @@ class TargetProduction(BaseModel):
     Options: DefaultTargetProductionSetter
     """
 
-    name: Literal["DefaultTargetProductionSetter"] = "DefaultTargetProductionSetter"
+    name: Literal["DefaultTargetProductionSetter", "PaperTargetProductionSetter"] = "DefaultTargetProductionSetter"
     path_name: str = "target_production"
     parameters: dict[str, Any] = {
         "existing_inventory_fraction": 0.0,

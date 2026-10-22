@@ -323,6 +323,20 @@ def input_constraints(c: CountryConfiguration) -> None:
     }
 
 
+def paper_target_production(
+    c: CountryConfiguration, chi_h: float = CHI_H, chi_m: float = CHI_M, chi_k: float = CHI_K
+) -> None:
+    """Paper (`eq:firm_target_production`, G4): target production capped by labour, intermediate inputs and capital
+    with weights chi (posterior 0.53, 0.03, 0.18), in place of the code's caps on purchases and hiring."""
+    c.firms.functions.target_production.name = "PaperTargetProductionSetter"
+    c.firms.functions.target_production.parameters = {
+        **c.firms.functions.target_production.parameters,
+        "target_production_considers_labour_inputs": chi_h,
+        "target_production_considers_intermediate_inputs": chi_m,
+        "target_production_considers_capital_inputs": chi_k,
+    }
+
+
 def capital_constraint(c: CountryConfiguration, weight: float) -> None:
     """How fully capital capacity caps labour demand and input purchases (default 1.0)."""
     p = c.firms.functions.target_production.parameters
