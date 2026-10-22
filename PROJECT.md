@@ -281,7 +281,10 @@ unemployment against seasonally adjusted quarterly data:
   sample mean) scores as well as the model on CPI. The policy rate is at zero from quarter 4 (MD18), as the ECB's
   was, so monetary policy cannot respond.
 - **Government consumption** (1.66) is the worst ratio: the plan is smooth, but realised spending is the
-  plan at expected industry prices, scored as nominal over the CPI.
+  plan at expected industry prices, scored as nominal over the CPI. Its error is quarter-to-quarter noise (within a
+  run growth varies by 0.25%/q against 0.16% in the data; mean 0.39% against 0.34%), not the deflator (at the
+  government's own prices the RMSE is the same, 0.0028): the government gets 99.4–100% of its plan as goods are
+  rationed, which is why the caps (MD19) and the investment split (exp033) move this ratio most.
 - **Accounts**: every loan and deposit ledger agrees exactly; unexplained money at most 0.3% of GDP; the
   by-design unbacked flows (S9, S10, S13) remain.
 - Runs are almost the same across seeds (the remaining randomness is price noise and labour-market flows):
