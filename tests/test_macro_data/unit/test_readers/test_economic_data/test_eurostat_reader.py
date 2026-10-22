@@ -60,6 +60,12 @@ class TestEuroStatReader:
         assert readers.eurostat.dividend_payout_ratio("AUT", 2016) == pytest.approx(0.463, abs=0.01)
         assert readers.eurostat.dividend_payout_ratio("LUX", 2012) == pytest.approx(0.299, abs=0.01)
 
+    def test__household_property_income_excluding_interest(self, readers):
+        # France 2014: D4 98,614 minus D41 15,984 million euros received by households (S9)
+        income = readers.eurostat.household_property_income_excluding_interest("FRA", 2014)
+        assert income == pytest.approx(82630e6, abs=1e6)
+        assert readers.eurostat.household_property_income_excluding_interest("USA", 2014) is None
+
     def test__firm_risk_premium(self, readers):
         assert readers.eurostat.firm_risk_premium("FRA", 2014) == pytest.approx(0.00570, abs=0.001)
 

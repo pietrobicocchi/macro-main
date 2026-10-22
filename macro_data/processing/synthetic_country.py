@@ -269,6 +269,11 @@ class SyntheticCountry:
             yearly_factor=yearly_factor,
         )
 
+        if country_configuration.financial_income_from_national_accounts:
+            population.financial_income_target = readers.eurostat.household_property_income_excluding_interest(
+                country, year
+            )
+
         firms = DefaultSyntheticFirms.from_readers(
             readers=readers,
             country_name=country,
@@ -506,6 +511,11 @@ class SyntheticCountry:
             exogenous_data=exogenous_country_data,
             yearly_factor=yearly_factor,
         )
+
+        if country_configuration.financial_income_from_national_accounts:
+            population.financial_income_target = readers.eurostat.household_property_income_excluding_interest(
+                country, year
+            )
 
         firms = DefaultSyntheticFirms.from_readers(
             readers=readers,

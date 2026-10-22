@@ -130,6 +130,9 @@ class SyntheticHFCSPopulation(SyntheticPopulation):
             Sets the housing-related fields in the household data.
     """
 
+    # Yearly income on other financial assets to calibrate their return to (S9); None: the survey's own ratio
+    financial_income_target: Optional[float] = None
+
     def __init__(
         self,
         country_name: str,
@@ -610,11 +613,17 @@ class SyntheticHFCSPopulation(SyntheticPopulation):
         Returns:
             None
         """
-        fa_mask = np.logical_not(np.isnan(self.household_data["Income from Financial Assets"].values.astype(float)))
-        self.household_data["Income from Financial Assets"] *= self.scale
-        self.coefficient_fa_income = (
-            self.household_data["Income from Financial Assets"].values.astype(float)[fa_mask].sum() / self.yearly_factor
-        ) / (self.household_data["Wealth in Other Financial Assets"].values.astype(float)[fa_mask]).sum()
+        if self.financial_income_target is not None:
+            # S9: the return that pays households the national accounts' property income (quarterly) on their stock
+            wealth = self.household_data["Wealth in Other Financial Assets"].values.astype(float)
+            self.coefficient_fa_income = self.financial_income_target / self.yearly_factor / np.nansum(wealth)
+        else:
+            fa_mask = np.logical_not(np.isnan(self.household_data["Income from Financial Assets"].values.astype(float)))
+            self.household_data["Income from Financial Assets"] *= self.scale
+            self.coefficient_fa_income = (
+                self.household_data["Income from Financial Assets"].values.astype(float)[fa_mask].sum()
+                / self.yearly_factor
+            ) / (self.household_data["Wealth in Other Financial Assets"].values.astype(float)[fa_mask]).sum()
         self.household_data["Income from Financial Assets"] = (
             self.coefficient_fa_income * self.household_data["Wealth in Other Financial Assets"].values
         )

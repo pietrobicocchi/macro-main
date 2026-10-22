@@ -681,6 +681,25 @@ class EuroStatReader:
 
         return (hh_prop + hh_surplus) / firm_surplus
 
+    def household_property_income_excluding_interest(self, country: Country | str, year: int) -> Optional[float]:
+        """Households' (S14) yearly property income received net of interest, D4 - D41, in LCU; None without data.
+
+        Dividends, withdrawals from quasi-corporations, investment income of insurance and pension claims and rents on
+        land: the income the survey's "other financial assets" earn. Interest is left out because the model pays
+        interest on deposits separately (S9).
+        """
+        if isinstance(country, Region):
+            country = country.parent_country
+        df = self.data["nonfinancial_transactions"]
+        received = df[(df["direct"] == "RECV") & (df["sector"] == "S14") & (df["geo"] == country)]
+        values = {}
+        for item in ("D4", "D41"):
+            row = received[(received["na_item"] == item) & (received["TIME_PERIOD"] == int(year))]
+            if row.empty or pd.isna(row["OBS_VALUE"].values[0]):
+                return None
+            values[item] = float(row["OBS_VALUE"].values[0])
+        return (values["D4"] - values["D41"]) * 1e6
+
     def firm_risk_premium(self, country: Country, year: int) -> float:
         """
         Calculate the firm risk premium for a given country and year.

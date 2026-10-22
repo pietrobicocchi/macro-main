@@ -91,6 +91,28 @@ class TestSyntheticPopulation:
         # Check individual age
         assert np.all(population.individual_data["Age"] >= 0)
 
+    def test__financial_income_target(self, readers, industry_data, exogenous_data):
+        """S9: with a national accounts target the return pays exactly that income, also when it is set again."""
+        france = Country("FRA")
+        population = SyntheticHFCSPopulation.from_readers(
+            readers=readers,
+            country_name=france,
+            year=2014,
+            scale=10000,
+            country_name_short=france.to_two_letter_code(),
+            industries=AGGREGATED_INDUSTRIES,
+            industry_data=industry_data[france],
+            rent_as_fraction_of_unemployment_rate=0.5,
+            total_unemployment_benefits=1000.0,
+            quarter=1,
+            exogenous_data=exogenous_data,
+        )
+        population.compute_household_wealth()
+        population.financial_income_target = 4e9  # yearly
+        for _ in range(2):
+            population.set_household_income_from_financial_assets()
+            assert population.household_data["Income from Financial Assets"].sum() == pytest.approx(1e9)
+
 
 @pytest.mark.parametrize("country", [Country("CAN"), Country("USA")])
 def test__household_consumption(multic_readers, multic_industry_data, configuration, country, exogenous_data):

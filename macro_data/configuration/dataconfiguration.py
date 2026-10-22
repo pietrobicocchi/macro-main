@@ -180,6 +180,9 @@ class CountryDataConfiguration(BaseModel):
     # A mortgage is secured on a property: cap each household's mortgages at the value of the properties they finance.
     # Spoofed survey data breaks that link (S24); real HFCS data rarely binds.
     cap_mortgages_at_property_value: bool = True
+    # S9: calibrate the return on households' other financial assets so their income matches national accounts
+    # property income net of interest (Eurostat D4 - D41, households) instead of the survey's own ratio
+    financial_income_from_national_accounts: bool = False
 
 
 class ROWDataConfiguration(BaseModel):

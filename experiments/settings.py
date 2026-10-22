@@ -579,6 +579,16 @@ def government_consumption_plan(c: CountryConfiguration, growth_rates: bool = Tr
     c.government_entities.functions.consumption.parameters = {"consistency": 1.0, "deflator": deflator}
 
 
+def government_no_growth(c: CountryConfiguration) -> None:
+    """The government keeps real consumption at its initial level (G18): no planned trend."""
+    c.government_entities.functions.consumption.name = "ConstantGrowthGovernmentConsumptionSetter"
+    c.government_entities.functions.consumption.parameters = {"consistency": 1.0, "default_growth": 0.0}
+
+
+# Data built with households' financial-income return from national accounts (S9), not the survey
+NATIONAL_ACCOUNTS_RETURN = {"financial_income_from_national_accounts": True}
+
+
 def paper_bank_limits(c: CountryConfiguration) -> None:
     """Paper appendix bank parameters (G9)."""
     b = c.banks.parameters

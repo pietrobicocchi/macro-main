@@ -58,13 +58,15 @@ def load_data(
     inventory_fraction: float = 0.0,
     labour_share_from_sea: bool = True,
     cash_social_benefits: bool = True,
+    financial_income_from_national_accounts: bool = False,
 ) -> DataWrapper:
     """France 2014 initial state. many_firms uses business-demography firm counts instead of one per industry.
 
     labour_share_from_sea sets initial wages from the SEA labour share (S2) instead of value added minus investment.
     utilisation_rate and inventory_fraction size the initial input stocks and inventory. Build the data with the
     values the simulation will use: if they differ, Simulation.from_datawrapper re-runs the financial
-    initialisation, which double-counts bank deposits (see PROJECT.md).
+    initialisation, which double-counts bank deposits (see PROJECT.md). financial_income_from_national_accounts sets
+    the return on households' other financial assets from national accounts property income (S9).
     """
     configuration = default_data_configuration(countries=[COUNTRY], seed=0, scale=scale)
     configuration.labour_share_from_sea = labour_share_from_sea
@@ -72,6 +74,7 @@ def load_data(
     # default_data_configuration ignores its single_firm_per_industry argument; the per-country flag is what counts
     for country_configuration in configuration.country_configs.values():
         country_configuration.single_firm_per_industry = not many_firms
+        country_configuration.financial_income_from_national_accounts = financial_income_from_national_accounts
         firms = country_configuration.firms_configuration
         firms.capital_inputs_utilisation_rate = utilisation_rate
         firms.intermediate_inputs_utilisation_rate = utilisation_rate
