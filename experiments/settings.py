@@ -591,6 +591,8 @@ NATIONAL_ACCOUNTS_RETURN = {"financial_income_from_national_accounts": True}
 EFFECTIVE_PROFIT_TAX = {"effective_profit_tax": True}
 # Data built with firms' investment split by capital compensation (S32), not over investment by product
 INVESTMENT_BY_CAPITAL_COMPENSATION = {"investment_shares_from_capital_compensation": True}
+# Data built with dividends equal to households' property income net of interest (F2, MD6)
+NATIONAL_ACCOUNTS_PAYOUT = {"payout_from_national_accounts": True}
 
 
 def paper_moving_probabilities(c: CountryConfiguration) -> None:

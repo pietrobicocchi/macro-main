@@ -186,6 +186,9 @@ class CountryDataConfiguration(BaseModel):
     # F7: replace the statutory profit tax with the effective rate that raises the national accounts' corporate tax
     # receipts (gov_10a_taxag D51B_C2) on the model's own initial profits of firms and banks
     effective_profit_tax: bool = False
+    # F2, MD6: firms' dividend payout set so that initial dividends equal households' property income net of interest
+    # (Eurostat D4 - D41), instead of the Eurostat ratio that counts households' own operating surplus as dividends
+    payout_from_national_accounts: bool = False
 
 
 class ROWDataConfiguration(BaseModel):

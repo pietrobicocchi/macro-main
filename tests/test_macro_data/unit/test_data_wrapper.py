@@ -538,3 +538,22 @@ def test_investment_split_by_capital_compensation_leaves_no_industry_loss_making
         single_hfcs_survey=True,
     )
     assert np.all(creator.synthetic_countries["FRA"].firms.firm_data["Profits"].values > 0)
+
+
+def test_payout_from_national_accounts_pays_households_property_income(data_config_path):
+    """F2, MD6: initial dividends (payout times positive after-tax profits) equal D4 - D41 of households, a quarter."""
+    with open(data_config_path, "r") as f:
+        configuration = DataConfiguration(**yaml.safe_load(f))
+    configuration.prune_date = None
+    configuration.seed = 0
+    for country_configuration in configuration.country_configs.values():
+        country_configuration.payout_from_national_accounts = True
+    creator = DataWrapper.from_config(
+        configuration=configuration,
+        raw_data_path=TEST_PATH / "unit" / "sample_raw_data",
+        single_hfcs_survey=True,
+    )
+    france = creator.synthetic_countries["FRA"]
+    firms = france.firms.firm_data
+    dividends = france.dividend_payout_ratio * np.maximum(0.0, firms["Profits"] - firms["Corporate Taxes Paid"]).sum()
+    assert dividends == pytest.approx((98614 - 15984) * 1e6 / 4, rel=1e-9)

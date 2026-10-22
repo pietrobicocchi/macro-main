@@ -357,6 +357,10 @@ class SyntheticCountry:
             emitting_indices=emitting_industry_indices,
             emission_factors_array=emission_factors_array,
         )
+        if country_configuration.payout_from_national_accounts:
+            dividend_payout_ratio = cls.payout_from_national_accounts(
+                readers, country, year, firms, yearly_factor, dividend_payout_ratio
+            )
 
         if readers.emission_fractions is not None:
             emission_fractions = EmissionFractions.from_reader(readers.emission_fractions)
@@ -602,6 +606,10 @@ class SyntheticCountry:
             emitting_indices=emitting_industry_indices,
             emission_factors_array=emission_factors_array,
         )
+        if country_configuration.payout_from_national_accounts:
+            dividend_payout_ratio = cls.payout_from_national_accounts(
+                readers, country, year, firms, yearly_factor, dividend_payout_ratio
+            )
 
         if readers.emission_fractions is not None:
             emission_fractions = EmissionFractions.from_reader(readers.emission_fractions)
@@ -876,6 +884,25 @@ class SyntheticCountry:
             + self.firms.number_of_firms
             + self.government_entities.number_of_entities
         )
+
+    @staticmethod
+    def payout_from_national_accounts(
+        readers: DataReaders,
+        country: Country | Region,
+        year: int,
+        firms: SyntheticFirms,
+        yearly_factor: float,
+        default: float,
+    ) -> float:
+        """The share of after-tax profits firms pay as dividends so that, initially, they pay households' property
+        income net of interest in the national accounts (D4 - D41), the income the national-accounts return gives
+        households' other financial assets (S9, F2, MD6). `default` without data."""
+        income = readers.eurostat.household_property_income_excluding_interest(country, year)
+        firm_data = firms.firm_data
+        after_tax_profits = np.maximum(0.0, firm_data["Profits"] - firm_data["Corporate Taxes Paid"]).sum()
+        if income is None or after_tax_profits <= 0:
+            return default
+        return income / yearly_factor / after_tax_profits
 
     @classmethod
     def initialise_pop_wealth_income(
