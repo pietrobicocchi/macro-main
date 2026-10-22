@@ -593,6 +593,35 @@ EFFECTIVE_PROFIT_TAX = {"effective_profit_tax": True}
 INVESTMENT_BY_CAPITAL_COMPENSATION = {"investment_shares_from_capital_compensation": True}
 
 
+def paper_moving_probabilities(c: CountryConfiguration) -> None:
+    """How often households reconsider their home, as in the paper (M9): owners keep it with probability 79/80 a
+    quarter (20 years on average), renters with 7/8 (2 years). The defaults are 0.5 for both."""
+    p = c.households.functions.property.parameters
+    c.households.functions.property.parameters = {
+        **p,
+        "probability_stay_in_owned_property": 79 / 80,
+        "probability_stay_in_rented_property": 7 / 8,
+    }
+
+
+def paper_renting_pressure(c: CountryConfiguration) -> None:
+    """The paper's psychological pressure of renting, mu^PS = 0.4 (default 0.1)."""
+    p = c.households.functions.property.parameters
+    c.households.functions.property.parameters = {**p, "psychological_pressure_of_renting": 0.4}
+
+
+def rents_indexed_to_cpi(c: CountryConfiguration, indexation: float = 1.0) -> None:
+    """Rents of occupied properties follow last quarter's CPI inflation (M14; the paper: phi^PIR = 1, lag 1). The
+    default keeps every rent constant. The switch is the property function's indexation: `households.functions.rent`
+    (ConstantRentSetter) is never called."""
+    p = c.households.functions.property.parameters
+    c.households.functions.property.parameters = {
+        **p,
+        "partial_rent_inflation_indexation": indexation,
+        "partial_rent_inflation_delay": 1,
+    }
+
+
 def paper_bank_limits(c: CountryConfiguration) -> None:
     """Paper appendix bank parameters (G9)."""
     b = c.banks.parameters

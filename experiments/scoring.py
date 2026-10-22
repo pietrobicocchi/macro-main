@@ -168,6 +168,14 @@ def simulate(
         ("Separation Rate", "num_individuals_newly_leaving"),
     ]:
         out[flow] = np.asarray(labour.get_aggregate(name), dtype=float).ravel()[1:] / employed
+    # Housing turnover: properties sold and newly rented in the quarter, as shares of the stock (M2, M9)
+    housing = country.housing_market
+    stock = len(housing.states["properties"])
+    for flow, name in [
+        ("House Sales", "total_number_of_bought_houses"),
+        ("New Rentals", "total_number_of_newly_rented_houses"),
+    ]:
+        out[flow] = np.asarray(housing.ts.get_aggregate(name), dtype=float).ravel()[1:] / stock
     # Mechanism dashboard: levels at the end of each quarter, and each sector's net lending (the change in its net
     # financial position) as a share of quarterly GDP; the rest of the world is minus the sum by stock-flow identity
     inside = pd.DataFrame(mechanisms)
@@ -358,6 +366,8 @@ def summarise(label: str, sim: pd.DataFrame, obs: pd.DataFrame, audit: list[pd.D
         "policy rate (last)": sim.loc[sim["t"] == quarters, "Policy Rate"].median(),
         "capacity utilisation (last)": sim.loc[sim["t"] == quarters, "capacity utilisation"].median(),
         "hiring rate/q": sim["Hiring Rate"].mean(),
+        "house sales/stock per q": sim["House Sales"].mean(),
+        "new rentals/stock per q": sim["New Rentals"].mean(),
         "separation rate/q": sim["Separation Rate"].mean(),
         "worst unexplained money/GDP": accounts.loc["money.unexplained", "worst share of GDP"],
         "worst ledger residual/GDP": accounts.loc[
