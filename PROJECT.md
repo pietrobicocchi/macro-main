@@ -342,7 +342,7 @@ commit messages (e.g. `G1:`).
 | R4 | Scoring differs from the paper: GDP deflated by PPI (macro_data's "Real GDP" too, +2.6%/yr vs ~1% official), one country, one start date | Spec | ours | exp001; `exogenous_data.py:375` divides nominal growth by PPI inflation | fixed for scoring: real aggregates scored against Eurostat chain-linked volumes (`scoring.observed`, `volumes=False` for the old target); firms' growth expectations still use the PPI-deflated history; one country, one start date remain | P3 |
 | R5 | `macrocalib` is untested and excluded from the test suite | Infra | ours | pytest `addopts` | open | P3 |
 | R6 | Differentiable version of the model | Gap | CB7 | Matias investigating | not ours now | P3 |
-| R7 | Scoring targets: CPI is not seasonally adjusted (quarterly inflation swings −0.5% to +0.9%), and the unemployment series is annual (flat within each year) | Data | ours | I4 forecast fans | open: seasonally adjusted HICP (`prc_hicp_midx` SA or `ei_cphi_m`), quarterly unemployment (`une_rt_q`) | P2 |
+| R7 | Scoring targets: CPI is not seasonally adjusted (quarterly inflation swings −0.5% to +0.9%), and the unemployment series is annual (flat within each year) | Data | ours | I4 forecast fans | option built: `scoring.observed(adjusted=True)` takes CPI inflation from the seasonally adjusted household consumption deflator (`namq_10_gdp` PD10_EUR SCA) and quarterly unemployment (`une_rt_q`, SA). Rescoring the baseline: CPI data s.d. 0.47% → 0.22%/q, CPI ratio 0.86 → 0.74, unemployment at q12 9.4% → 9.7%; other ratios unchanged. Switching the target changes the success metric: ask first | P2 |
 
 ### G. Growth and firm behaviour
 

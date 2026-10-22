@@ -40,6 +40,10 @@ AGGREGATES = {
 # France, chain-linked volumes (2010 euros), seasonally and calendar adjusted; downloaded 2026-10-21 from
 # https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/namq_10_gdp/Q.CLV10_MEUR.SCA.B1GQ+P31_S14_S15+P31_S14+P3_S13+P51G.FR/?format=SDMX-CSV&startPeriod=1999-Q1&endPeriod=2019-Q4
 VOLUMES = RAW_DATA / "eurostat/namq_10_gdp_clv.csv"
+# Seasonally adjusted alternatives for the CPI and unemployment targets (R7), downloaded 2026-10-22: the household
+# consumption deflator (namq_10_gdp, PD10_EUR, SCA, P31_S14_S15) and quarterly unemployment (une_rt_q, SA, 15-74)
+DEFLATORS = RAW_DATA / "eurostat/namq_10_gdp_deflators.csv"
+UNEMPLOYMENT = RAW_DATA / "eurostat/une_rt_q.csv"
 SCORED = [*AGGREGATES, "CPI Inflation", "Unemployment Rate"]
 
 
@@ -181,8 +185,19 @@ def simulate(
     return df
 
 
-def observed(data: DataWrapper, volumes: bool = True) -> pd.DataFrame:
-    """Observed quarterly growth rates. volumes=False deflates nominal data by PPI/CPI as before R4."""
+def _eurostat_quarterly(path: Path, item: str | None = None) -> pd.Series:
+    df = pd.read_csv(path)
+    if item is not None:
+        df = df[df["na_item"] == item]
+    series = df.set_index("TIME_PERIOD")["OBS_VALUE"]
+    series.index = pd.PeriodIndex(series.index, freq="Q").to_timestamp()
+    return series
+
+
+def observed(data: DataWrapper, volumes: bool = True, adjusted: bool = False) -> pd.DataFrame:
+    """Observed quarterly growth rates. volumes=False deflates nominal data by PPI/CPI as before R4. adjusted=True
+    takes CPI inflation from the seasonally adjusted household consumption deflator and unemployment from the
+    quarterly series (R7); the default keeps the CPI (not seasonally adjusted) and annual unemployment."""
     ex = data.synthetic_countries[COUNTRY].exogenous_data
     na = ex.national_accounts
     obs = pd.DataFrame(index=na.index)
@@ -193,6 +208,10 @@ def observed(data: DataWrapper, volumes: bool = True) -> pd.DataFrame:
         obs[agg] = real / real.shift(1) - 1.0
     obs["CPI Inflation"] = na["CPI (Value)"] / na["CPI (Value)"].shift(1) - 1.0
     obs["Unemployment Rate"] = ex.labour_stats["Unemployment Rate (Value)"].reindex(obs.index)
+    if adjusted:
+        deflator = _eurostat_quarterly(DEFLATORS, "P31_S14_S15").reindex(na.index)
+        obs["CPI Inflation"] = deflator / deflator.shift(1) - 1.0
+        obs["Unemployment Rate"] = _eurostat_quarterly(UNEMPLOYMENT).reindex(obs.index) / 100.0
     return obs
 
 
