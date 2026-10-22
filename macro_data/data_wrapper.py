@@ -252,6 +252,7 @@ class DataWrapper:
             yearly_factor=yearly_factor,
             simulation_quarter=quarter,
             labour_share_from_sea=configuration.labour_share_from_sea,
+            cash_social_benefits=configuration.cash_social_benefits,
         )
 
         if regions_dict:

@@ -49,6 +49,7 @@ def load_data(
     utilisation_rate: float = 0.85,
     inventory_fraction: float = 0.0,
     labour_share_from_sea: bool = True,
+    cash_social_benefits: bool = False,
 ) -> DataWrapper:
     """France 2014 initial state. many_firms uses business-demography firm counts instead of one per industry.
 
@@ -59,6 +60,7 @@ def load_data(
     """
     configuration = default_data_configuration(countries=[COUNTRY], seed=0, scale=scale)
     configuration.labour_share_from_sea = labour_share_from_sea
+    configuration.cash_social_benefits = cash_social_benefits
     # default_data_configuration ignores its single_firm_per_industry argument; the per-country flag is what counts
     for country_configuration in configuration.country_configs.values():
         country_configuration.single_firm_per_industry = not many_firms

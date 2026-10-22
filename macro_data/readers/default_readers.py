@@ -241,6 +241,7 @@ class DataReaders:
         yearly_factor: float = 4.0,
         simulation_quarter: int = 1,
         labour_share_from_sea: bool = False,
+        cash_social_benefits: bool = False,
     ):
         if regions_dict:
             all_regions = [region for regions in regions_dict.values() for region in regions]
@@ -449,6 +450,7 @@ class DataReaders:
         oecd_econ = OECDEconData(
             path=datapaths.oecd_econ_path,
             scale_dict=scale_dict,
+            cash_social_benefits=cash_social_benefits,
         )
 
         policy_rates = PolicyRatesReader(

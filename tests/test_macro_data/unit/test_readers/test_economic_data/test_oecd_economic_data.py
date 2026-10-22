@@ -3,6 +3,18 @@ import pytest
 
 
 class TestOECDEconData:
+    def test__cash_social_benefits_leave_out_in_kind_spending(self, readers):
+        """F6: SOCX total public social spending includes in-kind services that are government consumption."""
+        oecd = readers.oecd_econ
+        total = oecd.all_benefits_gdp_pct("FRA", 2013)
+        oecd.cash_social_benefits = True
+        try:
+            cash = oecd.all_benefits_gdp_pct("FRA", 2013)
+        finally:
+            oecd.cash_social_benefits = False
+        assert total == pytest.approx(0.316, abs=1e-3)
+        assert cash == pytest.approx(0.192, abs=1e-3)
+
     def test__tau_sif(self, readers):
         assert readers.oecd_econ.read_tau_sif("FRA", 2014) == pytest.approx(41.86e-2, abs=1e-4)
 

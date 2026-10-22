@@ -176,10 +176,17 @@ class OECDEconData:
         self,
         path: Path | str,
         scale_dict: dict[Country, int],
+        cash_social_benefits: bool = False,
     ):
-        """Initialize the OECDEconData reader with data path and scaling factors."""
+        """Initialize the OECDEconData reader with data path and scaling factors.
+
+        With `cash_social_benefits`, social benefits are SOCX public spending in cash only (F6): in-kind spending
+        (health, care) is government consumption in the national accounts, so counting it as transfers to
+        households counts it twice. Needs `SOCX_AGG_BY_TYPE.csv` (OECD DSD_SOCX_AGG@DF_SOCX_AGG, % of GDP).
+        """
         # Parameters
         self.scale_dict = scale_dict
+        self.cash_social_benefits = cash_social_benefits
         self.industry_mapping = INDUSTRY_MAPPING
         self.sector_mapping = ICIO_AGGREGATE
 
@@ -188,6 +195,9 @@ class OECDEconData:
         self.data = {
             key: pd.read_csv(path / (self.files_with_codes[key] + ".csv")) for key in self.files_with_codes.keys()
         }
+        by_type = Path(path) / "SOCX_AGG_BY_TYPE.csv"
+        if by_type.exists():
+            self.data["social_benefits_by_type_perc_gdp"] = pd.read_csv(by_type)
 
         self.default_industries = [
             "A",
@@ -835,6 +845,20 @@ class OECDEconData:
             return 0.29
         if country == "LVA":
             return 0.19
+        if self.cash_social_benefits:
+            df = self.data.get("social_benefits_by_type_perc_gdp")
+            if df is None:
+                raise FileNotFoundError("cash_social_benefits needs oecd_econ/SOCX_AGG_BY_TYPE.csv")
+            cash = df.loc[
+                (df["REF_AREA"] == country)
+                & (df["SPENDING_TYPE"] == "C")
+                & (df["EXPEND_SOURCE"] == "ES10")
+                & (df["PROGRAMME_TYPE"] == "_T")
+                & (df["TIME_PERIOD"] == year),
+                "OBS_VALUE",
+            ].values
+            if len(cash) and not np.isnan(cash[0]):
+                return cash[0] / 100.0
         df = self.data["total_social_benefits_perc_gdp"]
         val = df.loc[(df["COUNTRY"] == country) & (df["YEAR"] == year), "Value"].values
         if len(val) == 0 or np.isnan(val[0]):
