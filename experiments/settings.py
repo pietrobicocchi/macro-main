@@ -50,6 +50,26 @@ def before_our_decisions(c: CountryConfiguration) -> None:
     old_price_noise(c)
 
 
+def poledna_like(c: CountryConfiguration) -> None:
+    """The IIASA model's rules where the code has them (paper `table:comp_to_iiasa`), for the ladder's bottom rung:
+    production that substitutes between inputs (`Linear`), no housing market, firm loans only (no consumer loans or
+    mortgages), Poledna's labour market without reservation wages, and Poledna's Taylor rule. Not switchable yet:
+    one bank, fixed-markup loan rates, fixed-fraction consumption without household heterogeneity
+    (`PolednaCreditMarketClearer` no longer fits the credit market's interface: E15)."""
+    c.firms.functions.production.name = "Linear"
+    c.housing_market.functions.clearing.name = "NoHousingMarketClearer"
+    k = c.credit_market.functions.clearing.parameters
+    c.credit_market.functions.clearing.parameters = {**k, "allow_household_loans": False}
+    c.labour_market.functions.clearing.name = "PolednaLabourMarketClearer"
+    m = c.labour_market.functions.clearing.parameters
+    c.labour_market.functions.clearing.parameters = {
+        **{k: v for k, v in m.items() if k not in ("matching_efficiency", "matching_elasticity")},
+        "random_firing_probability": 0.0,
+        "consider_reservation_wages": False,
+    }
+    c.central_bank.functions.policy_rate.name = "PolednaPolicyRate"
+
+
 def md1_price_noise(c: CountryConfiguration) -> None:
     restore(c, "firms.functions.prices.parameters", ["price_setting_noise_std"])
 
@@ -91,10 +111,38 @@ def md16_government_plan(c: CountryConfiguration) -> None:
     restore(c, "government_entities.functions.consumption")
 
 
-# Cumulative rungs: (label, decision added, data the rung's initial state needs). The last rung is today's defaults.
+def paper_leontief_production(c: CountryConfiguration) -> None:
+    restore(c, "firms.functions.production")
+
+
+def paper_housing_market(c: CountryConfiguration) -> None:
+    restore(c, "housing_market.functions.clearing")
+
+
+def paper_household_credit(c: CountryConfiguration) -> None:
+    restore(c, "credit_market.functions.clearing.parameters", ["allow_household_loans"])
+
+
+def paper_reservation_wages(c: CountryConfiguration) -> None:
+    restore(c, "labour_market.functions.clearing.parameters", ["consider_reservation_wages"])
+
+
+def forked_constant_policy_rate(c: CountryConfiguration) -> None:
+    restore(c, "central_bank.functions.policy_rate")
+
+
+# Cumulative rungs: (label, change added, data the rung's initial state needs). P-rungs add the paper's innovations
+# over the IIASA model (`table:comp_to_iiasa`) to an IIASA-like model; numbered rungs add our decisions to the model
+# as forked. The last rung is today's defaults.
+_FORKED_DATA = {"utilisation_rate": 1.0, "labour_share_from_sea": False}
 _RUNGS = [
-    ("0 before our decisions", None, {"utilisation_rate": 1.0, "labour_share_from_sea": False}),
-    ("1 + MD1 price noise 0.05%", md1_price_noise, {"utilisation_rate": 1.0, "labour_share_from_sea": False}),
+    ("P0 IIASA-like rules", None, _FORKED_DATA),
+    ("P1 + Leontief production", paper_leontief_production, _FORKED_DATA),
+    ("P2 + housing market", paper_housing_market, _FORKED_DATA),
+    ("P3 + consumer loans and mortgages", paper_household_credit, _FORKED_DATA),
+    ("P4 + reservation wages", paper_reservation_wages, _FORKED_DATA),
+    ("0 + constant policy rate (model as forked)", forked_constant_policy_rate, _FORKED_DATA),
+    ("1 + MD1 price noise 0.05%", md1_price_noise, _FORKED_DATA),
     ("2 + MD9 wages from SEA labour shares", None, {"utilisation_rate": 1.0}),
     ("3 + MD14 cost pass-through, wage catch-up, no floor", md14_costs_wages_consumption, {"utilisation_rate": 1.0}),
     ("4 + MD15 spare capacity, growth expectations", md15_spare_capacity_and_growth_expectations, {}),
@@ -106,7 +154,7 @@ _RUNGS = [
     ("10 + MD16 government plan (defaults)", md16_government_plan, {}),
 ]
 LADDER = [
-    Step(label, [before_our_decisions] + [change for _, change, _ in _RUNGS[: k + 1] if change], data)
+    Step(label, [before_our_decisions, poledna_like] + [change for _, change, _ in _RUNGS[: k + 1] if change], data)
     for k, (label, _, data) in enumerate(_RUNGS)
 ]
 

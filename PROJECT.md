@@ -464,6 +464,7 @@ commit messages (e.g. `G1:`).
 | E12 | Housing market takes 92% of run time (row-wise pandas loops); blocks finer scales | Infra | ours | profile, 408 firms, 8 quarters: 8.2 of 8.9 s | open | P2 |
 | E13 | Plugging in behaviour means editing closed `Literal` lists and hard-wired argument passing in `country.py`; god objects (`firms.py` 2,256 lines, 196 time series) | Infra | ours | 54 behaviour slots, 27 with alternatives; 3 files use hooks | open | P3 |
 | E14 | Data and simulation configs duplicate firm settings, reconciled by a compatibility check and a re-initialisation path | Infra | ours | G5, S3, S8 all came from this | open | P2 |
+| E15 | Stale alternatives: `PolednaCreditMarketClearer` returns a DataFrame where the credit market now expects four loan arrays (fails at the first quarter); other unused rule classes are untested | Infra | upstream | building the Poledna-like ladder rung | open: fix or delete; the Poledna-like rung uses the default clearer without household loans | P3 |
 
 ### D. Data
 
@@ -525,7 +526,7 @@ with what this repository has for it. France on sample data is a diagnostic, nev
 | Beats AR(1) and IIASA on forecasting RMSE | `table:forecasting_gdp` | `make baseline`: France, sample data, uncalibrated: GDP 0.94, CPI 0.86, others 1.04–1.42 | needs D1, calibration (phase 5), 38 countries |
 | E1 growth mechanism (R1.2) | §4, App. A.2 | MD10–MD15: spare capacity, partial-adjustment investment, labour-augmenting productivity (+0.25%/q, exogenous) | E1's planned text ("no exogenous TFP, growth endogenous") is no longer true: rewrite once MD12 is settled |
 | E8 live vs dormant mechanisms (R1.1, R2.1, R2.7) | §3 table | "Model map" above: every rule in use and its status; dormant: φ^FM = φ^FK = 0, h^U = h^E = 0, φ^WN = 0, inventory target off | ready; separations and productivity growth are now live (MD11, MD12) |
-| E_ATTR ablation ladder (R1.1, R2.1) | §5 table | exp023 on France (`settings.LADDER`, `ratios.png`) | method ready; 38 countries need D1; Poledna-like bottom rung to define |
+| E_ATTR ablation ladder (R1.1, R2.1) | §5 table | exp023 on France (`settings.LADDER`, `ratios.png`): P0 IIASA-like (substitutable inputs, no housing, firm credit only, no reservation wages, Taylor rule), P1–P4 the paper's innovations, 1–10 our decisions | method ready; one bank, fixed-markup rates and homogeneous consumption are not switchable yet (P0 is IIASA-like, not IIASA); 38 countries need D1 |
 | E_AR1 simplified expectations, interactions off (R2.7) | §4, §5 | not built: needs a rung where realised paths equal the expectation paths | open |
 | E22 uncertainty bands (R2.4) | Figure 2, Table 5 | `plotting.forecast_fan`: median and 10–90% across seeds | method ready; note that only market matching and price noise are random now (MD15) |
 | E23 VAR peer benchmark (R1.9, R2.2) | Table 5 | `scoring.var_forecast`: VAR(p) on the five aggregates, p by AIC; the scorecard reports `sim / VAR`. On France 2000–2013 AIC picks p = 0 (the means): baseline sim/VAR 0.94, 1.09, 1.41, 1.15, 0.86 | built; 38 countries need D1 |
