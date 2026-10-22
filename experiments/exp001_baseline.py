@@ -20,6 +20,7 @@ import logging
 import warnings
 
 import pandas as pd
+from plotting import mechanism_dashboard
 from provenance import record_run
 from scoring import COUNTRY, RAW_DATA, ROOT, START, accounts_summary, load_data, observed, plot, scorecard, simulate
 
@@ -63,6 +64,7 @@ def main() -> None:
     accounts.to_csv(out_dir / "accounts.csv")
     title = f"exp001 baseline — {COUNTRY}, default parameters, scale {args.scale} (quarterly rates)"
     plot(sim, obs, args.quarters, title, out_dir / "figure.png")
+    mechanism_dashboard(sim, f"exp001 baseline: inside the model, {COUNTRY}", out_dir / "inside.png")
 
     pd.set_option("display.width", 200)
     print(

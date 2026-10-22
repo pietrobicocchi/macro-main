@@ -1,4 +1,4 @@
-.PHONY: setup test lint fmt exp baseline check upstream clean
+.PHONY: setup test test-fast lint fmt exp baseline figures check upstream clean
 
 setup:
 	uv sync --frozen --python 3.12 --extra dev
@@ -28,6 +28,10 @@ exp:
 # Reference run: default model, France 2014-Q1, scored against data. ~15 s.
 baseline:
 	uv run python experiments/exp001_baseline.py
+
+# The standard figures (model map, baseline fan and dashboard, ladder, robustness) from existing outputs
+figures:
+	uv run python experiments/figures.py
 
 # Everything to run before committing a change to model behaviour
 check: test lint baseline

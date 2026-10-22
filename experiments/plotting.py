@@ -181,3 +181,185 @@ def ratio_heatmap(summary: pd.DataFrame, title: str, path: Path) -> None:
     fig.colorbar(image, ax=ax, label="sim / AR(1) RMSE (log scale)", ticks=[0.5, 0.75, 1, 1.5, 2], format="%.2g")
     ax.set_title(title)
     _save(fig, path)
+
+
+# What each rule in use does, in a few words, and its decision or register tag (PROJECT.md, "Model map"): an MD
+# number is our decision; "paper: ..." an upstream default that departs from the paper; untagged rules follow it
+RULES = {
+    "SlackAwareGrowthForecastingAutoReg": ("AR(1) on growth, lowered when unemployment is low", "MD13"),
+    "GrowthManualForecastingAutoReg": ("AR(1) on growth", ""),
+    "InflationManualForecastingAutoReg": ("AR(1)", ""),
+    "DefaultHouseholdConsumption": ("share of expected income, no floor", "MD14"),
+    "AverageSavingRatesSetter": ("one average rate", "paper: per household (M13)"),
+    "EqualSocialTransfersSetter": ("equal split", "paper: per household (M13)"),
+    "DefaultHouseholdDemandForProperty": ("buy-or-rent logit", ""),
+    "ConstantRentSetter": ("constant", "paper: indexed (M14)"),
+    "UnableToPayHouseholdInsolvencyHandler": ("default when unable to pay", "MD8"),
+    "DefaultDemandEstimator": ("previous demand x expected growth", ""),
+    "PureLeontief": ("Leontief", ""),
+    "DefaultPriceSetter": ("expected inflation and unit-cost growth", "MD14"),
+    "WorkEffortFirmWageSetter": ("gradual CPI catch-up, work effort", "MD14"),
+    "FinancialTargetCapitalInputsSetter": ("replace depreciation", ""),
+    "PartialAdjustmentTargetCapitalInputsSetter": ("close 10% of the gap to desired capital", "MD10"),
+    "NoOpTFPGrowth": ("constant", ""),
+    "LabourAugmentingGrowth": ("output per worker +0.25%/q", "MD12"),
+    "AutoregressiveGovernmentConsumptionSetter": ("AR(1) on log real spending", ""),
+    "AutoregressiveGrowthGovernmentConsumptionSetter": ("AR(1) on growth of real spending", "MD16"),
+    "GrowthSocialBenefitsSetter": ("grow with expected growth", "level: F6"),
+    "DefaultInterestRatesSetter": ("error correction on the policy rate", ""),
+    "MinimumCapitalBankDemography": ("state recapitalises", "MD5"),
+    "ConstantPolicyRate": ("constant", "paper: Taylor rule (P4)"),
+    "PolednaPolicyRate": ("Taylor rule", ""),
+    "SearchFrictionsLabourMarketClearer": ("separations and a matching function", "MD11"),
+    "PolednaLabourMarketClearer": ("fire to target, hire at random", ""),
+    "WaterBucketGoodsMarketClearer": ("search and matching by price and size", ""),
+    "WaterBucketCreditMarketClearer": ("search and matching by rate", ""),
+    "AutomaticHousingMarketClearer": ("optimal assignment", "paper: random (E12)"),
+    "GrowthRoWExportsSetter": ("AR(1) forecast", "paper: index (M15)"),
+    "InflationRoWImportsSetter": ("AR(1) forecast", "paper: index (M15)"),
+}
+# (box title, box centre, [(label, config path of the rule)]); the rest of the world is in the simulation config
+MAP_BOXES = [
+    (
+        "Expectations",
+        (0.5, 0.86),
+        [("growth", "economy.functions.growth"), ("inflation", "economy.functions.inflation")],
+    ),
+    (
+        "Households",
+        (0.1, 0.58),
+        [
+            ("consumption", "households.functions.consumption"),
+            ("saving", "households.functions.saving_rates"),
+            ("transfers", "households.functions.social_transfers"),
+            ("housing", "households.functions.property"),
+            ("rents", "households.functions.rent"),
+            ("default", "households.functions.insolvency"),
+        ],
+    ),
+    (
+        "Firms",
+        (0.31, 0.58),
+        [
+            ("demand", "firms.functions.demand_estimator"),
+            ("production", "firms.functions.production"),
+            ("prices", "firms.functions.prices"),
+            ("wages", "firms.functions.wage_setter"),
+            ("investment", "firms.functions.target_capital_inputs"),
+            ("productivity", "firms.functions.productivity_growth"),
+        ],
+    ),
+    (
+        "Government",
+        (0.52, 0.58),
+        [
+            ("consumption", "government_entities.functions.consumption"),
+            ("benefits", "central_government.functions.social_benefits"),
+        ],
+    ),
+    (
+        "Banks, central bank",
+        (0.72, 0.58),
+        [
+            ("loan rates", "banks.functions.interest_rates"),
+            ("failure", "banks.functions.demography"),
+            ("policy rate", "central_bank.functions.policy_rate"),
+        ],
+    ),
+    ("Rest of the world", (0.91, 0.58), [("exports", "row.exports"), ("imports", "row.imports")]),
+    ("Housing market", (0.1, 0.28), [("", "housing_market.functions.clearing")]),
+    ("Labour market", (0.3, 0.28), [("", "labour_market.functions.clearing")]),
+    ("Goods market", (0.55, 0.28), [("", "goods")]),
+    ("Credit market", (0.8, 0.28), [("", "credit_market.functions.clearing")]),
+]
+MAP_LINKS = [
+    ("Households", "Housing market"),
+    ("Households", "Labour market"),
+    ("Firms", "Labour market"),
+    ("Households", "Goods market"),
+    ("Firms", "Goods market"),
+    ("Government", "Goods market"),
+    ("Rest of the world", "Goods market"),
+    ("Households", "Credit market"),
+    ("Firms", "Credit market"),
+    ("Banks, central bank", "Credit market"),
+]
+SEQUENCE = [
+    "expectations",
+    "targets: production, prices,\nwages, inputs, plans",
+    "labour market",
+    "housing and\ncredit markets",
+    "goods market\n(with rest of world)",
+    "realised accounts: profits,\ntaxes, deposits, defaults",
+]
+
+
+def _rule(config, row_config, path: str) -> str:
+    if path == "goods":
+        return "WaterBucketGoodsMarketClearer"
+    obj = row_config.functions if path.startswith("row.") else config
+    for name in path.removeprefix("row.").split("."):
+        obj = getattr(obj, name)
+    return obj.name
+
+
+def model_map(config, path: Path, row_config=None, title: str = "Model map: the rules in use") -> None:
+    """Agents, markets and a quarter's sequence of events, with what each rule in `config` does and its tag."""
+    from macromodel.configurations.row_configuration import RestOfTheWorldConfiguration
+
+    row_config = row_config or RestOfTheWorldConfiguration()
+    fig, ax = plt.subplots(figsize=(16, 9))
+    ax.set_axis_off()
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    centres = {}
+    for box_title, (x, y), rules in MAP_BOXES:
+        lines = []
+        for label, rule_path in rules:
+            name = _rule(config, row_config, rule_path)
+            words, tag = RULES.get(name, (name, ""))
+            lines.append((f"{label}: " if label else "") + words + (f"\n   [{tag}]" if tag else ""))
+        if box_title == "Expectations":
+            lines.append("forecast noise: " + ("none [MD15]" if config.assume_zero_noise else "random draw"))
+        is_market = box_title.endswith("market")
+        ax.text(
+            x,
+            y,
+            box_title.upper() + "\n" + "\n".join(lines),
+            ha="center",
+            va="center",
+            fontsize=7.5,
+            linespacing=1.35,
+            wrap=True,
+            bbox={
+                "boxstyle": "round,pad=0.5",
+                "fc": "#eef3fa" if is_market else "#fbf6ee",
+                "ec": COLORS["model"] if is_market else COLORS["firms"],
+            },
+        )
+        centres[box_title] = (x, y)
+    arrow = {"arrowstyle": "<->", "color": "#9a9a9a", "lw": 0.9}
+    for start, end in MAP_LINKS:
+        (x0, y0), (x1, y1) = centres[start], centres[end]
+        ax.annotate("", xy=(x1, y1 + 0.05), xytext=(x0, y0 - 0.15), arrowprops=arrow)
+    x0, y0 = centres["Expectations"]
+    for name in ["Households", "Firms", "Government", "Banks, central bank"]:
+        x1, y1 = centres[name]
+        ax.annotate("", xy=(x1, y1 + 0.14), xytext=(x0, y0 - 0.05), arrowprops={"arrowstyle": "->", "color": "#c4c4c4"})
+    for k, step in enumerate(SEQUENCE):
+        x = 0.08 + k * 0.168
+        ax.text(
+            x,
+            0.06,
+            f"{k + 1}. {step}",
+            ha="center",
+            va="center",
+            fontsize=8,
+            bbox={"boxstyle": "round", "fc": "white", "ec": "#888888"},
+        )
+        if k:
+            ax.annotate("", xy=(x - 0.075, 0.06), xytext=(x - 0.093, 0.06), arrowprops={"arrowstyle": "->"})
+    ax.text(0.5, 0.125, "one quarter", ha="center", fontsize=9, style="italic")
+    ax.text(0.99, 0.95, "[MD#]: our decision\n[paper: ...]: differs from the paper", ha="right", va="top", fontsize=8)
+    ax.set_title(title)
+    _save(fig, path)
