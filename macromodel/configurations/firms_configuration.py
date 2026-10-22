@@ -267,6 +267,7 @@ class WageSetter(BaseModel):
         "markup_time_span": 4,
         "max_increase_in_work_effort": 1.5,
         "cpi_indexation_speed": 0.25,  # MD14: wages catch up with prices about once a year
+        "unemployment_gap_sensitivity": 0.0,  # P2: wage Phillips curve, off
     }
 
 

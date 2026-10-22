@@ -452,6 +452,13 @@ def lagged_wage_indexation(c: CountryConfiguration, speed: float = 0.25) -> None
     c.firms.functions.wage_setter.parameters = {**p, "cpi_indexation_speed": speed}
 
 
+def wage_phillips_curve(c: CountryConfiguration, sensitivity: float = 0.1) -> None:
+    """Nominal wages grow faster when unemployment is below its initial level (P2): each quarter by `sensitivity`
+    times the gap. 0.1 a quarter is about 0.4 points of annual wage growth per point of unemployment."""
+    p = c.firms.functions.wage_setter.parameters
+    c.firms.functions.wage_setter.parameters = {**p, "unemployment_gap_sensitivity": sensitivity}
+
+
 def wage_brake(c: CountryConfiguration, tightness_scale: float = 0.5) -> None:
     """Existing employees' wages rise with their firm's recent hiring shortfalls (G8), as offered wages already do."""
     p = c.firms.functions.wage_setter.parameters

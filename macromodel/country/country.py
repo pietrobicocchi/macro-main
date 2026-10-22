@@ -652,6 +652,9 @@ class Country:
                 labour_inputs_from_employees=labour_inputs_from_employees,
                 estimated_ppi_inflation=self.economy.ts.current("estimated_ppi_inflation")[0],
                 historic_cpi=np.asarray(self.economy.ts.historic("cpi"), dtype=float).ravel(),
+                historic_unemployment_rate=np.asarray(
+                    self.economy.ts.historic("unemployment_rate"), dtype=float
+                ).ravel(),
                 income_taxes=self.central_government.states["Income Tax"],
                 employee_social_insurance_tax=self.central_government.states["Employee Social Insurance Tax"],
                 employer_social_insurance_tax=self.central_government.states["Employer Social Insurance Tax"],

@@ -27,6 +27,8 @@ class FirmWageSetter(ABC):
             work effort-based wage adjustments
         cpi_indexation_speed (float): Fraction of the gap between the wage price index and the latest CPI that
             nominal wages close each quarter (1 = wages follow last quarter's CPI fully)
+        unemployment_gap_sensitivity (float): Wage Phillips curve (P2): each quarter nominal wages grow by this
+            times the gap between the initial and the latest unemployment rate (0 = no response to slack)
     """
 
     def __init__(
@@ -35,6 +37,7 @@ class FirmWageSetter(ABC):
         markup_time_span: int,
         max_increase_in_work_effort: float,
         cpi_indexation_speed: float = 1.0,
+        unemployment_gap_sensitivity: float = 0.0,
     ):
         """Initialize the wage setter with markup parameters.
 
@@ -50,23 +53,29 @@ class FirmWageSetter(ABC):
         self.markup_time_span = markup_time_span
         self.max_increase_in_work_effort = max_increase_in_work_effort
         self.cpi_indexation_speed = cpi_indexation_speed
+        self.unemployment_gap_sensitivity = unemployment_gap_sensitivity
 
-    def wage_price_index(self, historic_cpi: np.ndarray) -> float:
+    def wage_price_index(self, historic_cpi: np.ndarray, historic_unemployment_rate: np.ndarray | None = None) -> float:
         """Price level nominal wages are indexed to (G17).
 
         Starts at the initial CPI and each quarter closes `cpi_indexation_speed` of the gap to the latest CPI, so
         wages catch up with prices gradually, as with periodic wage rounds, and a burst of inflation lowers real
-        wages for a while.
+        wages for a while. With `unemployment_gap_sensitivity` the index also grows by that times the gap between
+        the initial and the latest unemployment rate each quarter (a wage Phillips curve, P2).
 
         Args:
             historic_cpi (np.ndarray): CPI from the initial quarter to the latest one
+            historic_unemployment_rate (np.ndarray, optional): Unemployment rate from the initial quarter on
 
         Returns:
             float: Wage price index
         """
         index = historic_cpi[0]
-        for cpi in historic_cpi[1:]:
+        for t, cpi in enumerate(historic_cpi[1:], start=1):
             index += self.cpi_indexation_speed * (cpi - index)
+            if self.unemployment_gap_sensitivity and historic_unemployment_rate is not None:
+                latest = historic_unemployment_rate[min(t, len(historic_unemployment_rate)) - 1]
+                index *= 1 + self.unemployment_gap_sensitivity * (historic_unemployment_rate[0] - latest)
         return float(index)
 
     @abstractmethod

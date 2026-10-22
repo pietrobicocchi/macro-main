@@ -51,3 +51,14 @@ class TestWagePriceIndex:
 
     def test_stable_prices_leave_the_index_at_the_cpi(self):
         assert np.isclose(self._setter(0.25).wage_price_index(np.full(8, 1.1)), 1.1)
+
+    def test_wages_rise_faster_when_unemployment_is_below_its_initial_level(self):
+        """P2: wage Phillips curve; the index grows by sensitivity x (initial - latest unemployment) each quarter."""
+        setter = self._setter(1.0)
+        setter.unemployment_gap_sensitivity = 0.1
+        cpi = np.ones(3)
+        # quarter 1 sees unemployment 0.10 (gap 0), quarter 2 sees 0.08 (gap 0.02): 1.0 * (1 + 0.1 * 0.02)
+        assert np.isclose(setter.wage_price_index(cpi, np.array([0.10, 0.08, 0.08])), 1.002)
+        assert np.isclose(setter.wage_price_index(cpi, np.array([0.10, 0.10, 0.10])), 1.0)
+        setter.unemployment_gap_sensitivity = 0.0
+        assert np.isclose(setter.wage_price_index(cpi, np.array([0.10, 0.05, 0.05])), 1.0)

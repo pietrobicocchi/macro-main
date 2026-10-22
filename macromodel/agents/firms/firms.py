@@ -916,6 +916,7 @@ class Firms(Agent):
         employee_social_insurance_tax: float,
         employer_social_insurance_tax: float,
         historic_cpi: np.ndarray | None = None,
+        historic_unemployment_rate: np.ndarray | None = None,
     ) -> np.ndarray:
         """Set employee wages based on offers and market conditions.
 
@@ -938,6 +939,7 @@ class Firms(Agent):
             employee_social_insurance_tax (float): Employee SI tax rate
             employer_social_insurance_tax (float): Employer SI tax rate
             historic_cpi (np.ndarray, optional): CPI history; wages are indexed to it by the wage setter
+            historic_unemployment_rate (np.ndarray, optional): Unemployment rate history, for a wage Phillips curve
 
         Returns:
             np.ndarray: Updated employee wages
@@ -965,7 +967,9 @@ class Firms(Agent):
             employee_social_insurance_tax=employee_social_insurance_tax,
             employer_social_insurance_tax=employer_social_insurance_tax,
             current_tfp_multiplier=self.wage_productivity_factor,
-            current_cpi=1.0 if historic_cpi is None else self.functions["wage_setter"].wage_price_index(historic_cpi),
+            current_cpi=1.0
+            if historic_cpi is None
+            else self.functions["wage_setter"].wage_price_index(historic_cpi, historic_unemployment_rate),
         )
 
     def update_total_wages_paid(
