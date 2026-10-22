@@ -98,8 +98,8 @@ posterior (Table `table:prior`) only the χ caps are used.
   (0.53, 0.03, 0.18; MD19).
 
 **Against the paper's stated values** (`appendix_model_description.tex`, calibration paragraphs; audit 2026-10-22).
-Equal: target inflation 0.02, ω^M = ω^K = 0.85, h^max = 1.5, φ^FM = φ^FK = 0, φ^GM = 2, ρ^CAR = 0.08,
-ρ^RoA = 0.05 (units: M17). Different:
+Equal: target inflation 0.02, ω^M = ω^K = 0.85, h^max = 1.5, φ^FM = φ^FK = 0, φ^GM = 2, φ^ROW = 1,
+γ^F = γ^H = 1, h^U = h^E = 0, ρ^CAR = 0.08, ρ^RoA = 0.05 (units: M17). Different:
 
 | Parameter | Paper | Code default | Where | Tested |
 | --- | --- | --- | --- | --- |
@@ -113,6 +113,8 @@ Equal: target inflation 0.02, ω^M = ω^K = 0.85, h^max = 1.5, φ^FM = φ^FK = 0
 | Bank solvency ratio ρ^SR | 0.1 | 0.05 | `banks.functions` | — |
 | Consumer loans ρ^LTI-C | 0.36 | 0.5 | `banks.parameters` | M3 |
 | Mortgages LTV, LTI, DSTI | ESRB national measures | 0.8, 3, 0.3 | `banks.parameters` | — |
+| Offered-wage markup when hiring falls short φ^WN | 0 | 0.5 (`labour_market_tightness_markup_scale`) | `firms.offered_wage_setter` | — |
+| Reservation-wage period T^RW | 8 quarters | 0 (off) | `individuals` | ladder rung P4: dormant |
 
 ## Modelling decisions
 
