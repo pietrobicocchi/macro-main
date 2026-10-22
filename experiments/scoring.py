@@ -205,10 +205,23 @@ def ar1_forecast(history: pd.Series, horizon: int) -> np.ndarray:
     return np.array(preds)
 
 
+def var_forecast(history: pd.DataFrame, horizon: int, maxlags: int = 4) -> pd.DataFrame:
+    """Iterated multi-step VAR(p) forecast of the scored aggregates, p by AIC up to `maxlags` (the peer benchmark of
+    revision entry E23; Poledna et al. 2023 compare with a VAR)."""
+    from statsmodels.tsa.api import VAR
+
+    y = history.dropna().reset_index(drop=True)
+    fit = VAR(y).fit(maxlags=maxlags, ic="aic")
+    if fit.k_ar == 0:
+        return pd.DataFrame([y.mean().to_numpy()] * horizon, columns=y.columns)
+    return pd.DataFrame(fit.forecast(y.to_numpy()[-fit.k_ar :], horizon), columns=y.columns)
+
+
 def scorecard(sim: pd.DataFrame, obs: pd.DataFrame, quarters: int) -> pd.DataFrame:
     # sim t=1 is the first simulated quarter after initialisation, i.e. START itself is t=0
     target = obs.loc[obs.index > START].iloc[:quarters]
     history = obs.loc[(obs.index >= AR1_FIT_START) & (obs.index <= START)]
+    var = var_forecast(history[[agg for agg in SCORED if agg != "Unemployment Rate"]], len(target))
     rows = []
     for agg in SCORED:
         y = target[agg].to_numpy()
@@ -225,6 +238,8 @@ def scorecard(sim: pd.DataFrame, obs: pd.DataFrame, quarters: int) -> pd.DataFra
             ar1 = ar1_forecast(history[agg], len(y))
             row["AR(1) RMSE"] = np.sqrt(np.nanmean((ar1 - y) ** 2))
             row["sim / AR(1)"] = row["sim RMSE (median seed)"] / row["AR(1) RMSE"]
+            row["VAR RMSE"] = np.sqrt(np.nanmean((var[agg].to_numpy()[: len(y)] - y) ** 2))
+            row["sim / VAR"] = row["sim RMSE (median seed)"] / row["VAR RMSE"]
         rows.append(row)
     return pd.DataFrame(rows).set_index("aggregate")
 
