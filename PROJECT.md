@@ -189,6 +189,7 @@ scored against PPI- or CPI-deflated data.
 | R4: same model, scored against chain-linked volumes | 1.50 | 2.32 | 6.70 | 1.11 | 1.09 | −0.07% | 10.7% |
 | + MD15 growth engine, forecasts without a random draw | **0.99** | **1.08** | **1.90** | **1.09** | **0.86** | +0.19% | 10.0% |
 | + MD16 government spending planned on growth rates of CPI-deflated spending | **0.94** | **1.04** | **1.42** | 1.13 | 0.86 | +0.28% | 9.4% |
+| + M16 housing matching respects willingness to pay (bug fix) | 0.97 | **0.95** | 1.53 | 1.20 | 0.86 | +0.31% | 9.0% |
 
 ## What we have learned
 
@@ -215,17 +216,17 @@ differ from the submitted one.
   consumption, real government consumption and real GFCF, then forecasts 3 years
   ahead. The paper-figure notebook path suggests a fourth repo, `inet-macro-dev`.
 
-### Current state of `main` (MD16)
+### Current state of `main` (MD16, M16 fixed)
 
 Default settings, 10 seeds, 12 quarters, France 2014, real aggregates against chain-linked volumes:
-- **Scorecard** (`sim / AR(1)`): GDP **0.94**, HH cons. 1.04, gov. cons. 1.42, investment 1.13, CPI **0.86**.
-  GDP and CPI beat AR(1); household consumption and investment are close; the paper reports 0.40–0.75.
-  Nothing is calibrated yet, and the firm and household data are spoofed (D1).
-- **Sanity gate passed**: growth +0.28%/q (data +0.28%); unemployment 9.4% after 12 quarters (data 9.4%)
-  and 8.1% after 20 in exp021 (data 8.4%); no explosion.
-- **Government consumption** (1.42) is the worst ratio: the plan is smooth, but realised spending is the
+- **Scorecard** (`sim / AR(1)`): GDP **0.97**, HH cons. **0.95**, gov. cons. 1.53, investment 1.20, CPI **0.86**
+  (`sim / VAR`: 0.97, 1.00, 1.52, 1.21, 0.86). Three aggregates beat AR(1); the paper reports 0.40–0.75.
+  Nothing is calibrated yet, the firm and household data are spoofed (D1), and the government and household
+  accounts are far from France's (F6, F7, S31).
+- **Sanity gate passed**: growth +0.31%/q (data +0.28%); unemployment 9.0% after 12 quarters (data 9.4%).
+- **Government consumption** (1.53) is the worst ratio: the plan is smooth, but realised spending is the
   plan at expected industry prices, scored as nominal over the CPI.
-- **Accounts**: every loan and deposit ledger agrees exactly; unexplained money at most 0.7% of GDP; the
+- **Accounts**: every loan and deposit ledger agrees exactly; unexplained money at most 0.3% of GDP; the
   by-design unbacked flows (S9, S10, S13) remain.
 - Runs are almost the same across seeds (the remaining randomness is price noise and labour-market flows):
   about 1 s per 12 quarters with 18 firms, about 10 s with 408, mostly in the housing market (E12).
@@ -426,13 +427,14 @@ commit messages (e.g. `G1:`).
 | M6 | Housing IDs set to −1 at initialisation | Bug | upstream | — | done: #93 merged `80d8b3d` | — |
 | M7 | Credit-supply units bug | Bug | upstream | — | done: #104 merged `a6dca3c` | — |
 | M8 | Rent-value regression swapped and fitted through one point | Bug | ours | — | done `21f1f2b`; report upstream (E9) | — |
-| M9 | Houses change hands far too often: about 12% of the stock per quarter (real: about 1%), 800–1,400 bn of sales per quarter | Spec | ours | Phase 1 decomposition | open | P2 |
+| M9 | Houses change hands far too often: about 12% of the stock per quarter (real: about 1%), 800–1,400 bn of sales per quarter | Spec | ours | Phase 1 decomposition; M16 | partial: 3–6% of the stock a quarter after M16 (sales go to every household that can afford a home it wants) | P2 |
 | M10 | Interest on existing loans was an annual rate charged every quarter (4×) | Bug | upstream | now: firm loans 1.0%/yr, consumer loans 4.8%/yr, mortgages 2.3%/yr | done: upstream #83 and #85 merged (`40c8a1e`, `f12f78b`) | — |
 | M11 | Poledna layoffs reported the sum of every firm's excess employees, negative ones included, as the number fired (−hires under search frictions); only the reported flows (`num_individuals_newly_fired`, `job_reallocation_rate`) were wrong | Bug | ours | exp010 | done: counts the workers actually fired, with test | — |
 | M12 | Layoffs only reset a worker's firm ID, so firms' employee lists kept laid-off workers (and listed rehired workers twice); the lists guard random separations | Bug | ours | engine + frictions, 16 quarters: 95 stale entries, 60 duplicates | done: lists rebuilt after every clearing, with test; defaults unaffected (no random separations) | — |
 | M13 | Households all save at one average rate and receive equal social transfers; the paper sets both per household from HFCS characteristics | Spec | upstream | model map; `AverageSavingRatesSetter`, `EqualSocialTransfersSetter` | open: alternatives exist; matter for distribution, less for aggregates | P2 |
 | M14 | Rents never change (`ConstantRentSetter`); the paper indexes them partially to CPI and cuts vacant offers | Spec | upstream | model map | open | P3 |
 | M15 | The rest of the world sets exports and imports from AR(1) forecasts that still draw noise (`row_configuration.assume_zero_noise=False`); the paper indexes them to modelled production and prices | Spec | upstream | model map; I1 | open: exp022 tests the noise | P2 |
+| M16 | The automatic housing clearer matched households with homes priced above their willingness to pay: its cost was \|willingness − price\|, never negative, so the `cost < 0` guard never fired, and the optimal assignment paired every household with demand to some home | Bug | upstream | I1 (profiling the housing market); regression test | fixed `e82f780`: sales fall from about 12% to 3–6% of the stock a quarter; baseline GDP 0.94 → 0.97, HH cons. 1.04 → 0.95, gov. cons. 1.42 → 1.53, invest. 1.13 → 1.20; report upstream (E9) | — |
 
 ### F. Government and finance
 
