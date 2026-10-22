@@ -604,6 +604,32 @@ def paper_moving_probabilities(c: CountryConfiguration) -> None:
     }
 
 
+def rent_affordability(c: CountryConfiguration, share: float = 0.25) -> None:
+    """Households deciding to rent can pay up to `share` of their quarterly income (M2). The default is 0.2 money
+    units whatever the income (coefficient 0.2, exponent 0), so no household that decides to rent finds a home."""
+    p = c.households.functions.property.parameters
+    c.households.functions.property.parameters = {
+        **p,
+        "maximum_rent_income_coefficient": share,
+        "maximum_rent_income_exponent": 1.0,
+    }
+
+
+def purchase_affordability(c: CountryConfiguration, years_of_income: float = 5.0) -> None:
+    """Households can pay up to `years_of_income` times their yearly income for a home (M2; the paper's rule, 42.9
+    Y^0.789 in yearly income, gives about 175,000 euros for the median French household). The default is 5 times
+    *quarterly* income, which buys only the cheapest homes (about 47,000 euros against a median of 161,000)."""
+    p = c.households.functions.property.parameters
+    c.households.functions.property.parameters = {**p, "maximum_price_income_coefficient": 4 * years_of_income}
+
+
+def paper_buy_or_rent_sensitivity(c: CountryConfiguration) -> None:
+    """The paper's influence of costs on buying over renting, phi^B = 0.001 per euro (M2). The code divides the cost
+    difference by 10,000 (the default scale, so per real household) and multiplies by a temperature of 1."""
+    p = c.households.functions.property.parameters
+    c.households.functions.property.parameters = {**p, "cost_comparison_temperature": 0.001}
+
+
 def paper_renting_pressure(c: CountryConfiguration) -> None:
     """The paper's psychological pressure of renting, mu^PS = 0.4 (default 0.1)."""
     p = c.households.functions.property.parameters
