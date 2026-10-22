@@ -310,19 +310,14 @@ class ConstantGrowthGovernmentConsumptionSetter(GovernmentConsumptionSetter):
 
 
 class AutoregressiveGrowthGovernmentConsumptionSetter(GovernmentConsumptionSetter):
-    """Autoregressive growth consumption target determination.
+    """Government spending planned like a budget: real consumption grows at an AR(1) forecast of its past growth
+    rates (MD16, default).
 
-    This class implements consumption targeting based on:
-    - Autoregressive forecasting of growth rates
-    - Price level adjustments
-    - Consistency requirements
-    - Industry-specific allocation
-
-    The approach provides:
-    - Data-driven growth forecasts
-    - Price-adjusted spending
-    - Consistent or period-by-period forecasting
-    - Industry-level detail
+    The history is real consumption (nominal over `deflator`, the CPI by default) before the simulation, then the
+    model's own. With `consistency` 1 the plan covers `buffer` quarters and is made again from the latest history
+    when it runs out; each quarter the planned real amount is bought at expected prices, split across industries
+    in proportion to last quarter's desired consumption. An AR(1) on growth rates keeps the trend that an AR(1) on
+    log levels (`AutoregressiveGovernmentConsumptionSetter`) lets fade.
     """
 
     def compute_target_consumption(
