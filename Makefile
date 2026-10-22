@@ -6,6 +6,10 @@ setup:
 test:
 	uv run pytest -q
 
+# Unit tests without the whole-simulation and data-building suites (~1 min); `make test` before a behaviour change
+test-fast:
+	uv run pytest -q -p no:warnings --ignore=tests/test_macromodel/unit/test_simulation.py --ignore=tests/test_macro_data
+
 # The credit clearing file is excluded from the format check until upstream merges PR #104 (E11):
 # reformatting it here would conflict with that merge.
 LINT_FORMAT_EXCLUDE = macromodel/markets/credit_market/func/clearing.py
