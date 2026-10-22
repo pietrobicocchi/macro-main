@@ -389,8 +389,9 @@ One paragraph per mechanism; each experiment's numbers are in the Experiments ta
 The intermezzo (phase 2½) is done, and the decisions it raised are adopted (MD17–MD19, R7 targets; exp022,
 exp023 and exp025 rerun on them). Every MD15–MD19 value was chosen in-sample. In order:
 1. **Data (D1), on the critical path**: the public data is in (interim, see Data); the licensed HFCS and Compustat
-   are not (Pietro: ask INET for `inet-macro-data`, then WRDS and the ECB). Everything that becomes a paper claim waits on it: calibration on 2010–2013 (phase 5), held-out start
-   dates, the 38-country ladder (E_ATTR), the recovery period (E24).
+   are not (Pietro: ask INET for `inet-macro-data`, then WRDS and the ECB). Everything that becomes a paper claim
+   waits on it: calibration on 2010–2013 (phase 5), held-out start dates, the 38-country ladder (E_ATTR), the
+   recovery period (E24).
 2. **Household side** (S9, S31, G18): the option anchoring the return to national accounts is built (exp031):
    unpaid income 21% → 4% of GDP, household-consumption ratio 1.04 → 1.11. **Decision for Pietro**: adopt as
    MD20 (changes the initial state)? Then the dividend channel (MD6) for the remaining 4%.
@@ -400,8 +401,9 @@ exp023 and exp025 rerun on them). Every MD15–MD19 value was chosen in-sample. 
 4. **Effective tax rates** (F7, phase 4): revenue 41.5% of GDP against 53.8%. The profit tax is built as an
    option (exp032; alone it widens the deficit). Left: income tax, social contributions and production taxes,
    calibrated together, since they set the gross–net wage split in the initial state.
-5. **Phase 4 markets**: rental market (M2), consumer credit (M3), firm credit (M17, F2, G9), housing turnover (M9),
-   E15.
+5. **Phase 4 markets**: rental market (M2: diagnosed, options in exp037), house prices that never move (M18),
+   consumer credit (M3), firm credit (M17, F2, G9), housing turnover (M9: exp034), E15 (three configured functions
+   are never called).
 6. **Decisions waiting for Pietro** (built as data options, each changes the initial state): the national-accounts
    return on household financial assets (S9, exp031), and the investment split by capital compensation (S32,
    exp033, a bug in the split); and, a behaviour default, the paper's moving probabilities for housing (M9, exp034).
@@ -410,7 +412,10 @@ exp023 and exp025 rerun on them). Every MD15–MD19 value was chosen in-sample. 
    HH 0.99, gov. 2.05, invest. 1.02.
    Adopting one means a ladder rung, `make baseline` and a scorecard row.
 7. **For the paper**: E1's text ("no exogenous TFP") is contradicted by MD12; the revision plan's χ^K ≈ 0.56
-   against `table:prior`'s 0.18 (E2); the data section's benefits source changes (MD17).
+   against `table:prior`'s 0.18 (E2); the data section's benefits source changes (MD17). Typos in the appendix
+   (M2, exp034): the buy-or-rent probability falls when renting is dearer (sign); the mortgage annuity has exponent
+   +m_l and adds the principal twice; the price and rent cuts 1 − exp ε need ε in percent (/100); ρ^RoA and ρ^RoE
+   have no time unit (M17).
 
 Every known problem, fixed or open, is in the Issue register below.
 
