@@ -631,6 +631,18 @@ def paper_bank_limits(c: CountryConfiguration) -> None:
     b.household_consumption_loans_loan_to_income_ratio = 0.36
 
 
+def paper_bank_solvency(c: CountryConfiguration) -> None:
+    """The paper's solvency ratio between bank equity and assets, rho^SR = 0.1 (default 0.05)."""
+    d = c.banks.functions.demography
+    d.parameters = {**d.parameters, "solvency_ratio": 0.1}
+
+
+def paper_offered_wage(c: CountryConfiguration) -> None:
+    """No wage markup when firms fail to meet their labour targets, as in the paper (phi^WN = 0; default 0.5)."""
+    w = c.firms.functions.offered_wage_setter
+    w.parameters = {**w.parameters, "labour_market_tightness_markup_scale": 0.0}
+
+
 # Rest of the world (M15)
 
 

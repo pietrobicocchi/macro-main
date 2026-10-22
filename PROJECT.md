@@ -105,15 +105,16 @@ Equal: target inflation 0.02, ω^M = ω^K = 0.85, h^max = 1.5, φ^FM = φ^FK = 0
 | --- | --- | --- | --- | --- |
 | Owners / renters keep their home a quarter (p^OS, p^RS) | 79/80, 7/8 | 0.5, 0.5 | `households.property` | exp034: candidate |
 | Psychological pressure of renting μ^PS | 0.4 | 0.1 | `households.property` | exp034 |
+| exp035 | The paper's stated values for wages and banks (parameter audit) | done | No offered-wage markup (φ^WN = 0) and the solvency ratio 0.1: identical runs (dormant: firms meet their labour targets, the bank's equity stays above both thresholds). The paper's bank limits (firm debt-to-equity 1.0, return on equity 0.15, consumer loans 0.36): GDP 1.03 → 1.01, HH 1.05 → 1.06, gov. 1.66 → 1.81, invest. 1.11 → 1.00, CPI 0.75; growth and unemployment unchanged. `outputs/exp035_paper_parameters/` |
 | Buy-or-rent sensitivity φ^B | 0.001 per euro | 1 per euro (temperature 1, `/ 10000`) | `households.property` | M2 |
 | Rent indexation φ^PIR, lag | 1, 1 | 0 | `households.property` | exp034 |
 | Price and rent cuts of unsold properties p^PM, p^RM | 0.1964, 0.2848 | 0 (off) | `households.property` | formula needs /100 (exp034) |
 | Purchase price and rent rules (φ^HP, β^HP; φ^HR, β^HR) | 42.9 Y^0.789; 17.2 Y^0.346 | 5 Y; 0.2 Y^0 | `households.property` | units of Y unclear (Carro et al.) |
-| Firm loans: debt-to-equity ρ^DtE, return on equity ρ^RoE | 1.0, 0.15 | 0.03, 0.05 | `banks.parameters` | exp019, exp028 (`paper_bank_limits`) |
-| Bank solvency ratio ρ^SR | 0.1 | 0.05 | `banks.functions` | — |
+| Firm loans: debt-to-equity ρ^DtE, return on equity ρ^RoE | 1.0, 0.15 | 0.03, 0.05 | `banks.parameters` | exp019, exp028, exp035 (`paper_bank_limits`: invest. 1.11 → 1.00) |
+| Bank solvency ratio ρ^SR | 0.1 | 0.05 | `banks.functions.demography` | exp035: dormant |
 | Consumer loans ρ^LTI-C | 0.36 | 0.5 | `banks.parameters` | M3 |
 | Mortgages LTV, LTI, DSTI | ESRB national measures | 0.8, 3, 0.3 | `banks.parameters` | — |
-| Offered-wage markup when hiring falls short φ^WN | 0 | 0.5 (`labour_market_tightness_markup_scale`) | `firms.offered_wage_setter` | — |
+| Offered-wage markup when hiring falls short φ^WN | 0 | 0.5 (`labour_market_tightness_markup_scale`) | `firms.offered_wage_setter` | exp035: dormant |
 | Reservation-wage period T^RW | 8 quarters | 0 (off) | `individuals` | ladder rung P4: dormant |
 
 ## Modelling decisions
