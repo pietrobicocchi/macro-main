@@ -43,7 +43,10 @@ def restore(c: CountryConfiguration, path: str, keys: list[str] | None = None) -
 
 
 def before_our_decisions(c: CountryConfiguration) -> None:
-    """The model as forked, with our accounting fixes (MD2-MD5, MD7, MD8) but none of our behavioural decisions."""
+    """The model as forked, with our accounting fixes (MD2-MD5, MD7, MD8) but none of our behavioural decisions.
+    Build the data with `cash_social_benefits=False` (MD17)."""
+    pre_md19_target_production(c)
+    pre_md18_constant_policy_rate(c)
     pre_md16_government_consumption(c)
     pre_md15_no_growth_engine(c)
     pre_md14_prices_wages_consumption(c)
@@ -88,7 +91,7 @@ def md15_spare_capacity_and_growth_expectations(c: CountryConfiguration) -> None
 
 def md10_investment(c: CountryConfiguration) -> None:
     restore(c, "firms.functions.target_capital_inputs")
-    restore(c, "firms.functions.target_production")
+    restore(c, "firms.functions.target_production.parameters", ["capital_inputs_target_considers_capital_inputs"])
 
 
 def md11_search_frictions(c: CountryConfiguration) -> None:
@@ -111,6 +114,18 @@ def md16_government_plan(c: CountryConfiguration) -> None:
     restore(c, "government_entities.functions.consumption")
 
 
+def forked_constant_policy_rate(c: CountryConfiguration) -> None:
+    pre_md18_constant_policy_rate(c)
+
+
+def md18_taylor_rule(c: CountryConfiguration) -> None:
+    restore(c, "central_bank.functions.policy_rate")
+
+
+def md19_paper_target_production(c: CountryConfiguration) -> None:
+    restore(c, "firms.functions.target_production")
+
+
 def paper_leontief_production(c: CountryConfiguration) -> None:
     restore(c, "firms.functions.production")
 
@@ -127,14 +142,12 @@ def paper_reservation_wages(c: CountryConfiguration) -> None:
     restore(c, "labour_market.functions.clearing.parameters", ["consider_reservation_wages"])
 
 
-def forked_constant_policy_rate(c: CountryConfiguration) -> None:
-    restore(c, "central_bank.functions.policy_rate")
-
-
 # Cumulative rungs: (label, change added, data the rung's initial state needs). P-rungs add the paper's innovations
 # over the IIASA model (`table:comp_to_iiasa`) to an IIASA-like model; numbered rungs add our decisions to the model
 # as forked. The last rung is today's defaults.
-_FORKED_DATA = {"utilisation_rate": 1.0, "labour_share_from_sea": False}
+_DOUBLE_BENEFITS = {"cash_social_benefits": False}
+_SEA_WAGES = {**_DOUBLE_BENEFITS, "utilisation_rate": 1.0}
+_FORKED_DATA = {**_SEA_WAGES, "labour_share_from_sea": False}
 _RUNGS = [
     ("P0 IIASA-like rules", None, _FORKED_DATA),
     ("P1 + Leontief production", paper_leontief_production, _FORKED_DATA),
@@ -143,15 +156,18 @@ _RUNGS = [
     ("P4 + reservation wages", paper_reservation_wages, _FORKED_DATA),
     ("0 + constant policy rate (model as forked)", forked_constant_policy_rate, _FORKED_DATA),
     ("1 + MD1 price noise 0.05%", md1_price_noise, _FORKED_DATA),
-    ("2 + MD9 wages from SEA labour shares", None, {"utilisation_rate": 1.0}),
-    ("3 + MD14 cost pass-through, wage catch-up, no floor", md14_costs_wages_consumption, {"utilisation_rate": 1.0}),
-    ("4 + MD15 spare capacity, growth expectations", md15_spare_capacity_and_growth_expectations, {}),
-    ("5 + MD10 partial-adjustment investment", md10_investment, {}),
-    ("6 + MD11 search frictions", md11_search_frictions, {}),
-    ("7 + MD12 productivity growth", md12_productivity_growth, {}),
-    ("8 + MD13 slack-aware expectations", md13_slack_aware_expectations, {}),
-    ("9 + MD15 deterministic forecasts", md15_deterministic_forecasts, {}),
-    ("10 + MD16 government plan (defaults)", md16_government_plan, {}),
+    ("2 + MD9 wages from SEA labour shares", None, _SEA_WAGES),
+    ("3 + MD14 cost pass-through, wage catch-up, no floor", md14_costs_wages_consumption, _SEA_WAGES),
+    ("4 + MD15 spare capacity, growth expectations", md15_spare_capacity_and_growth_expectations, _DOUBLE_BENEFITS),
+    ("5 + MD10 partial-adjustment investment", md10_investment, _DOUBLE_BENEFITS),
+    ("6 + MD11 search frictions", md11_search_frictions, _DOUBLE_BENEFITS),
+    ("7 + MD12 productivity growth", md12_productivity_growth, _DOUBLE_BENEFITS),
+    ("8 + MD13 slack-aware expectations", md13_slack_aware_expectations, _DOUBLE_BENEFITS),
+    ("9 + MD15 deterministic forecasts", md15_deterministic_forecasts, _DOUBLE_BENEFITS),
+    ("10 + MD16 government plan", md16_government_plan, _DOUBLE_BENEFITS),
+    ("11 + MD17 cash social benefits", None, {}),
+    ("12 + MD18 Taylor rule", md18_taylor_rule, {}),
+    ("13 + MD19 paper's target-production caps (defaults)", md19_paper_target_production, {}),
 ]
 LADDER = [
     Step(label, [before_our_decisions, poledna_like] + [change for _, change, _ in _RUNGS[: k + 1] if change], data)
@@ -220,6 +236,14 @@ def without_reservation_wages(c: CountryConfiguration) -> None:
     c.labour_market.functions.clearing.parameters = {**m, "consider_reservation_wages": False}
 
 
+def without_taylor_rule(c: CountryConfiguration) -> None:
+    pre_md18_constant_policy_rate(c)
+
+
+def without_paper_target_production(c: CountryConfiguration) -> None:
+    pre_md19_target_production(c)
+
+
 # 2. Reverts to earlier defaults --------------------------------------------------------------------------------------
 
 
@@ -276,6 +300,21 @@ def pre_md16_government_consumption(c: CountryConfiguration) -> None:
     government_consumption_plan(c, growth_rates=False, deflator="ppi")
 
 
+def pre_md18_constant_policy_rate(c: CountryConfiguration) -> None:
+    """The default before MD18 (2026-10-22): the policy rate stays at its initial value."""
+    c.central_bank.functions.policy_rate.name = "ConstantPolicyRate"
+
+
+def pre_md19_target_production(c: CountryConfiguration) -> None:
+    """The default before MD19 (2026-10-22): no caps on target production; the code's caps on purchases stay."""
+    c.firms.functions.target_production.name = "DefaultTargetProductionSetter"
+    c.firms.functions.target_production.parameters = {
+        k: v
+        for k, v in c.firms.functions.target_production.parameters.items()
+        if not k.startswith("target_production_considers_")
+    }
+
+
 # 3. Alternatives explored --------------------------------------------------------------------------------------------
 
 # Growth and firm behaviour (G)
@@ -326,8 +365,9 @@ def input_constraints(c: CountryConfiguration) -> None:
 def paper_target_production(
     c: CountryConfiguration, chi_h: float = CHI_H, chi_m: float = CHI_M, chi_k: float = CHI_K
 ) -> None:
-    """Paper (`eq:firm_target_production`, G4): target production capped by labour, intermediate inputs and capital
-    with weights chi (posterior 0.53, 0.03, 0.18), in place of the code's caps on purchases and hiring."""
+    """Paper (`eq:firm_target_production`, G4; default since MD19 at the posterior): target production capped by
+    labour, intermediate inputs and capital with weights chi (posterior 0.53, 0.03, 0.18), on top of the code's caps
+    on purchases and hiring."""
     c.firms.functions.target_production.name = "PaperTargetProductionSetter"
     c.firms.functions.target_production.parameters = {
         **c.firms.functions.target_production.parameters,
@@ -466,7 +506,7 @@ def wage_brake(c: CountryConfiguration, tightness_scale: float = 0.5) -> None:
 
 
 def taylor_rule(c: CountryConfiguration) -> None:
-    """Paper: the policy rate follows a Taylor rule estimated by OLS (`eq:cb_policy_rate`; P4)."""
+    """Paper: the policy rate follows a Taylor rule estimated by OLS (`eq:cb_policy_rate`; P4; default since MD18)."""
     c.central_bank.functions.policy_rate.name = "PolednaPolicyRate"
 
 

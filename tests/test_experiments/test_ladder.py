@@ -20,6 +20,18 @@ def test_top_rung_of_the_ladder_is_todays_defaults():
     assert LADDER[-1].data == {}
 
 
+def test_every_rung_changes_the_model():
+    """Regression: a rung restoring a whole function also switched on later decisions (MD10 restored MD19's caps)."""
+    previous = None
+    for step in LADDER:
+        c = CountryConfiguration()
+        for change in step.changes:
+            change(c)
+        current = (json.loads(c.model_dump_json()), step.data)
+        assert current != previous, step.label
+        previous = current
+
+
 def test_bottom_rung_differs_from_the_defaults():
     bottom = CountryConfiguration()
     for change in LADDER[0].changes:

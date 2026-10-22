@@ -23,7 +23,7 @@ class CentralBankPolicy(BaseModel):
     """
 
     path_name: str = "policy_rate"
-    name: Literal["ConstantPolicyRate", "PolednaPolicyRate", "SmoothTaylorRule"] = "ConstantPolicyRate"
+    name: Literal["ConstantPolicyRate", "PolednaPolicyRate", "SmoothTaylorRule"] = "PolednaPolicyRate"  # MD18
     parameters: dict = {}
 
 

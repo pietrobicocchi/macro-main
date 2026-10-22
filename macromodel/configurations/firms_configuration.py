@@ -274,10 +274,12 @@ class WageSetter(BaseModel):
 class TargetProduction(BaseModel):
     """
     The function for setting the firms target production.
-    Options: DefaultTargetProductionSetter
+    Options: PaperTargetProductionSetter (default since MD19: the paper's chi caps on target production, at the
+    paper's posterior), DefaultTargetProductionSetter (no caps on target production; takes no
+    `target_production_considers_*` parameters)
     """
 
-    name: Literal["DefaultTargetProductionSetter", "PaperTargetProductionSetter"] = "DefaultTargetProductionSetter"
+    name: Literal["DefaultTargetProductionSetter", "PaperTargetProductionSetter"] = "PaperTargetProductionSetter"
     path_name: str = "target_production"
     parameters: dict[str, Any] = {
         "existing_inventory_fraction": 0.0,
@@ -290,6 +292,10 @@ class TargetProduction(BaseModel):
         "capital_inputs_target_considers_labour_inputs": 0.0,
         "capital_inputs_target_considers_intermediate_inputs": 0.0,
         "capital_inputs_target_considers_capital_inputs": 0.0,  # MD15: invest on expected demand, not capacity
+        # MD19: the paper's caps on target production, at its posterior (`table:prior`, G4)
+        "target_production_considers_labour_inputs": 0.53,
+        "target_production_considers_intermediate_inputs": 0.03,
+        "target_production_considers_capital_inputs": 0.18,
     }
 
 
@@ -576,17 +582,22 @@ class FirmsConfiguration(BaseModel):
 
         if len(bundles) > 0:
             # No bundled version of the partial-adjustment investment rule (MD10) yet: keep the old rule, which
-            # replaces depreciation capped at current capacity
+            # replaces depreciation capped at current capacity, and no caps on target production (MD19 untested here)
             functions = FirmsFunctions(
                 target_capital_inputs=TargetCapitalInputs(
                     name="BundleWeightedTargetCapitalInputsSetter",
                     parameters={"target_capital_inputs_fraction": 0.0, "credit_gap_fraction": 0.0},
                 ),
                 target_production=TargetProduction(
+                    name="DefaultTargetProductionSetter",
                     parameters={
-                        **TargetProduction().parameters,
+                        **{
+                            key: value
+                            for key, value in TargetProduction().parameters.items()
+                            if not key.startswith("target_production_considers_")
+                        },
                         "capital_inputs_target_considers_capital_inputs": 1.0,
-                    }
+                    },
                 ),
                 target_intermediate_inputs=TargetIntermediateInputs(
                     name="BundleWeightedTargetIntermediateInputsSetter"

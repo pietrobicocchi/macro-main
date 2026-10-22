@@ -1,4 +1,4 @@
-.PHONY: setup test test-fast lint fmt exp baseline figures check upstream clean
+.PHONY: setup test test-fast lint fmt exp baseline figures data check upstream clean
 
 setup:
 	uv sync --frozen --python 3.12 --extra dev
@@ -36,6 +36,10 @@ baseline:
 # The standard figures (model map, baseline fan and dashboard, ladder, robustness) from existing outputs
 figures:
 	uv run python experiments/figures.py
+
+# The full public raw data (D1, interim: HFCS and Compustat stay spoofed) -> ~/Documents/dev/phd/datasets/macro_raw_data
+data:
+	uv run python experiments/public_data.py
 
 # Everything to run before committing a change to model behaviour
 check: test lint baseline

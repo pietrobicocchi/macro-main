@@ -1,10 +1,10 @@
 """exp025: Which elements of today's defaults matter, independent of the order they were added? (R1.1, R2.1)
 
 Leave-one-out complement of the ablation ladder (exp023, one order only): today's defaults without one element at a
-time, our decisions and the paper's innovations over the IIASA model, plus two additions not in the defaults (the
-paper's Taylor rule, cash social benefits F6). Hypothesis (recorded before running): deterministic forecasts and the
-price-noise fix matter most for the ratios, spare capacity and productivity growth for growth and unemployment; the
-paper's housing and household-credit innovations matter little on France's sample data (dormant in exp023).
+time, our decisions and the paper's innovations over the IIASA model. Hypothesis (recorded before running):
+deterministic forecasts and the price-noise fix matter most for the ratios, spare capacity and productivity growth for
+growth and unemployment; the paper's housing and household-credit innovations matter little on France's sample data
+(dormant in exp023). Rerun on MD17-MD19 (2026-10-22): the first run had the Taylor rule and cash benefits as additions.
 
 Usage:
     uv run python experiments/exp025_leave_one_out.py [--seeds 10] [--quarters 20]
@@ -19,16 +19,17 @@ from settings import (
     pre_md16_government_consumption,
     spare_capacity,
     substitutable_inputs,
-    taylor_rule,
     with_forecast_noise,
     without_growth_expectations,
     without_household_credit,
     without_housing_market,
+    without_paper_target_production,
     without_partial_adjustment_investment,
     without_productivity_growth,
     without_reservation_wages,
     without_search_frictions,
     without_slack_aware_expectations,
+    without_taylor_rule,
 )
 
 STEPS = [
@@ -48,8 +49,9 @@ STEPS = [
     Step("without the housing market (paper)", [without_housing_market]),
     Step("without household credit (paper)", [without_household_credit]),
     Step("without reservation wages (paper)", [without_reservation_wages]),
-    Step("with the Taylor rule (paper)", [taylor_rule]),
-    Step("with cash social benefits (F6)", data={"cash_social_benefits": True}),
+    Step("without cash social benefits (MD17)", data={"cash_social_benefits": False}),
+    Step("without the Taylor rule (MD18)", [without_taylor_rule]),
+    Step("without the paper's target-production caps (MD19)", [without_paper_target_production]),
 ]
 
 if __name__ == "__main__":

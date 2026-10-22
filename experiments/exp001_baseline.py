@@ -37,7 +37,7 @@ def main() -> None:
     parser.add_argument("--seeds", type=int, default=10)
     parser.add_argument("--quarters", type=int, default=12)
     parser.add_argument("--scale", type=int, default=10_000, help="real-world agents per model agent")
-    parser.add_argument("--policy", default="ConstantPolicyRate", choices=["ConstantPolicyRate", "PolednaPolicyRate"])
+    parser.add_argument("--policy", default="PolednaPolicyRate", choices=["ConstantPolicyRate", "PolednaPolicyRate"])
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.WARNING)

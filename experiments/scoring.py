@@ -7,6 +7,7 @@ over seeds of the per-trajectory RMSE, alongside an AR(1) benchmark fit on pre-2
 
 import argparse
 import logging
+import os
 import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -23,8 +24,11 @@ from macromodel.configurations.row_configuration import RestOfTheWorldConfigurat
 from macromodel.simulation import Simulation
 
 ROOT = Path(__file__).resolve().parents[1]
-RAW_DATA = ROOT / "tests/test_macro_data/unit/sample_raw_data"
+# The test sample by default; MACRO_RAW_DATA=<datasets>/macro_raw_data for the full public data
+# (experiments/public_data.py: still the spoofed HFCS and Compustat, D1)
+RAW_DATA = Path(os.environ.get("MACRO_RAW_DATA", ROOT / "tests/test_macro_data/unit/sample_raw_data")).expanduser()
 COUNTRY = "FRA"
+GEO = "FR"  # Eurostat's code for COUNTRY
 START = pd.Timestamp("2014-01-01")
 AR1_FIT_START = pd.Timestamp("2000-07-01")
 
@@ -53,7 +57,7 @@ def load_data(
     utilisation_rate: float = 0.85,
     inventory_fraction: float = 0.0,
     labour_share_from_sea: bool = True,
-    cash_social_benefits: bool = False,
+    cash_social_benefits: bool = True,
 ) -> DataWrapper:
     """France 2014 initial state. many_firms uses business-demography firm counts instead of one per industry.
 
@@ -189,6 +193,7 @@ def simulate(
 
 def _eurostat_quarterly(path: Path, item: str | None = None) -> pd.Series:
     df = pd.read_csv(path)
+    df = df[df["geo"] == GEO]
     if item is not None:
         df = df[df["na_item"] == item]
     series = df.set_index("TIME_PERIOD")["OBS_VALUE"]
@@ -196,14 +201,15 @@ def _eurostat_quarterly(path: Path, item: str | None = None) -> pd.Series:
     return series
 
 
-def observed(data: DataWrapper, volumes: bool = True, adjusted: bool = False) -> pd.DataFrame:
+def observed(data: DataWrapper, volumes: bool = True, adjusted: bool = True) -> pd.DataFrame:
     """Observed quarterly growth rates. volumes=False deflates nominal data by PPI/CPI as before R4. adjusted=True
-    takes CPI inflation from the seasonally adjusted household consumption deflator and unemployment from the
-    quarterly series (R7); the default keeps the CPI (not seasonally adjusted) and annual unemployment."""
+    (default since 2026-10-22, R7) takes CPI inflation from the seasonally adjusted household consumption deflator
+    and unemployment from the quarterly series, since the model has no seasons; adjusted=False keeps the CPI (not
+    seasonally adjusted) and annual unemployment."""
     ex = data.synthetic_countries[COUNTRY].exogenous_data
     na = ex.national_accounts
     obs = pd.DataFrame(index=na.index)
-    clv = pd.read_csv(VOLUMES).pivot(index="TIME_PERIOD", columns="na_item", values="OBS_VALUE")
+    clv = pd.read_csv(VOLUMES).query("geo == @GEO").pivot(index="TIME_PERIOD", columns="na_item", values="OBS_VALUE")
     clv.index = pd.PeriodIndex(clv.index, freq="Q").to_timestamp()
     for agg, (_, deflator, col, item) in AGGREGATES.items():
         real = clv[item].reindex(na.index) if volumes else na[f"{col} (Value)"] / na[f"{deflator.upper()} (Value)"]

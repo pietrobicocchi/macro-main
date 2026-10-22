@@ -13,7 +13,7 @@ from scoring import ROOT, load_data, observed
 from macromodel.configurations import CountryConfiguration
 
 OUT = ROOT / "outputs"
-BASELINE = OUT / "exp001_baseline" / "ConstantPolicyRate_scale10000"
+BASELINE = OUT / "exp001_baseline" / "PolednaPolicyRate_scale10000"
 
 
 def _baseline_fan(path: Path) -> None:

@@ -43,6 +43,7 @@ experiments/   expNNN_*.py entrypoints, plus
   plotting.py    every figure: forecast fan, mechanism dashboard, ratio heatmap, model map
   figures.py     FIGURES registry, `make figures` -> outputs/figures/ (PDF and PNG)
   provenance.py  run records (commit, dirty files, command, parameters)
+  public_data.py `make data`: the full public raw data in ~/Documents/dev/phd/datasets (D1)
 outputs/       generated results, one directory per experiment (gitignored)
 extra/         local reference material, never published (gitignored)
 ```
@@ -61,9 +62,10 @@ and the mechanism-dashboard series.
 
 ## Data
 
-Only the test sample data is on this machine: France-relevant public data for 2014 plus
-**spoofed** HFCS (households) and Compustat (firms, banks). It is for diagnosing
-mechanisms, not for claims in the paper (D1). Defaults: scale 10,000 (≈2.9k households,
+Experiments run on the test sample: public data cut to France or 2014, plus **spoofed** HFCS
+(households) and Compustat (firms, banks). The full public data (`make data`, opt-in with
+`MACRO_RAW_DATA`) still has the spoofed micro-data. Both are interim, for diagnosing mechanisms,
+not for claims in the paper; the data discussion lives in PROJECT.md, Data (D1). Defaults: scale 10,000 (≈2.9k households,
 1 bank) and **one firm per industry**; use `scoring.load_data(many_firms=True)` for
 business-demography counts.
 
@@ -75,8 +77,8 @@ An experiment is its question and its steps; `scoring.run_experiment` does the r
 ```python
 """exp0NN: <question>. Hypothesis (recorded before running): <what and why>."""
 from scoring import Step, run_experiment
-from settings import taylor_rule
-STEPS = [Step("defaults"), Step("Taylor rule", [taylor_rule])]   # data={...} if initial stocks change
+from settings import wage_phillips_curve
+STEPS = [Step("defaults"), Step("Phillips curve", [wage_phillips_curve])]   # data={...} if initial stocks change
 if __name__ == "__main__":
     run_experiment(__file__, __doc__, STEPS)
 ```
@@ -116,8 +118,11 @@ for every bug fixed.
 - Firms start with spare capacity by default (utilisation 0.85, MD15), in both the data and the
   simulation configuration; `scoring.load_data` builds 0.85 unless told otherwise.
 - The rest of the world's forecasts still draw noise (`row_configuration.assume_zero_noise`, M15).
-- The government's accounts are far from France's (deficit 18% of GDP a quarter: F6, F7);
-  households' saving and the net-lending panel of the dashboard reflect it.
+- Social benefits are SOCX cash spending by default (MD17); the data needs
+  `oecd_econ/SOCX_AGG_BY_TYPE.csv`. Tax rates are statutory, not effective (F7), and households'
+  financial income has no payer (S9): the net-lending panel of the dashboard reflects both.
+- Scoring targets are seasonally adjusted (R7): experiments run before 2026-10-22 scored CPI
+  against the unadjusted CPI; compare their ratios only within the same experiment.
 - `economy.compute_gdp(always_adjust=True)` forces GDP to balance via imports/exports (S6).
 - pandas 3 (Copy-on-Write): chained assignment `df["a"][mask] = x` silently does
   nothing; use `df.loc[mask, "a"] = x`.

@@ -252,9 +252,10 @@ class DataConfiguration(BaseModel):
     # Initial wages from the SEA labour share of value added (S2). When False, wages are value added minus
     # investment, which leaves firms no operating profit.
     labour_share_from_sea: bool = True
-    # Social benefits from SOCX public spending in cash only (F6). When False, SOCX total public social spending,
-    # whose in-kind part (health, care) is also government consumption, so it is counted twice.
-    cash_social_benefits: bool = False
+    # Social benefits from SOCX public spending in cash only (F6, MD17; needs oecd_econ/SOCX_AGG_BY_TYPE.csv). When
+    # False, SOCX total public social spending, whose in-kind part (health, care) is also government consumption, so
+    # it is counted twice.
+    cash_social_benefits: bool = True
 
     def model_post_init(self, __context: Any) -> None:
         """
