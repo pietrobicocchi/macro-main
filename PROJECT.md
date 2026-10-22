@@ -594,6 +594,7 @@ commit messages (e.g. `G1:`).
 | S28 | Firm-loan ledger residual (3.5% of GDP, seed 7, one quarter): a firm's written-off loans stayed in its own debt records until the next quarter (households' were fixed in S20) | Bug | ours | seed 7, t = 7 | done: insolvency clears the firm's debt records, with test | — |
 | S29 | Unexplained money grew with the policy rate: 15.6% of GDP with the Taylor rule on the engine (exp012, old defaults) | Question | ours | the interest the central bank pays on positive bank reserves (money it creates) was missing from the money identity; with it, the engine + Taylor run's worst unexplained money is 2.8% and the default run's halves (1.3% → 0.7% at q11); the rest grows with reserves, probably deposit interest booked differently by banks and depositors; bank reserves reach 3–5× quarterly GDP in engine runs | partial: identity fixed, with test; rest open | P2 |
 | S30 | The capital stock's value was recorded with the intermediate-input stock's function each quarter (about a ninth of the true value); banks use it as collateral for firm loans | Bug | upstream | I1 (mechanism dashboard); `country.py` | fixed `1af901a`, regression test; exp019's "debt above capital value" is suspect; report upstream (E9) | — |
+| S31 | Household income is 80% of GDP at t = 1 (net wages 30%, social transfers 29%, income on other financial assets 19%, rents 1%; France: disposable income ≈ 67%, cash benefits ≈ 19%) and households consume 42% of GDP, a saving rate of about 40% (France ≈ 15%): two inflated income sources (F6, S9) offset by a high saving rate. Savings accumulate as other financial assets, whose unpaid income (S9) then grows | Spec | ours | I1: household income statement at t = 1 | open: fix F6 and S9 together, then recheck the saving rate; changes the initial state: ask first | P1 |
 
 ### M. Markets and trade
 
@@ -698,6 +699,19 @@ pass through the model), then I2, I4, I5.
 
 ## Claims → evidence
 
-| Claim in the paper | Figure / table | Experiment |
-| --- | --- | --- |
-| Beats AR(1) and IIASA on forecasting RMSE | `table:forecasting_gdp` | not yet reproduced |
+Every paper claim and revision-plan entry (`../paper-macro-model/docs/revision_plan.md`) that waits on a result,
+with what this repository has for it. France on sample data is a diagnostic, never the paper's evidence (D1).
+
+| Claim or entry (referee IDs) | Paper location | Evidence here | Status |
+| --- | --- | --- | --- |
+| Beats AR(1) and IIASA on forecasting RMSE | `table:forecasting_gdp` | `make baseline`: France, sample data, uncalibrated: GDP 0.94, CPI 0.86, others 1.04–1.42 | needs D1, calibration (phase 5), 38 countries |
+| E1 growth mechanism (R1.2) | §4, App. A.2 | MD10–MD15: spare capacity, partial-adjustment investment, labour-augmenting productivity (+0.25%/q, exogenous) | E1's planned text ("no exogenous TFP, growth endogenous") is no longer true: rewrite once MD12 is settled |
+| E8 live vs dormant mechanisms (R1.1, R2.1, R2.7) | §3 table | "Model map" above: every rule in use and its status; dormant: φ^FM = φ^FK = 0, h^U = h^E = 0, φ^WN = 0, inventory target off | ready; separations and productivity growth are now live (MD11, MD12) |
+| E_ATTR ablation ladder (R1.1, R2.1) | §5 table | exp023 on France (`settings.LADDER`, `ratios.png`) | method ready; 38 countries need D1; Poledna-like bottom rung to define |
+| E_AR1 simplified expectations, interactions off (R2.7) | §4, §5 | not built: needs a rung where realised paths equal the expectation paths | open |
+| E22 uncertainty bands (R2.4) | Figure 2, Table 5 | `plotting.forecast_fan`: median and 10–90% across seeds | method ready; note that only market matching and price noise are random now (MD15) |
+| E23 VAR peer benchmark (R1.9, R2.2) | Table 5 | not built: `scoring.py` has AR(1) only | open: add VAR(p) on the five aggregates |
+| E24 recovery period (R2.6) | §5 | needs other start dates (D1) | blocked |
+| E25 country vs area (R2.5) | future work | — | optional |
+| E28 simulation-validity diagnostics (R2.O.4) | appendix | mechanism dashboard (`inside_k.png`), accounting checks, single runs in `series_k.csv` | ready |
+| E29 unemployment and GDP growth in Table 5 (R2.O.5) | Table 5 | scorecard has unemployment RMSE and growth | ready |
