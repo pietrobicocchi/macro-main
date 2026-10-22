@@ -9,9 +9,9 @@ class Consumption(BaseModel):
         "AutoregressiveGrowthGovernmentConsumptionSetter",
         "ConstantGrowthGovernmentConsumptionSetter",
         "ExogenousGovernmentConsumptionSetter",
-    ] = "AutoregressiveGovernmentConsumptionSetter"
+    ] = "AutoregressiveGrowthGovernmentConsumptionSetter"  # MD16: AR(1) on growth rates of CPI-deflated spending
     path_name: str = "consumption"
-    parameters: dict = {"consistency": 1.0}
+    parameters: dict = {"consistency": 1.0, "deflator": "cpi"}
 
 
 class GovernmentFunctions(BaseModel):

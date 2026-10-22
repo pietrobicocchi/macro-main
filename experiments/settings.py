@@ -279,3 +279,8 @@ def government_consumption_plan(c: CountryConfiguration, growth_rates: bool = Tr
         else "AutoregressiveGovernmentConsumptionSetter"
     )
     c.government_entities.functions.consumption.parameters = {"consistency": 1.0, "deflator": deflator}
+
+
+def pre_md16_government_consumption(c: CountryConfiguration) -> None:
+    """The default before MD16 (2026-10-22): the government plans an AR(1) on log levels of PPI-deflated spending."""
+    government_consumption_plan(c, growth_rates=False, deflator="ppi")

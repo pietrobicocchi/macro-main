@@ -85,6 +85,7 @@ looking at the result. This is the raw material for the rewritten model section.
 | MD13 | Firms' expected growth falls when unemployment is below its initial level: AR(1) forecast − 0.2 × (initial − current unemployment rate) (`SlackAwareGrowthForecastingAutoReg`, `settings.growth_forecast_slack_aware`) | Firms extrapolating recent growth alone expect a boom to go on whatever the labour market; by Okun's law output is about twice as far above potential as unemployment is below normal, and firms expecting a tenth of that gap to close each quarter expect 0.2 × the unemployment gap less growth | forecast from pre-2014 data only (`DataOnlyGrowthForecastingAutoReg`, no lookahead) | exp014: unemployment 6.4% after five years (engine alone 2.4%); with cost pass-through and yearly wage catch-up 7.7% at q12 and 6.9% at q20, growth 0.4%/q | default since MD15; describe expectations |
 | MD14 | Prices pass on half of unit-cost growth in place of half of expected inflation (`price_setting_speed_gf` 0.5, `_cp` 0.5); nominal wages close a quarter of the gap to the CPI each quarter (`cpi_indexation_speed` 0.25); no consumption floor (`minimum_consumption_fraction` 0) | Firms set prices from costs as well as expectations (the paper's equation has a cost term); wages are renegotiated about once a year, not every quarter; the floor counted every adult as unemployed, exceeded the income of 40% of households and was not in the initial state (S26) | each part alone (exp013, exp016); old rules selectable (`settings.pre_md14_prices_wages_consumption`) | exp015, exp016 (10 seeds): HH cons. 2.85 → 1.52, invest. 1.20 → 1.13, CPI 1.84 → 1.20; GDP 1.14 → 1.26, gov. cons. 2.05 → 2.26; unemployment 10.3% → 10.9–11.2% | **default since 2026-10-21**; describe prices, wages, consumption |
 | MD15 | The growth engine is the default: firms start with spare capacity (utilisation 0.85, data and simulation), expected demand grows with the growth forecast, investment closes λ = 0.10 of the gap to desired capital per quarter on smoothed demand (MD10), search frictions with μ calibrated at the first quarter so the initial unemployment rate is a steady state (MD11), labour productivity +0.25%/q (MD12), the slack-aware growth forecast (MD13); and forecasts carry no random draw (`assume_zero_noise=True`, P3) | Firms do not run at full capacity (French manufacturing utilisation was about 81% in 2014); a quarterly adjustment of 0.10 (about a third of the capital gap a year) is in the range of estimated adjustment speeds, where 0.25 (two thirds a year) is fast; expectations are forecasts, and survey expectations are much smoother than outcomes; government spending follows a budget, not a random path. Without the draw the accelerator no longer turns forecast noise into investment swings | keep the draw (the paper); λ 0.25; old defaults selectable (`settings.pre_md15_no_growth_engine`, with `load_data(utilisation_rate=1.0)`) | exp020, `make baseline` (10 seeds, against volumes): GDP 1.50 → **0.99**, HH cons. 2.32 → 1.08, gov. cons. 6.70 → 1.90, invest. 1.11 → 1.09, CPI 1.09 → **0.86**; growth −0.07 → +0.19%/q (data 0.28%); unemployment q12 10.7% → 10.0% (data 9.4%) | **default since 2026-10-21**; describe the growth engine and expectations |
+| MD16 | The government plans real consumption from an AR(1) on the growth rates of its past spending deflated by the CPI (`AutoregressiveGrowthGovernmentConsumptionSetter`, `deflator="cpi"`), in place of an AR(1) on log levels deflated by the PPI | Budgets extend the recent growth of spending; an AR(1) on log levels mean-reverts, so planned growth fades to zero; the CPI is closer to the price of what governments buy than the PPI, which fell with oil in 2014–16 | follow the economy's growth forecast; levels deflated by CPI (1.67); growth rates deflated by PPI (1.63); old rule selectable (`settings.pre_md16_government_consumption`) | exp021; `make baseline` (10 seeds): gov. cons. 1.90 → 1.42, GDP 0.99 → **0.94**, HH cons. 1.08 → 1.04, invest. 1.09 → 1.13; growth 0.28%/q (data 0.28%); unemployment q12 9.4% (data 9.4%) | **default since 2026-10-22**; describe government spending |
 
 ## Baselines
 
@@ -144,6 +145,7 @@ scored against PPI- or CPI-deflated data.
 | + income-weighted average saving rate (S26) | **1.18** | **1.38** | 2.20 | 1.14 | **1.09** | −0.07% | 10.7% |
 | R4: same model, scored against chain-linked volumes | 1.50 | 2.32 | 6.70 | 1.11 | 1.09 | −0.07% | 10.7% |
 | + MD15 growth engine, forecasts without a random draw | **0.99** | **1.08** | **1.90** | **1.09** | **0.86** | +0.19% | 10.0% |
+| + MD16 government spending planned on growth rates of CPI-deflated spending | **0.94** | **1.04** | **1.42** | 1.13 | 0.86 | +0.28% | 9.4% |
 
 ## What we have learned
 
@@ -271,16 +273,16 @@ Paper settings added cumulatively to the defaults as they were with 5% price noi
 - **Financing limits (G9)** cause a recession with today's bank lending limits (firm
   debt/equity 0.03; paper 1.0).
 
-### Current state of `main` (MD15)
+### Current state of `main` (MD16)
 
 Default settings, 10 seeds, 12 quarters, France 2014, real aggregates against chain-linked volumes:
-- **Scorecard** (`sim / AR(1)`): GDP **0.99**, HH cons. 1.08, gov. cons. 1.90, investment 1.09, CPI **0.86**.
-  GDP and CPI beat AR(1) for the first time; household consumption and investment are close. Nothing is
-  calibrated yet, and the firm and household data are spoofed (D1).
-- **Sanity gate passed**: growth +0.19%/q (data +0.28%), +0.23%/q over 20 quarters (data +0.39%);
-  unemployment 10.0% after 12 quarters and 9.4% after 20 (data 9.4%, 8.4%); no explosion.
-- **Government consumption** (1.90) is the worst ratio: its path is the AR(1) forecast of its own history,
-  0.10%/q against 0.34%/q in the data.
+- **Scorecard** (`sim / AR(1)`): GDP **0.94**, HH cons. 1.04, gov. cons. 1.42, investment 1.13, CPI **0.86**.
+  GDP and CPI beat AR(1); household consumption and investment are close; the paper reports 0.40–0.75.
+  Nothing is calibrated yet, and the firm and household data are spoofed (D1).
+- **Sanity gate passed**: growth +0.28%/q (data +0.28%); unemployment 9.4% after 12 quarters (data 9.4%)
+  and 8.1% after 20 in exp021 (data 8.4%); no explosion.
+- **Government consumption** (1.42) is the worst ratio: the plan is smooth, but realised spending is the
+  plan at expected industry prices, scored as nominal over the CPI.
 - **Accounts**: every loan and deposit ledger agrees exactly; unexplained money at most 0.7% of GDP; the
   by-design unbacked flows (S9, S10, S13) remain.
 - Runs are almost the same across seeds (the remaining randomness is price noise and labour-market flows):
@@ -477,13 +479,21 @@ On exp011's engine (frictions, productivity +0.25%/q), with two forecasts of gro
 
 ### Next step
 
-1. **Decision (needs approval): make the growth-rate / CPI spending plan the default** (exp021).
-2. **Robustness of MD15**: 20 quarters and many firms on the new defaults; sensitivity to λ, the separation
-   rate, the productivity growth rate and the slack sensitivity, before calibration (phase 5).
-3. **Firms' growth expectations** still learn from the PPI-deflated data history (R4); switch them to the
-   volume series in the data pipeline (changes the initial state: ask first).
-4. **S29 rest**; MD6 (dividends); G9 once real firm balance sheets are available (D1); interest rates
-   in spending decisions (G17).
+Roadmap phases 1 (accounts) and 2 (growth engine) are done, and phase 3 in part (cost pass-through, forecast
+noise decided). Every MD15–MD16 value was chosen while looking at the 2014–16 scores, so the ratios below 1 are
+in-sample until a held-out test (phase 5).
+1. **Robustness of the defaults**: 20 quarters and many firms; one-at-a-time sensitivity to λ, the separation
+   rate, productivity growth, the slack sensitivity, spare capacity and the government deflator. Shows
+   whether 0.94 / 0.86 is a plateau or a knife edge.
+2. **Ablation ladder (phase 6, the Question's second half)**: from a Poledna-like model to today's defaults,
+   one decision at a time (MD1–MD16 are switches), scoring each rung.
+3. **Phase 3 rest**: a Taylor rule by default (P4; constant policy rate now) and inflation that responds to
+   slack (P2).
+4. **Data (D1), blocking phase 5**: the full raw data for 2010–2017 and the real HFCS / Compustat; then
+   calibrate on 2010–2013 (`macrocalib`, untested: R5) and score on held-out start dates and countries.
+   Firms' growth expectations should then learn from volumes (R4; changes the initial state).
+5. **Phase 4 and the rest**: housing, consumer credit, taxes and benefits (F1); S29; MD6 dividends; G9 and
+   G17 (interest rates in spending).
 
 Every known problem, fixed or open, is in the Issue register below.
 
@@ -605,7 +615,7 @@ commit messages (e.g. `G1:`).
 | F2 | Corporate equity not wired between firms and households (profits not redistributed) | Gap | CB7 | Andrea's module; relates to S2 | open | P2 |
 | F3 | Government debt, bond issuance, QE | Gap | CB7 | Tom's UK prototype | open | P3 |
 | F4 | Fiscal rules | Gap | CB7 | — | open | P3 |
-| F5 | The government's spending plan is an AR(1) on log levels of PPI-deflated spending, so planned growth fades (0.10%/q against 0.34%/q) | Spec | ours | exp021: growth rates / CPI takes gov. cons. 1.90 → 1.42 | fix built (option): `AutoregressiveGrowthGovernmentConsumptionSetter`, `deflator="cpi"`; default pending | P1 |
+| F5 | The government's spending plan is an AR(1) on log levels of PPI-deflated spending, so planned growth fades (0.10%/q against 0.34%/q) | Spec | ours | exp021: growth rates / CPI takes gov. cons. 1.90 → 1.42 | fixed: `AutoregressiveGrowthGovernmentConsumptionSetter`, `deflator="cpi"`, default (MD16) | — |
 
 ### E. Engineering and workflow
 
