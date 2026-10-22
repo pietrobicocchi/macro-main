@@ -66,6 +66,11 @@ class TestEuroStatReader:
         assert income == pytest.approx(82630e6, abs=1e6)
         assert readers.eurostat.household_property_income_excluding_interest("USA", 2014) is None
 
+    def test__corporate_tax_receipts(self, readers):
+        # France 2014: taxes on the income or profits of corporations, 55,310 million euros (F7)
+        assert readers.eurostat.corporate_tax_receipts("FRA", 2014) == pytest.approx(55310e6, abs=1e6)
+        assert readers.eurostat.corporate_tax_receipts("USA", 2014) is None
+
     def test__firm_risk_premium(self, readers):
         assert readers.eurostat.firm_risk_premium("FRA", 2014) == pytest.approx(0.00570, abs=0.001)
 

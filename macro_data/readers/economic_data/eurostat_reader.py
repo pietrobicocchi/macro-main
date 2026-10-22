@@ -126,6 +126,8 @@ class EuroStatReader:
         self.proxy_country = proxy_country
         self.total_output = total_output
 
+        self.path = Path(path)
+
         # Load data files
         self.files_with_codes = self.get_files_with_codes()
         self.data = {}
@@ -699,6 +701,21 @@ class EuroStatReader:
                 return None
             values[item] = float(row["OBS_VALUE"].values[0])
         return (values["D4"] - values["D41"]) * 1e6
+
+    def corporate_tax_receipts(self, country: Country | str, year: int) -> Optional[float]:
+        """General government's yearly receipts of taxes on the income or profits of corporations (gov_10a_taxag,
+        D51B_C2) in LCU; None without the file (optional) or the value (F7)."""
+        if isinstance(country, Region):
+            country = country.parent_country
+        path = self.path / "gov_10a_taxag.csv"
+        if not path.exists():
+            return None
+        df = pd.read_csv(path)
+        df["geo"] = self.country_code_switch(df["geo"])
+        row = df[(df["na_item"] == "D51B_C2") & (df["geo"] == country) & (df["TIME_PERIOD"] == int(year))]
+        if row.empty or pd.isna(row["OBS_VALUE"].values[0]):
+            return None
+        return float(row["OBS_VALUE"].values[0]) * 1e6
 
     def firm_risk_premium(self, country: Country, year: int) -> float:
         """

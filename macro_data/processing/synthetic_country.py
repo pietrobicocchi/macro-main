@@ -836,6 +836,12 @@ class SyntheticCountry:
             long_term_loans=credit_market.longterm_loans,
             short_term_loans=credit_market.shortterm_loans,
         )
+        if country_configuration.effective_profit_tax and tax_data.corporate_tax_receipts is not None:
+            # F7: the rate that raises the receipts on the profits the model starts with (quarterly)
+            base = np.maximum(0.0, firms.firm_data["Profits"]).sum() + np.maximum(0.0, banks.bank_data["Profits"]).sum()
+            tax_data.profit_tax = tax_data.corporate_tax_receipts / population.yearly_factor / base
+            firms.set_corporate_taxes_paid(tau_firm=tax_data.profit_tax)
+            banks.set_corporate_taxes_paid(tau_bank=tax_data.profit_tax)
         central_government.update_fields(
             synthetic_banks=banks,
             synthetic_population=population,

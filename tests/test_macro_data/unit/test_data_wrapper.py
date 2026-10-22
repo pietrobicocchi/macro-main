@@ -45,6 +45,18 @@ class TestCreator:
 
         assert new_creator.synthetic_countries.keys() == {"FRA"}
 
+        # Household stocks do not depend on firm settings: a reset must leave them alone (S3: it multiplied
+        # deposits and loans by the scale again, and the bank's household deposits with them)
+        unchanged = [
+            "Wealth in Deposits",
+            "Outstanding Balance of HMR Mortgages",
+            "Outstanding Balance of other Non-Mortgage Loans",
+            "Income from Financial Assets",
+        ]
+        households = new_creator.synthetic_countries["FRA"].population.household_data
+        before = {column: households[column].sum() for column in unchanged}
+        bank_deposits_before = new_creator.synthetic_countries["FRA"].banks.bank_data["Deposits from Households"].sum()
+
         new_creator.synthetic_countries["FRA"].reset_firm_function_dependent(
             capital_inputs_utilisation_rate=0.1,
             initial_inventory_to_input_fraction=0.1,
@@ -52,6 +64,12 @@ class TestCreator:
             zero_initial_debt=False,
             zero_initial_deposits=False,
         )
+
+        households = new_creator.synthetic_countries["FRA"].population.household_data
+        for column in unchanged:
+            assert households[column].sum() == pytest.approx(before[column], rel=1e-9), column
+        bank_deposits = new_creator.synthetic_countries["FRA"].banks.bank_data["Deposits from Households"].sum()
+        assert bank_deposits == pytest.approx(bank_deposits_before, rel=1e-9)
 
         assert new_creator.emission_factors["coal"] > 0
         assert new_creator.emission_factors["oil"] > 0

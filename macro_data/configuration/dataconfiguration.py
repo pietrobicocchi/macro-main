@@ -183,6 +183,9 @@ class CountryDataConfiguration(BaseModel):
     # S9: calibrate the return on households' other financial assets so their income matches national accounts
     # property income net of interest (Eurostat D4 - D41, households) instead of the survey's own ratio
     financial_income_from_national_accounts: bool = False
+    # F7: replace the statutory profit tax with the effective rate that raises the national accounts' corporate tax
+    # receipts (gov_10a_taxag D51B_C2) on the model's own initial profits of firms and banks
+    effective_profit_tax: bool = False
 
 
 class ROWDataConfiguration(BaseModel):

@@ -587,6 +587,8 @@ def government_no_growth(c: CountryConfiguration) -> None:
 
 # Data built with households' financial-income return from national accounts (S9), not the survey
 NATIONAL_ACCOUNTS_RETURN = {"financial_income_from_national_accounts": True}
+# Data built with the effective profit tax (F7): corporate tax receipts over the model's initial profits
+EFFECTIVE_PROFIT_TAX = {"effective_profit_tax": True}
 
 
 def paper_bank_limits(c: CountryConfiguration) -> None:

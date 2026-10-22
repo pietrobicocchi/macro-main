@@ -246,11 +246,13 @@ def default_data_configuration(
             raise ValueError("If using the disaggregated reader for Canada, only CAN can be in the list of countries.")
 
     country_configurations = create_country_configurations(countries, scale, proxy_country_dict)
+    # a per-country setting: DataConfiguration has no such field, and silently dropped it when passed there (G5)
+    for country_configuration in country_configurations.values():
+        country_configuration.single_firm_per_industry = single_firm_per_industry
     return DataConfiguration(
         year=year,
         country_configs=country_configurations,
         aggregate_industries=aggregate_industries,
-        single_firm_per_industry=single_firm_per_industry,
         seed=seed,
         can_disaggregation=use_disagg_can_2014_reader,
     )

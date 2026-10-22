@@ -385,6 +385,19 @@ class SyntheticHFCSPopulation(SyntheticPopulation):
         self.set_household_income_from_financial_assets()
         self.set_household_income()
 
+    def _scaled_columns(self) -> set[str]:
+        if not hasattr(self, "_scaled"):
+            self._scaled = set()
+        return self._scaled
+
+    def _scale_once(self, column: str) -> None:
+        """Scale a survey column to the country once: the wealth and income steps run again when the initial state
+        is re-initialised (Simulation.from_datawrapper), and scaling in place each time multiplied household
+        deposits and loans by the scale again (S3)."""
+        if column not in self._scaled_columns():
+            self.household_data.loc[:, column] *= self.scale
+            self._scaled.add(column)
+
     def set_household_other_real_assets_wealth(self) -> None:
         self.household_data.loc[
             self.household_data["Value of Household Vehicles"].isna(),
@@ -417,7 +430,7 @@ class SyntheticHFCSPopulation(SyntheticPopulation):
         self.household_data.loc[self.household_data["Wealth in Deposits"].isna(), "Wealth in Deposits"] = 0.0
         self.household_data.loc[:, "Outstanding Balance of Credit Line"] = 0.0
         self.household_data.loc[:, "Outstanding Balance of Credit Card Debt"] = 0.0
-        self.household_data.loc[:, "Wealth in Deposits"] *= self.scale
+        self._scale_once("Wealth in Deposits")
 
     def set_household_other_financial_assets(self) -> None:
         self.household_data.loc[self.household_data["Mutual Funds"].isna(), "Mutual Funds"] = 0.0
@@ -466,8 +479,8 @@ class SyntheticHFCSPopulation(SyntheticPopulation):
             self.household_data["Outstanding Balance of Mortgages on other Properties"].isna(),
             "Outstanding Balance of Mortgages on other Properties",
         ] = 0.0
-        self.household_data.loc[:, "Outstanding Balance of HMR Mortgages"] *= self.scale
-        self.household_data.loc[:, "Outstanding Balance of Mortgages on other Properties"] *= self.scale
+        self._scale_once("Outstanding Balance of HMR Mortgages")
+        self._scale_once("Outstanding Balance of Mortgages on other Properties")
         if cap_at_property_value:
             # Property values are already scaled when the housing data is set
             for mortgage, value in [
@@ -483,7 +496,7 @@ class SyntheticHFCSPopulation(SyntheticPopulation):
             self.household_data["Outstanding Balance of other Non-Mortgage Loans"].isna(),
             "Outstanding Balance of other Non-Mortgage Loans",
         ] = 0.0
-        self.household_data.loc[:, "Outstanding Balance of other Non-Mortgage Loans"] *= self.scale
+        self._scale_once("Outstanding Balance of other Non-Mortgage Loans")
 
     def set_household_debt(self) -> None:
         self.household_data["Debt"] = (
@@ -617,9 +630,10 @@ class SyntheticHFCSPopulation(SyntheticPopulation):
             # S9: the return that pays households the national accounts' property income (quarterly) on their stock
             wealth = self.household_data["Wealth in Other Financial Assets"].values.astype(float)
             self.coefficient_fa_income = self.financial_income_target / self.yearly_factor / np.nansum(wealth)
-        else:
+        elif "Income from Financial Assets" not in self._scaled_columns():
+            # the survey's ratio, from its own income once (later calls keep it: the column then holds model income)
             fa_mask = np.logical_not(np.isnan(self.household_data["Income from Financial Assets"].values.astype(float)))
-            self.household_data["Income from Financial Assets"] *= self.scale
+            self._scale_once("Income from Financial Assets")
             self.coefficient_fa_income = (
                 self.household_data["Income from Financial Assets"].values.astype(float)[fa_mask].sum()
                 / self.yearly_factor

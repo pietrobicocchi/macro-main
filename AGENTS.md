@@ -109,10 +109,10 @@ for every bug fixed.
 
 ## Known traps
 
-- **Firm settings that change initial stocks** (utilisation rates, inventory target)
-  must be built into the data with matching values (`scoring.load_data(...)`).
-  Otherwise `Simulation.from_datawrapper` re-runs the financial initialisation,
-  which double-counts bank deposits and diverges (S3).
+- **Firm settings that change initial stocks** (utilisation rates, inventory target): build them
+  into the data with matching values (`scoring.load_data(...)`). Otherwise `Simulation.from_datawrapper`
+  re-runs the initialisation; since S3 was fixed that gives the same stocks, but it re-draws the housing
+  match, so the run is not the one the data was built for.
 - Realised inflation equals the AR(1) price forecast (P2); forecast noise is off by
   default since MD15 (`assume_zero_noise=True`).
 - Firms start with spare capacity by default (utilisation 0.85, MD15), in both the data and the
