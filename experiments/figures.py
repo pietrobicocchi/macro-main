@@ -38,6 +38,7 @@ FIGURES = {
     "baseline_inside": _baseline_inside,
     "ablation_ladder": _summary_heatmap("exp023_ablation_ladder", "Ablation ladder, France: sim / AR(1) RMSE"),
     "robustness": _summary_heatmap("exp022_robustness", "Robustness of the defaults: sim / AR(1) RMSE"),
+    "leave_one_out": _summary_heatmap("exp025_leave_one_out", "Today's defaults without one element: sim / AR(1) RMSE"),
 }
 
 
