@@ -230,6 +230,35 @@ Default settings, 10 seeds, 12 quarters, France 2014, real aggregates against ch
 - Runs are almost the same across seeds (the remaining randomness is price noise and labour-market flows):
   about 1 s per 12 quarters with 18 firms, about 10 s with 408, mostly in the housing market (E12).
 
+### Audit of the default model (I1, 2026-10-22)
+
+A walk through one quarter against the paper (model map above) and against France's 2014 national and government
+accounts, at t = 1 (one seed; % of GDP; France: Eurostat `gov_10a_main`, `namq_10_gdp`):
+
+| | Model | France 2014 | Register |
+| --- | --- | --- | --- |
+| Government revenue | 41.5 | 53.8 | F7 |
+| Social benefits (cash) | 31.0 | 19.8 | F6 |
+| Government consumption | 27.6 | 24.4 | F6 |
+| Government deficit | 18.4 | 4.6 | F6, F7 |
+| Household income (disposable) | 79.7 | ≈ 67 | S31 |
+| Household consumption | 41.8 (46.5 incl. VAT) | ≈ 53 | S31 |
+| Household saving rate | ≈ 40% of income | ≈ 15% | S31 |
+| Capital stock / annual GDP | 2.2 | ≈ 2–3 (business capital) | — |
+| Depreciation | 1.4% of capital a quarter | ≈ 1.5% | — |
+
+- **Bugs:** the capital stock's value used the intermediate-input stock's function (S30, fixed): firm collateral
+  was a ninth of its true value, so exp019's conclusion on financing limits is suspect.
+- **Accounts that matter for dynamics:** benefits counted twice (F6; option `cash_social_benefits` built),
+  revenue rates far from effective rates (F7), unpaid financial income (S9), and so a household sector that saves
+  40% of an inflated income (S31). Four industries start loss-making on the sample data and one firm defaults every
+  8 quarters (S32).
+- **Departures from the paper that are upstream defaults:** one saving rate and equal transfers for all households
+  (M13), constant rents (M14), rest-of-the-world trade from noisy AR(1) forecasts (M15), a constant policy rate
+  (P4), optimal-assignment housing market (E12). The paper's expectations are deterministic: dropping the noise
+  (MD15) follows the paper (P3).
+- **Scoring data:** CPI is not seasonally adjusted and unemployment is annual (R7).
+
 ### How the default model came to be (exp003–exp021)
 
 One paragraph per mechanism; each experiment's numbers are in the Experiments table and in
