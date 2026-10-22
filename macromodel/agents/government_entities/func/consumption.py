@@ -223,19 +223,10 @@ class AutoregressiveGovernmentConsumptionSetter(GovernmentConsumptionSetter):
 
 
 class ConstantGrowthGovernmentConsumptionSetter(GovernmentConsumptionSetter):
-    """Constant growth consumption target determination.
+    """Real government consumption grows at a constant rate: `default_growth`, or the mean growth of its history.
 
-    This class implements consumption targeting based on:
-    - Fixed growth rate assumptions
-    - Price level adjustments
-    - Historical growth estimation
-    - Industry-specific allocation
-
-    The approach provides:
-    - Simple growth-based targets
-    - Price-adjusted spending
-    - Stable consumption paths
-    - Industry-level detail
+    The plan is real (the latest real consumption times (1 + g) per quarter) and bought at expected prices, split
+    across industries in proportion to last quarter's desired consumption.
     """
 
     def compute_target_consumption(
@@ -299,13 +290,20 @@ class ConstantGrowthGovernmentConsumptionSetter(GovernmentConsumptionSetter):
         else:
             growth_factor = 1 + self.default_growth
 
+        # Regression: the target was last quarter's nominal target times the price ratio and expected inflation, which
+        # counted the price level twice (real spending grew 1.4%/q at zero growth in a run)
+        if self.fixed_total_government_consumption is None:
+            self.fixed_total_government_consumption = (
+                historic_total_consumption[-1]
+                if historic_total_consumption is not None
+                else previous_desired_government_consumption.sum()
+            )
+            self._plan_start = current_time - 1
+        consumption = self.fixed_total_government_consumption * growth_factor ** (current_time - self._plan_start)
+        consumption_weights = _normalise_government_consumption_weights(previous_desired_government_consumption)
         return np.maximum(
             0.0,
-            (1 + expected_inflation)
-            * current_good_prices
-            / initial_good_prices
-            * growth_factor
-            * previous_desired_government_consumption,
+            (1 + expected_inflation) * current_good_prices / initial_good_prices * consumption * consumption_weights,
         )
 
 

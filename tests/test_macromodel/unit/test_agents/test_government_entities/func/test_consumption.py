@@ -1,7 +1,10 @@
 import numpy as np
 import pytest
 
-from macromodel.agents.government_entities.func.consumption import AutoregressiveGrowthGovernmentConsumptionSetter
+from macromodel.agents.government_entities.func.consumption import (
+    AutoregressiveGrowthGovernmentConsumptionSetter,
+    ConstantGrowthGovernmentConsumptionSetter,
+)
 from macromodel.forecaster.forecaster import ManualAutoregForecaster
 
 
@@ -50,3 +53,26 @@ def test_growth_plan_is_made_again_when_it_runs_out(history):
     next_growth = ManualAutoregForecaster().forecast(growth, t=1, assume_zero_noise=True)[0]
     assert np.isclose(planned, longer_history[-1] * (1 + next_growth))
     assert setter.deflator == "ppi"
+
+
+def test_constant_growth_plan_counts_the_price_level_once():
+    """Regression: the nominal target compounded last quarter's prices with this quarter's, so real spending grew at
+    zero growth whenever prices rose."""
+    setter = ConstantGrowthGovernmentConsumptionSetter(consistency=1.0, default_growth=0.0)
+    previous = np.array([50.0, 50.0])
+    for t in range(1, 5):
+        prices = np.full(2, 1.01**t)
+        nominal = setter.compute_target_consumption(
+            previous_desired_government_consumption=previous,
+            model=None,
+            historic_total_consumption=None,
+            initial_good_prices=np.ones(2),
+            current_good_prices=prices,
+            expected_growth=0.0,
+            expected_inflation=0.01,
+            current_time=t,
+            exogenous_total_consumption=None,
+            forecasting_window=60,
+        )
+        assert np.isclose(nominal.sum() / (1.01 * prices[0]), 100.0)
+        previous = nominal
