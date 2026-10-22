@@ -86,7 +86,7 @@ No calibrated values are loaded anywhere: `macrocalib` has not been run, and of 
 posterior (Table `table:prior`) only the χ caps are used.
 - **Estimated from data at initialisation:** input–output coefficients, initial stocks
   and balance sheets, tax rates, the Taylor-rule coefficients (ARDL on the policy-rate
-  history; a TODO says `xi_pi` is wrong), and each quarter the AR(1) growth and inflation
+  history), and each quarter the AR(1) growth and inflation
   forecasts.
 - **Hand-set defaults** in `macromodel/configurations/*.py`: every behavioural parameter
   (price setting, target production, input constraints, utilisation rates, bank limits,
@@ -434,6 +434,7 @@ commit messages (e.g. `G1:`).
 | P4 | Taylor rule inert (zero by quarter 3), constant rate by default, and a TODO says `xi_pi` is estimated wrongly | Bug | ours | exp001; `default_synthetic_central_bank.py:187` | fixed: default since MD18. Not a bug: the rule gets quarterly PPI inflation and gross-output growth, the series it is estimated on, and ξ_π = β/(1 − ρ) matches the rule's (1 − ρ) ξ_π form, so the TODO is stale. On France (ρ 0.93, ξ_π 1.51, ξ_γ 4.05) the rate falls from 0.33% to zero within four quarters, as the ECB's did in 2014. The zero lower bound then binds: the rule cannot respond to the economy until inflation rises | — |
 | P5 | Firms did not pass cost increases into prices (cost-push weight 0) | Spec | ours | exp007; exp012, exp013, exp015 | done: half pass-through by default (MD14) | — |
 | P6 | Cost-push inflation compared unit costs with the sector's price level, so it pulled prices down to costs (−10%/q) instead of passing on cost changes | Bug | ours | unit cost / price 0.895 at t=1; Sam's prior notes "prices cause shit to break" | done: uses unit-cost growth, with test | — |
+| P7 | `InflationForecasting.forecast_inflation` applied its upper bound with `np.maximum`, raising every forecast to the cap | Bug | upstream | code reading, 2026-10-22 | fixed, with test; latent: no caller passes bounds (`Economy` clips the forecast itself), so no run changes | — |
 
 ### S. Initial state and stock-flow consistency
 

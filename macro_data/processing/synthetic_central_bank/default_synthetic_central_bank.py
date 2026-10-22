@@ -184,7 +184,9 @@ class DefaultSyntheticCentralBank(SyntheticCentralBank):
             "smooth_policy_rate": [smooth_taylor_params["policy_rate"]],
         }
 
-        # TODO: the xi_pi factor is wrong
+        # xi_pi = beta_pi / (1 - rho) is the long-run response the rule's (1 - rho) xi_pi form expects, and the rule
+        # gets the series it is estimated on (quarterly PPI inflation, gross-output growth): the old TODO saying
+        # xi_pi is wrong was stale (P4)
 
         # Keep the legacy Poledna initialization anchored to the last observed
         # policy rate before the simulation start. This preserves a clear
