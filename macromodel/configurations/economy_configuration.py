@@ -16,8 +16,8 @@ class Growth(BaseModel):
         "SlackAwareGrowthForecastingAutoReg",
         "GrowthImplementedForecastingAutoReg",
         "ExogenousGrowthForecasting",
-    ] = "GrowthManualForecastingAutoReg"
-    parameters: dict = {"value": 0.0, "lags": 1}
+    ] = "SlackAwareGrowthForecastingAutoReg"  # MD13, default since MD15
+    parameters: dict = {"value": 0.0, "lags": 1, "slack_sensitivity": 0.2}
     path_name: str = "growth"
 
 

@@ -129,6 +129,25 @@ class TestLabourMarket:
         assert num_hired == num_separated
         assert len(firms.states["Employments"][0]) == 40
 
+    def test_uncalibrated_matching_makes_initial_unemployment_a_steady_state(self):
+        """With matching_efficiency=None the first clearing calibrates it so that, in expectation, hires replace
+        separations at the initial unemployment rate."""
+        clearer = SearchFrictionsLabourMarketClearer(
+            matching_efficiency=None,
+            matching_elasticity=0.5,
+            **{**CLEARER_PARAMETERS, "random_firing_probability": 0.05},
+        )
+        firms, households, individuals = _one_firm_market(n_employed=90, n_unemployed=10, desired_labour=90.0)
+
+        clearer.clear(firms=firms, households=households, individuals=individuals)
+
+        u, s = 0.1, 0.05
+        assert np.isclose(clearer.matching_efficiency, (s * (1 - u) / (u + s * (1 - u))) ** 0.5)
+        # In the steady state the market fills every vacancy: M(U + sE, sE) = sE
+        seekers, vacancies = 100 * u + s * 90, s * 90
+        assert np.isclose(clearer.matches(seekers, vacancies), vacancies)
+        assert SearchFrictionsLabourMarketClearer.steady_state_matching_efficiency(0.1, 0.0, 0.5) == 1.0
+
     def test_employee_lists_follow_layoffs_and_hires(self):
         """Regression: laid-off workers stayed on their old firm's list (and on two lists once rehired)."""
         clearer = SearchFrictionsLabourMarketClearer(

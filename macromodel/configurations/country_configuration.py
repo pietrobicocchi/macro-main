@@ -36,7 +36,7 @@ class CountryConfiguration(BaseModel):
 
     forecasting_window: int = 60
     assume_zero_growth: bool = False
-    assume_zero_noise: bool = False
+    assume_zero_noise: bool = True  # MD15: forecasts are expectations, without a random draw (P3)
     use_emission_multiplier: bool = False
     CH4_production_emissions_only: bool = False
 

@@ -44,7 +44,7 @@ SCORED = [*AGGREGATES, "CPI Inflation", "Unemployment Rate"]
 def load_data(
     scale: int = 10_000,
     many_firms: bool = False,
-    utilisation_rate: float = 1.0,
+    utilisation_rate: float = 0.85,
     inventory_fraction: float = 0.0,
     labour_share_from_sea: bool = True,
 ) -> DataWrapper:

@@ -44,7 +44,7 @@ class Clearing(BaseModel):
         "DefaultLabourMarketClearer",
         "PolednaLabourMarketClearer",
         "SearchFrictionsLabourMarketClearer",
-    ] = "PolednaLabourMarketClearer"
+    ] = "SearchFrictionsLabourMarketClearer"  # MD11, default since MD15
     parameters: dict[str, Any] = {
         "compare_with_normalised_inputs": True,
         "round_target_employment": True,
@@ -57,8 +57,10 @@ class Clearing(BaseModel):
         "individuals_quitting": False,
         "individuals_quitting_temperature": 1.0,
         "optimised_hiring": True,
-        "random_firing_probability": 0.0,
+        "random_firing_probability": 0.03,
         "sorted_firing": True,
+        "matching_efficiency": None,  # None: the initial unemployment rate is a steady state
+        "matching_elasticity": 0.5,
     }
     path_name: str = "clearing"
 

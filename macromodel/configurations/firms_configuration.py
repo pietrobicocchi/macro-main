@@ -107,7 +107,7 @@ class DemandEstimator(BaseModel):
     path_name: str = "demand_estimator"
     parameters: dict[str, Any] = {
         "firm_growth_adjustment_speed": 0.0,
-        "sectoral_growth_adjustment_speed": 0.0,
+        "sectoral_growth_adjustment_speed": 1.0,  # MD15: expected demand grows with the growth forecast
     }
 
 
@@ -220,9 +220,14 @@ class TargetCapitalInputs(BaseModel):
         "FinancialTargetCapitalInputsSetter",
         "BundleWeightedTargetCapitalInputsSetter",
         "PartialAdjustmentTargetCapitalInputsSetter",
-    ] = "FinancialTargetCapitalInputsSetter"
+    ] = "PartialAdjustmentTargetCapitalInputsSetter"  # MD10, default since MD15
     path_name: str = "target_capital_inputs"
-    parameters: dict[str, Any] = {"target_capital_inputs_fraction": 0.0, "credit_gap_fraction": 0.0}
+    parameters: dict[str, Any] = {
+        "capital_gap_adjustment_speed": 0.10,
+        "demand_smoothing": 0.10,
+        "target_capital_inputs_fraction": 0.0,
+        "credit_gap_fraction": 0.0,
+    }
 
 
 class TargetCredit(BaseModel):
@@ -283,7 +288,7 @@ class TargetProduction(BaseModel):
         "intermediate_inputs_target_considers_capital_inputs": 1.0,
         "capital_inputs_target_considers_labour_inputs": 0.0,
         "capital_inputs_target_considers_intermediate_inputs": 0.0,
-        "capital_inputs_target_considers_capital_inputs": 1.0,
+        "capital_inputs_target_considers_capital_inputs": 0.0,  # MD15: invest on expected demand, not capacity
     }
 
 
@@ -295,9 +300,9 @@ class ProductivityGrowth(BaseModel):
 
     name: Literal[
         "NoOpTFPGrowth", "LabourAugmentingGrowth", "SimpleTFPGrowth", "StochasticTFPGrowth", "SectoralTFPGrowth"
-    ] = "NoOpTFPGrowth"
+    ] = "LabourAugmentingGrowth"  # MD12, default since MD15
     path_name: str = "productivity_growth"
-    parameters: dict[str, Any] = {}
+    parameters: dict[str, Any] = {"labour_productivity_growth": 0.0025}
 
 
 class ProductivityInvestmentPlanner(BaseModel):
@@ -393,8 +398,9 @@ class FirmsParameters(BaseModel):
 
     capital_inputs_delay: list[int] = [0 for _ in range(18)]
     depreciation_rates: list[float] = [0.0 for _ in range(18)]
-    capital_inputs_utilisation_rate: float = Field(1.0, ge=0.0, le=1.0)
-    intermediate_inputs_utilisation_rate: float = Field(1.0, ge=0.0, le=1.0)
+    # MD15: spare capacity; must match the data configuration (S3)
+    capital_inputs_utilisation_rate: float = Field(0.85, ge=0.0, le=1.0)
+    intermediate_inputs_utilisation_rate: float = Field(0.85, ge=0.0, le=1.0)
     tfp_base_growth_rate: float = Field(0.0025, ge=0.0, le=0.1, description="Base TFP growth rate (quarterly)")
     tfp_investment_elasticity: float = Field(0.3, ge=0.0, le=1.0, description="Returns to scale for TFP investment")
 
@@ -456,8 +462,6 @@ class FirmsParameters(BaseModel):
             **{
                 "capital_inputs_delay": [0 for _ in range(n_industries)],
                 "depreciation_rates": [0.0 for _ in range(n_industries)],
-                "capital_inputs_utilisation_rate": 1.0,
-                "intermediate_inputs_utilisation_rate": 1.0,
                 "tfp_base_growth_rate": tfp_base_growth_rate,
                 "tfp_investment_elasticity": tfp_investment_elasticity,
                 # Use defaults for new productivity investment parameters
@@ -570,8 +574,19 @@ class FirmsConfiguration(BaseModel):
             raise ValueError("Bundle arbitrage cannot be enabled without defining bundles.")
 
         if len(bundles) > 0:
+            # No bundled version of the partial-adjustment investment rule (MD10) yet: keep the old rule, which
+            # replaces depreciation capped at current capacity
             functions = FirmsFunctions(
-                target_capital_inputs=TargetCapitalInputs(name="BundleWeightedTargetCapitalInputsSetter"),
+                target_capital_inputs=TargetCapitalInputs(
+                    name="BundleWeightedTargetCapitalInputsSetter",
+                    parameters={"target_capital_inputs_fraction": 0.0, "credit_gap_fraction": 0.0},
+                ),
+                target_production=TargetProduction(
+                    parameters={
+                        **TargetProduction().parameters,
+                        "capital_inputs_target_considers_capital_inputs": 1.0,
+                    }
+                ),
                 target_intermediate_inputs=TargetIntermediateInputs(
                     name="BundleWeightedTargetIntermediateInputsSetter"
                 ),

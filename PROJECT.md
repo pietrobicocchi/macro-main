@@ -60,7 +60,8 @@ posterior (Table `table:prior`) is not used.
 - **Hand-set defaults** in `macromodel/configurations/*.py`: every behavioural parameter
   (price setting, target production, input constraints, utilisation rates, bank limits,
   credit and housing markets). Changed so far: `price_setting_noise_std` 0.05 → 0.0005 (MD1);
-  price setting, wage indexation and the consumption floor (MD14).
+  price setting, wage indexation and the consumption floor (MD14); the growth engine and forecasts
+  without a random draw (MD15).
 
 ## Modelling decisions
 
@@ -78,11 +79,12 @@ looking at the result. This is the raw material for the rewritten model section.
 | MD7 | Initial mortgages are capped at the value of the property they finance (`cap_mortgages_at_property_value`, data config, default on) | A mortgage is secured on a property; the spoofed survey breaks that link | wait for real data; cap at a loan-to-value above 1 | Phase 1: underwater households 77 → 24 | none; switch off with real HFCS |
 | MD8 | Households default when they cannot pay: underwater and an overdraft above one quarter of income (`UnableToPayHouseholdInsolvencyHandler`, default) | Underwater households that keep paying do not default; the old rule defaulted at the first overdraft | old rule (still selectable); recovery of the house by the bank (not yet) | Phase 1: quarter-1 write-offs 400 → 110 bn, no bank bail-out needed | describe household default |
 | MD9 | Initial wages keep each industry's SEA labour share of value added; capital compensation stays equal to investment (steady capital stock), and the rest is profit (`labour_share_from_sea`) | Value added = wages + depreciation + profits + taxes; the old rule gave profits to workers | keep the old rule (current default) | exp005: profits 3.9% → 24.5% of GDP, wages match France, GDP and CPI scores hold or improve | default since 2026-10-21; describe the initial income split |
-| MD10 | Investment as a flexible accelerator: replacement plus a fraction λ of the gap to desired capital (initial capital/output ratio at planned output), planned on expected demand (`PartialAdjustmentTargetCapitalInputsSetter`) | Standard investment theory; closing only part of the gap avoids the paper's runaway top-up | paper's full top-up (G2) | exp006–exp008: cycles without brakes; with desired capital on smoothed demand (`demand_smoothing` 0.10) growth is steady at 0.7%/q | candidate, option until unemployment stays plausible (G12) |
-| MD11 | Search frictions in the labour market: employees separate at s = 3% per quarter, firms post vacancies for the gap to desired labour (replacements included), and hires are capped by a Cobb-Douglas matching function M = μU^0.5 V^0.5, with μ set so the initial unemployment rate (10.3%) is a steady state (`SearchFrictionsLabourMarketClearer`, `settings.search_frictions`) | Real labour markets have job-to-unemployment flows and take time to fill vacancies; without them a boom hires the whole unemployed pool within a quarter (G13). Flows are calibrated to a steady state at the initial unemployment rate, as initial stocks are | quits by wage/wealth (`individuals_quitting`); a hiring-speed cap (`hiring_speed` < 1) | exp010: unemployment holds at 10.3% under today's defaults; under the growth engine it falls to 2% (no frictions: 0%) | option; describe the labour market |
-| MD12 | Labour-augmenting technical progress: output per worker grows at an exogenous g per quarter in every industry (0.25%, about 1% a year), and real wages per worker grow with it (`LabourAugmentingGrowth`, `settings.labour_productivity_growth`) | On a balanced growth path output per worker rises and the labour share and capital-output ratio stay constant (Harrod-neutral progress); without it, output growth needs a proportional rise in employment from a fixed labour force (G14) | the TFP module (`SimpleTFPGrowth`, G15); g endogenous to investment | exp011: unemployment rises 10.3% → 14.4% on today's capacity-capped defaults; under the growth engine it stays near 2–4% because GDP growth rises instead (G16) | option; describe productivity growth |
-| MD13 | Firms' expected growth falls when unemployment is below its initial level: AR(1) forecast − 0.2 × (initial − current unemployment rate) (`SlackAwareGrowthForecastingAutoReg`, `settings.growth_forecast_slack_aware`) | Firms extrapolating recent growth alone expect a boom to go on whatever the labour market; by Okun's law output is about twice as far above potential as unemployment is below normal, and firms expecting a tenth of that gap to close each quarter expect 0.2 × the unemployment gap less growth | forecast from pre-2014 data only (`DataOnlyGrowthForecastingAutoReg`, no lookahead) | exp014: unemployment 6.4% after five years (engine alone 2.4%); with cost pass-through and yearly wage catch-up 7.7% at q12 and 6.9% at q20, growth 0.4%/q | option; describe expectations |
+| MD10 | Investment as a flexible accelerator: replacement plus a fraction λ of the gap to desired capital (initial capital/output ratio at planned output), planned on expected demand (`PartialAdjustmentTargetCapitalInputsSetter`) | Standard investment theory; closing only part of the gap avoids the paper's runaway top-up | paper's full top-up (G2) | exp006–exp008: cycles without brakes; with desired capital on smoothed demand (`demand_smoothing` 0.10) growth is steady at 0.7%/q | default since MD15 (λ 0.10); describe investment |
+| MD11 | Search frictions in the labour market: employees separate at s = 3% per quarter, firms post vacancies for the gap to desired labour (replacements included), and hires are capped by a Cobb-Douglas matching function M = μU^0.5 V^0.5, with μ set so the initial unemployment rate (10.3%) is a steady state (`SearchFrictionsLabourMarketClearer`, `settings.search_frictions`) | Real labour markets have job-to-unemployment flows and take time to fill vacancies; without them a boom hires the whole unemployed pool within a quarter (G13). Flows are calibrated to a steady state at the initial unemployment rate, as initial stocks are | quits by wage/wealth (`individuals_quitting`); a hiring-speed cap (`hiring_speed` < 1) | exp010: unemployment holds at 10.3% under today's defaults; under the growth engine it falls to 2% (no frictions: 0%) | default since MD15; describe the labour market |
+| MD12 | Labour-augmenting technical progress: output per worker grows at an exogenous g per quarter in every industry (0.25%, about 1% a year), and real wages per worker grow with it (`LabourAugmentingGrowth`, `settings.labour_productivity_growth`) | On a balanced growth path output per worker rises and the labour share and capital-output ratio stay constant (Harrod-neutral progress); without it, output growth needs a proportional rise in employment from a fixed labour force (G14) | the TFP module (`SimpleTFPGrowth`, G15); g endogenous to investment | exp011: unemployment rises 10.3% → 14.4% on today's capacity-capped defaults; under the growth engine it stays near 2–4% because GDP growth rises instead (G16) | default since MD15; describe productivity growth |
+| MD13 | Firms' expected growth falls when unemployment is below its initial level: AR(1) forecast − 0.2 × (initial − current unemployment rate) (`SlackAwareGrowthForecastingAutoReg`, `settings.growth_forecast_slack_aware`) | Firms extrapolating recent growth alone expect a boom to go on whatever the labour market; by Okun's law output is about twice as far above potential as unemployment is below normal, and firms expecting a tenth of that gap to close each quarter expect 0.2 × the unemployment gap less growth | forecast from pre-2014 data only (`DataOnlyGrowthForecastingAutoReg`, no lookahead) | exp014: unemployment 6.4% after five years (engine alone 2.4%); with cost pass-through and yearly wage catch-up 7.7% at q12 and 6.9% at q20, growth 0.4%/q | default since MD15; describe expectations |
 | MD14 | Prices pass on half of unit-cost growth in place of half of expected inflation (`price_setting_speed_gf` 0.5, `_cp` 0.5); nominal wages close a quarter of the gap to the CPI each quarter (`cpi_indexation_speed` 0.25); no consumption floor (`minimum_consumption_fraction` 0) | Firms set prices from costs as well as expectations (the paper's equation has a cost term); wages are renegotiated about once a year, not every quarter; the floor counted every adult as unemployed, exceeded the income of 40% of households and was not in the initial state (S26) | each part alone (exp013, exp016); old rules selectable (`settings.pre_md14_prices_wages_consumption`) | exp015, exp016 (10 seeds): HH cons. 2.85 → 1.52, invest. 1.20 → 1.13, CPI 1.84 → 1.20; GDP 1.14 → 1.26, gov. cons. 2.05 → 2.26; unemployment 10.3% → 10.9–11.2% | **default since 2026-10-21**; describe prices, wages, consumption |
+| MD15 | The growth engine is the default: firms start with spare capacity (utilisation 0.85, data and simulation), expected demand grows with the growth forecast, investment closes λ = 0.10 of the gap to desired capital per quarter on smoothed demand (MD10), search frictions with μ calibrated at the first quarter so the initial unemployment rate is a steady state (MD11), labour productivity +0.25%/q (MD12), the slack-aware growth forecast (MD13); and forecasts carry no random draw (`assume_zero_noise=True`, P3) | Firms do not run at full capacity (French manufacturing utilisation was about 81% in 2014); a quarterly adjustment of 0.10 (about a third of the capital gap a year) is in the range of estimated adjustment speeds, where 0.25 (two thirds a year) is fast; expectations are forecasts, and survey expectations are much smoother than outcomes; government spending follows a budget, not a random path. Without the draw the accelerator no longer turns forecast noise into investment swings | keep the draw (the paper); λ 0.25; old defaults selectable (`settings.pre_md15_no_growth_engine`, with `load_data(utilisation_rate=1.0)`) | exp020, `make baseline` (10 seeds, against volumes): GDP 1.50 → **0.99**, HH cons. 2.32 → 1.08, gov. cons. 6.70 → 1.90, invest. 1.11 → 1.09, CPI 1.09 → **0.86**; growth −0.07 → +0.19%/q (data 0.28%); unemployment q12 10.7% → 10.0% (data 9.4%) | **default since 2026-10-21**; describe the growth engine and expectations |
 
 ## Baselines
 
@@ -140,6 +142,7 @@ scored against PPI- or CPI-deflated data.
 | + MD14 cost pass-through, yearly wage catch-up, no consumption floor | 1.26 | **1.52** | 2.26 | **1.13** | 1.20 | −0.13% | 11.2% |
 | + income-weighted average saving rate (S26) | **1.18** | **1.38** | 2.20 | 1.14 | **1.09** | −0.07% | 10.7% |
 | R4: same model, scored against chain-linked volumes | 1.50 | 2.32 | 6.70 | 1.11 | 1.09 | −0.07% | 10.7% |
+| + MD15 growth engine, forecasts without a random draw | **0.99** | **1.08** | **1.90** | **1.09** | **0.86** | +0.19% | 10.0% |
 
 ## What we have learned
 
@@ -267,20 +270,20 @@ Paper settings added cumulatively to the defaults as they were with 5% price noi
 - **Financing limits (G9)** cause a recession with today's bank lending limits (firm
   debt/equity 0.03; paper 1.0).
 
-### Current state of `main` (MD14, income-weighted saving rate)
+### Current state of `main` (MD15)
 
-Default settings, 10 seeds, 12 quarters, France 2014:
-- **Scorecard** (`sim / AR(1)`): GDP 1.18, HH cons. 1.38, gov. cons. 2.20, investment 1.14, CPI 1.09.
-  Every ratio is still above 1; household consumption and CPI are the best so far.
-- **Against chain-linked volumes (R4)** the same runs score GDP 1.50, HH cons. 2.32, gov. cons. 6.70,
-  investment 1.11: the real series are smooth, so the AR(1) benchmark is harder to beat.
-- **No growth**: real GDP −0.07%/q (data +0.28% in volumes). The growth engine (MD10–MD13) is
-  built as options and tracks unemployment, but grows only 0.2%/q in its first three years (exp016).
-- **Unemployment** 10.7% after 12 quarters (data ~9.4%): inside the sanity gate's 2 pp.
-- **Accounts**: every loan and deposit ledger agrees exactly (S28 fixed); unexplained money at most 1.5%
-  of GDP; the by-design unbacked flows (S9, S10, S13) remain.
-- Runs are deterministic per seed: about 1 s per 12 quarters with 18 firms, about 10 s with 408, mostly
-  in the housing market (E12).
+Default settings, 10 seeds, 12 quarters, France 2014, real aggregates against chain-linked volumes:
+- **Scorecard** (`sim / AR(1)`): GDP **0.99**, HH cons. 1.08, gov. cons. 1.90, investment 1.09, CPI **0.86**.
+  GDP and CPI beat AR(1) for the first time; household consumption and investment are close. Nothing is
+  calibrated yet, and the firm and household data are spoofed (D1).
+- **Sanity gate passed**: growth +0.19%/q (data +0.28%), +0.23%/q over 20 quarters (data +0.39%);
+  unemployment 10.0% after 12 quarters and 9.4% after 20 (data 9.4%, 8.4%); no explosion.
+- **Government consumption** (1.90) is the worst ratio: its path is the AR(1) forecast of its own history,
+  0.10%/q against 0.34%/q in the data.
+- **Accounts**: every loan and deposit ledger agrees exactly; unexplained money at most 0.7% of GDP; the
+  by-design unbacked flows (S9, S10, S13) remain.
+- Runs are almost the same across seeds (the remaining randomness is price noise and labour-market flows):
+  about 1 s per 12 quarters with 18 firms, about 10 s with 408, mostly in the housing market (E12).
 
 ### Search frictions (exp010, 5 seeds, 20 quarters)
 
@@ -453,15 +456,15 @@ On exp011's engine (frictions, productivity +0.25%/q), with two forecasts of gro
 
 ### Next step
 
-1. **Decision (needs approval): make B the default.** It passes the sanity gate, which comes before the
-   ratios in the success metric. It changes the initial state (utilisation 0.85 must be built into the
-   data, S3) and the default data configuration.
-2. **B's investment forecast** (2.3–2.5): not lumpiness (exp018, 408 firms: 2.39) but the dynamics: the
-   early burst from spare capacity and growth of 1.1%/q (data 0.8%). Financing limits cannot help on the
-   spoofed firm balance sheets (exp019, G9). Next: release spare capacity gradually (G6), or investment
-   that responds to the real interest rate (G17).
-3. **R4:** needs the chain-linked volume series (blocked on data).
-4. **S29 rest**; MD6 (dividends); G9 once real firm balance sheets are available (D1).
+1. **Government consumption** (1.90): its spending path is an AR(1) on its own history from 2000–2013, which
+   misses the 2014–16 path; check the levels it is fitted on (nominal over PPI) and whether it should
+   follow the economy's growth forecast instead.
+2. **Robustness of MD15**: 20 quarters and many firms on the new defaults; sensitivity to λ, the separation
+   rate, the productivity growth rate and the slack sensitivity, before calibration (phase 5).
+3. **Firms' growth expectations** still learn from the PPI-deflated data history (R4); switch them to the
+   volume series in the data pipeline (changes the initial state: ask first).
+4. **S29 rest**; MD6 (dividends); G9 once real firm balance sheets are available (D1); interest rates
+   in spending decisions (G17).
 
 Every known problem, fixed or open, is in the Issue register below.
 
@@ -495,22 +498,22 @@ commit messages (e.g. `G1:`).
 
 | ID | Problem | Kind | Source | Evidence | Status | Pri |
 | --- | --- | --- | --- | --- | --- | --- |
-| G1 | No growth: firms start at full capacity and capital purchases only replace depreciation, capped at current capacity | Spec | ours | exp003, exp004, exp006 | partial: investment engine built (`PartialAdjustmentTargetCapitalInputsSetter`, MD10 candidate, option); unstable without G7–G9 | P1 |
+| G1 | No growth: firms start at full capacity and capital purchases only replace depreciation, capped at current capacity | Spec | ours | exp003, exp004, exp006 | fixed: spare capacity and the partial-adjustment investment rule are the default (MD15) | — |
 | G2 | The paper's stock top-up (φ^K = φ^M = 1) explodes like an accelerator | Spec | ours | exp004 | superseded by the partial-adjustment rule (G1), which still cycles without stabilisers | — |
-| G3 | Growth expectations off by default | Spec | ours | exp002, exp003, exp006 | open: part of the engine; no effect on its own | P1 |
+| G3 | Growth expectations off by default | Spec | ours | exp002, exp003, exp006 | fixed: on by default (MD15) | — |
 | G4 | χ caps input purchases and hiring, not target production as in the paper | Spec | ours | exp002; Sam's `target_production_considers_*` | open | P2 |
 | G5 | One firm per industry by default, and `default_data_configuration` ignores its `single_firm_per_industry` argument | Bug | ours | `configuration_utils.py:74` | workaround in `scoring.load_data` | P2 |
-| G6 | Spare capacity overshoots: unemployment falls to 5.8% (data 9.4%) | Question | ours | exp004 step 2 | open | P2 |
+| G6 | Spare capacity overshoots: unemployment falls to 5.8% (data 9.4%) | Question | ours | exp004 step 2; exp020: with the default engine (MD15) unemployment is 10.0% / 9.4% after 12 / 20 quarters (data 9.4%, 8.4%) | fixed by MD11–MD13, MD15 | — |
 | G7 | Many-firm runs crashed (per-firm prices used as per-industry) | Bug | ours | — | done `31f797a` | — |
 | G8 | Wages did not respond to labour-market tightness (existing employees' markup scale 0) | Spec | ours | exp007: a tightness markup raises wages, but with prices not passing costs through it adds demand instead of braking | partial: needs cost pass-through in prices (P5) | P1 |
 | G9 | Capital purchases are not limited by financing (`credit_gap_fraction = 0`) | Spec | ours | exp008; exp019: even with the paper's bank limits, firms receive no long-term credit: only 2 of 18 firms want it, both with debt above the value of their capital (the bank rule is a loan-to-collateral limit) and one loss-making; cutting their investment by the unmet credit causes a recession | blocked on data: firm balance sheets are spoofed (D1) | P2 |
 | G10 | Desired capital followed current planned output, booms included: multiplier–accelerator cycles | Spec | ours | exp008: sizing desired capital on smoothed planned output (`demand_smoothing` 0.10) gives steady growth of 0.7%/q (data 0.6%) with no bust | fix built (option) | — |
-| G11 | Spare capacity alone sends unemployment from 10% to 4% within five years | Question | ours | exp006 step 2 (see G6) | open: check labour demand vs planned output | P2 |
+| G11 | Spare capacity alone sends unemployment from 10% to 4% within five years | Question | ours | exp006 step 2 (see G6) | fixed with G6 | — |
 | G12 | Work effort can raise output per worker by up to 50% (`max_increase_in_work_effort = 1.5`) | Spec | ours | exp009; exp015: a cap of 1.1 changes nothing in the candidate model | low priority: effort is not what drives employment | P3 |
-| G13 | The labour market has no frictions: firms fill every vacancy within the quarter (`hiring_speed = 1`), nobody separates (`random_firing_probability = 0`), no quits; so a boom hires the whole unemployed pool and unemployment goes to 0% | Spec | ours | exp009: employment +11.5% in two years, unemployment 10.3% → 0% | partial: `SearchFrictionsLabourMarketClearer` (MD11, option); exp010: unemployment 10.3% → 2% under the engine, because of G14 | P1 |
-| G14 | Labour productivity does not grow (`NoOpTFPGrowth`), so every percent of output growth needs a percent more workers from a fixed labour force | Spec | ours | exp010; exp011: labour-augmenting progress cuts labour demand on capacity-capped defaults (unemployment 10.3% → 14.4% at 0.25%/q), but under the engine output grows faster instead (G16) | partial: `LabourAugmentingGrowth` (MD12, option) | P1 |
+| G13 | The labour market has no frictions: firms fill every vacancy within the quarter (`hiring_speed = 1`), nobody separates (`random_firing_probability = 0`), no quits; so a boom hires the whole unemployed pool and unemployment goes to 0% | Spec | ours | exp009: employment +11.5% in two years, unemployment 10.3% → 0% | fixed: `SearchFrictionsLabourMarketClearer` is the default (MD15), μ calibrated to the initial unemployment rate | — |
+| G14 | Labour productivity does not grow (`NoOpTFPGrowth`), so every percent of output growth needs a percent more workers from a fixed labour force | Spec | ours | exp010; exp011: labour-augmenting progress cuts labour demand on capacity-capped defaults (unemployment 10.3% → 14.4% at 0.25%/q), but under the engine output grows faster instead (G16) | fixed: `LabourAugmentingGrowth` is the default (MD15) | — |
 | G15 | The TFP module (`SimpleTFPGrowth`) counts all net capital investment as productivity investment, so with the investment engine TFP grows about 3%/q (multiplier 1.88 after 20 quarters at a 0.25%/q base); TFP also scales intermediate and capital capacity, not labour demand | Spec | ours | G14 probes | open: not used | P2 |
-| G16 | Demand growth is not anchored: firms scale demand by forecast growth, an AR(1) over the data history and the model's own realised growth, so extra supply (spare capacity, productivity) becomes faster growth | Spec | ours | exp011; exp014: a slack-aware forecast (MD13) holds unemployment at 5.5–6.9% after five years (2.4% without); a data-only forecast 3.6% | partial: `SlackAwareGrowthForecastingAutoReg` (MD13, option) | P1 |
+| G16 | Demand growth is not anchored: firms scale demand by forecast growth, an AR(1) over the data history and the model's own realised growth, so extra supply (spare capacity, productivity) becomes faster growth | Spec | ours | exp011; exp014: a slack-aware forecast (MD13) holds unemployment at 5.5–6.9% after five years (2.4% without); a data-only forecast 3.6% | fixed: `SlackAwareGrowthForecastingAutoReg` is the default (MD15) | — |
 | G17 | Nothing transmits higher prices or interest rates to spending: wages were paid at the latest CPI (real wages fixed), households spend a fixed share of nominal income, investment ignores interest rates and financing | Spec | ours | exp012, exp013 | partial: wages catch up gradually by default (MD14); consumption and investment channels open | P1 |
 
 ### P. Prices, expectations and monetary policy
@@ -519,7 +522,7 @@ commit messages (e.g. `G1:`).
 | --- | --- | --- | --- | --- | --- | --- |
 | P1 | 5% per-firm price noise dominated the dynamics | Spec | ours | exp002 | done `60948b7` (0.0005) | — |
 | P2 | Realised inflation equals the AR(1) forecast (self-fulfilling; referee R2.4) | Question | ours | exp003 | open | P2 |
-| P3 | Forecast noise draw roughly doubles the inflation error: keep (paper) or drop? | Question | ours | exp003: CPI ratio 1.8 → 0.95 without it; exp020: it drives the growth engine's investment volatility (quarter-1 investment −14% to +15% across seeds) and the government's spending path | decision pending | P1 |
+| P3 | Forecast noise draw roughly doubles the inflation error: keep (paper) or drop? | Question | ours | exp003: CPI ratio 1.8 → 0.95 without it; exp020: it drives the growth engine's investment volatility (quarter-1 investment −14% to +15% across seeds) and the government's spending path | decided: dropped by default (MD15); `assume_zero_noise=False` restores it | — |
 | P4 | Taylor rule inert (zero by quarter 3), constant rate by default, and a TODO says `xi_pi` is estimated wrongly | Bug | ours | exp001; `default_synthetic_central_bank.py:168` | open; see upstream #83 | P2 |
 | P5 | Firms did not pass cost increases into prices (cost-push weight 0) | Spec | ours | exp007; exp012, exp013, exp015 | done: half pass-through by default (MD14) | — |
 | P6 | Cost-push inflation compared unit costs with the sector's price level, so it pulled prices down to costs (−10%/q) instead of passing on cost changes | Bug | ours | unit cost / price 0.895 at t=1; Sam's prior notes "prices cause shit to break" | done: uses unit-cost growth, with test | — |
@@ -530,7 +533,7 @@ commit messages (e.g. `G1:`).
 | --- | --- | --- | --- | --- | --- | --- |
 | S1 | Stock-flow consistency: `macromodel/accounting.py` checks every quarter that the loan and deposit ledgers agree, bank equity and government debt move only by their flows, and money changes only by the deficit plus net exports; it separates the by-design unbacked flows from leaks | Gap | both | exp001 `accounts.csv`: all ledgers exact; money residual ≈ unbacked flows (up to 11% of GDP); unexplained ≤ 4% of GDP, early quarters only (S23) | partial: done once S9, S10, S13, S23 are closed | P1 |
 | S2 | Firms made about zero profit: initial wages were value added minus investment (labour share 85%; SEA and France ≈ 59%) | Bug | ours | exp005 | done: `labour_share_from_sea` is the default (MD9); firm profits ≈ 24% of GDP | — |
-| S3 | The re-initialisation path double-counts bank deposits (liabilities 1.65e16) | Bug | ours | exp004 | workaround: build data with matching settings | P2 |
+| S3 | The re-initialisation path double-counts bank deposits (liabilities 1.65e16) | Bug | ours | exp004; MD15: `n_industries_default` hard-coded utilisation 1.0, so default runs took this path until fixed | workaround: build data with matching settings; the defaults now match (test) | P2 |
 | S4 | Bank deposits are negative on the normal path (−1.17e12) | Question | ours | probe | open | P2 |
 | S5 | Initial Demand = Production + Inventory | Question | ours | `firm_tools.py:487` | open | P3 |
 | S6 | GDP is forced to balance by adjusting imports/exports, which can hide inconsistencies | Spec | ours | `gdp.trade_adjustment` check: the adjustment is 0 in single-country runs | not active for one country; check in multi-country runs | P3 |

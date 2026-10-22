@@ -79,8 +79,10 @@ class FirmsDataConfiguration(BaseModel):
     zero_initial_deposits: bool = True
     zero_initial_debt: bool = True
     initial_inventory_to_input_fraction: float = 0
-    intermediate_inputs_utilisation_rate: float = 1.0
-    capital_inputs_utilisation_rate: float = 1.0
+    # Firms start with spare capacity (MD15; France's manufacturing capacity utilisation was about 81% in 2014).
+    # Must match the simulation's FirmsParameters (S3).
+    intermediate_inputs_utilisation_rate: float = 0.85
+    capital_inputs_utilisation_rate: float = 0.85
 
 
 class InterestRates(BaseModel):

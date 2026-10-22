@@ -1,11 +1,13 @@
 import tempfile
 from copy import deepcopy
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
 
 from macro_data.configuration.countries import Country as CountryName
+from macro_data.configuration.dataconfiguration import FirmsDataConfiguration
 from macromodel.configurations import CountryConfiguration, SimulationConfiguration
 from macromodel.simulation import Simulation, check_compatibility
 
@@ -140,6 +142,12 @@ def test_can_provincial(can_provincial_datawrapper):
     )
 
     configuration.seed = 0
+    # The stored provincial data was built at full utilisation; match it rather than re-initialise (S3)
+    for province in all_provs:
+        firms_data = can_provincial_datawrapper.configuration.country_configs[province].firms_configuration
+        parameters = configuration.country_configurations[province].firms.parameters
+        parameters.capital_inputs_utilisation_rate = firms_data.capital_inputs_utilisation_rate
+        parameters.intermediate_inputs_utilisation_rate = firms_data.intermediate_inputs_utilisation_rate
 
     simulation = Simulation.from_datawrapper(
         datawrapper=can_provincial_datawrapper, simulation_configuration=configuration
@@ -249,6 +257,14 @@ def test_check_compatibility(datawrapper):
     country_sim_configuration.firms.parameters.intermediate_inputs_utilisation_rate = 0.1
 
     assert not check_compatibility(country_data_configuration, country_sim_configuration)
+
+
+def test_default_configurations_build_the_same_initial_stocks():
+    """Regression: the simulation's default utilisation (via `n_industries_default`) differed from the data's, so
+    default runs took the re-initialisation path that double-counts bank deposits (S3)."""
+    data_firms = FirmsDataConfiguration()
+    for simulation_configuration in [CountryConfiguration(), CountryConfiguration.n_industry_default(18)]:
+        assert check_compatibility(SimpleNamespace(firms_configuration=data_firms), simulation_configuration)
 
 
 def test_random_seed(datawrapper):

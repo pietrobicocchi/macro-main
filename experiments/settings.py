@@ -236,3 +236,34 @@ def pre_md14_prices_wages_consumption(c: CountryConfiguration) -> None:
     c.firms.functions.wage_setter.parameters = {**w, "cpi_indexation_speed": 1.0}
     h = c.households.functions.consumption.parameters
     c.households.functions.consumption.parameters = {**h, "minimum_consumption_fraction": 1.0}
+
+
+def pre_md15_no_growth_engine(c: CountryConfiguration) -> None:
+    """The defaults before MD15 (2026-10-21): firms at full capacity, capital purchases that replace depreciation
+    only, no growth in expected demand, a frictionless labour market, no productivity growth, an AR(1) growth
+    forecast on realised growth, and a random draw in every forecast. Build the data with
+    `scoring.load_data(utilisation_rate=1.0)`."""
+    c.firms.parameters.capital_inputs_utilisation_rate = 1.0
+    c.firms.parameters.intermediate_inputs_utilisation_rate = 1.0
+    c.firms.functions.demand_estimator.parameters = {
+        "firm_growth_adjustment_speed": 0.0,
+        "sectoral_growth_adjustment_speed": 0.0,
+    }
+    c.firms.functions.target_capital_inputs.name = "FinancialTargetCapitalInputsSetter"
+    c.firms.functions.target_capital_inputs.parameters = {
+        "target_capital_inputs_fraction": 0.0,
+        "credit_gap_fraction": 0.0,
+    }
+    p = c.firms.functions.target_production.parameters
+    c.firms.functions.target_production.parameters = {**p, "capital_inputs_target_considers_capital_inputs": 1.0}
+    c.firms.functions.productivity_growth.name = "NoOpTFPGrowth"
+    c.firms.functions.productivity_growth.parameters = {}
+    c.labour_market.functions.clearing.name = "PolednaLabourMarketClearer"
+    m = c.labour_market.functions.clearing.parameters
+    c.labour_market.functions.clearing.parameters = {
+        **{k: v for k, v in m.items() if k not in ("matching_efficiency", "matching_elasticity")},
+        "random_firing_probability": 0.0,
+    }
+    c.economy.functions.growth.name = "GrowthManualForecastingAutoReg"
+    c.economy.functions.growth.parameters = {"value": 0.0, "lags": 1}
+    c.assume_zero_noise = False

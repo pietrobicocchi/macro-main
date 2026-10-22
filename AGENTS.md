@@ -90,8 +90,10 @@ initial-state consistency, determinism per seed; add a regression test for every
   Otherwise `Simulation.from_datawrapper` re-runs the financial initialisation,
   which double-counts bank deposits and diverges (S3).
 - `default_data_configuration` ignores its `single_firm_per_industry` argument (G5).
-- Realised inflation equals the AR(1) price forecast (P2); forecast noise is on by
-  default (`assume_zero_noise=False`).
+- Realised inflation equals the AR(1) price forecast (P2); forecast noise is off by
+  default since MD15 (`assume_zero_noise=True`).
+- Firms start with spare capacity by default (utilisation 0.85, MD15), in both the data and the
+  simulation configuration; `scoring.load_data` builds 0.85 unless told otherwise.
 - `economy.compute_gdp(always_adjust=True)` forces GDP to balance via imports/exports (S6).
 - pandas 3 (Copy-on-Write): chained assignment `df["a"][mask] = x` silently does
   nothing; use `df.loc[mask, "a"] = x`.

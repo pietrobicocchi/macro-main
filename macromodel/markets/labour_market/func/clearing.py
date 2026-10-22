@@ -39,7 +39,7 @@ The module supports various labour market features including:
 """
 
 from abc import ABC, abstractmethod
-from typing import Callable, Tuple
+from typing import Callable, Optional, Tuple
 
 import numpy as np
 from numba import int64, njit
@@ -1004,12 +1004,26 @@ class SearchFrictionsLabourMarketClearer(LabourMarketClearer):
     so each vacancy is filled with probability M / V. Unfilled vacancies stay open: firms post them again next
     quarter while desired labour exceeds their workforce. Layoffs of excess workers are as in
     `PolednaLabourMarketClearer`.
+
+    With `matching_efficiency=None` it is calibrated at the first clearing so the initial unemployment rate u is a
+    steady state: there vacancies replace separations, V = s E, job seekers are U + s E, and every vacancy is
+    filled, M = V, so matching_efficiency = (V / (U + V))^matching_elasticity.
     """
 
-    def __init__(self, matching_efficiency: float, matching_elasticity: float, **kwargs):
+    def __init__(self, matching_efficiency: Optional[float], matching_elasticity: float, **kwargs):
         super().__init__(**kwargs)
         self.matching_efficiency = matching_efficiency
         self.matching_elasticity = matching_elasticity
+
+    @staticmethod
+    def steady_state_matching_efficiency(
+        unemployment_rate: float, separation_rate: float, matching_elasticity: float
+    ) -> float:
+        """Matching efficiency that makes `unemployment_rate` a steady state (1.0, no friction, without separations)."""
+        if separation_rate <= 0:
+            return 1.0
+        separations = separation_rate * (1.0 - unemployment_rate)
+        return (separations / (unemployment_rate + separations)) ** matching_elasticity
 
     def matches(self, unemployed: float, vacancies: float) -> float:
         """Number of matches the market makes in one quarter."""
@@ -1052,6 +1066,13 @@ class SearchFrictionsLabourMarketClearer(LabourMarketClearer):
         firm_industries = firms.states["Industry"]
         average_industry_productivity = firms.states["Labour Productivity by Industry"]
         n_firms = prev_labour_inputs.shape[0]
+
+        if self.matching_efficiency is None:
+            active = current_individuals_activity != ActivityStatus.NOT_ECONOMICALLY_ACTIVE
+            unemployment_rate = np.sum(active & (individuals_corresponding_firm == -1)) / max(1, np.sum(active))
+            self.matching_efficiency = self.steady_state_matching_efficiency(
+                unemployment_rate, self.random_firing_probability, self.matching_elasticity
+            )
 
         def employees_labour() -> np.ndarray:
             employed = individuals_corresponding_firm >= 0
