@@ -168,6 +168,7 @@ expectations, χ caps, bank limits, a Taylor rule or many firms changed little o
 | exp024 | Do realistic government and household accounts change the dynamics (F6, S9, S31)? | done (after M16) | Cash benefits (SOCX cash, `cash_social_benefits`): deficit 18% → 6% of GDP, household income 80% → 67%; GDP 0.97 (same), HH cons. 0.95 → 1.03, gov. cons. 1.53 → 1.30, invest. 1.20 → 1.12, CPI 0.86; unemployment 9.3% / 8.3% at q12 / q20 (data 9.4%, 8.4%; defaults 9.0%, 7.6%). Adding firm shares (MD6) removes 19% of GDP of unpaid income at once and collapses demand (unemployment 21%). `outputs/exp024_government_accounts/` |
 | exp025 | Which elements of today's defaults matter, independent of order? Leave-one-out (R1.1, R2.1) | done | Load-bearing: the price-noise fix MD1 (without it GDP 2.70, gov. cons. 24.5, unemployment 18% at q20), deterministic forecasts MD15 (GDP 2.71, HH 2.59), MD14 (HH 6.16), spare capacity (no growth, unemployment 13.8% at q20); slack-aware expectations keep unemployment on track (without: 6.0% at q20, data 8.4%); the government plan MD16 (gov. 1.97 without). Little effect given the rest: growth expectations, search frictions, SEA labour shares, Leontief production, the housing market; without partial-adjustment investment gov. cons. and investment improve slightly (0.99, 0.98; in-sample). Dormant: household credit, reservation wages. The paper's Taylor rule improves gov. cons. and investment a little (1.47, 1.14; P4). `outputs/exp025_leave_one_out/` |
 | exp026 | Does the paper's target-production rule (χ caps on target production, G4) change today's model? | done | At the paper's posterior (χ^H 0.53, χ^M 0.03, χ^K 0.18): GDP 1.00, HH cons. 0.99, gov. cons. 1.93, invest. 1.07, CPI 0.86; unemployment 9.7% / 8.6% at q12 / q20 (data 9.4%, 8.4%; defaults 9.0%, 7.6%). With χ = 1 (IIASA-like) growth stops and unemployment reaches 14%. The paper's rule works with the growth engine: E2's text and the code can match. `outputs/exp026_paper_target_production/` |
+| exp027 | The decision options together: cash benefits (F6), Taylor rule (P4), the paper's target-production caps (G4) | done | Close to additive. Candidate E (all three): GDP 1.03, HH cons. 1.04, gov. cons. 1.69, invest. 1.08, CPI 0.86; unemployment 10.0% / 9.1% at q12 / q20 (data 9.4%, 8.4%); growth 0.2–0.3%/q. More faithful to the paper and to France's accounts at a cost of about 0.05 on the GDP and HH ratios (in-sample). `outputs/exp027_candidate_e/` |
 
 ### Baseline scorecard history
 
@@ -308,7 +309,7 @@ One paragraph per mechanism; each experiment's numbers are in the Experiments ta
 
 The intermezzo (phase 2½) is done: audit (I1), runner and figures (I2, I4), model map and ladder (I3), workflow
 (I5); exp022–exp025 ran on the fixed model. Every MD15–MD16 value was chosen in-sample.
-1. **Decisions for Pietro** (each built as an option, default unchanged):
+1. **Decisions for Pietro** (each built as an option, default unchanged; together as candidate E in exp027):
    - cash social benefits (F6, `cash_social_benefits`): deficit 18% → 6% of GDP, household income 80% → 67%, gov.
      cons. 1.53 → 1.30, unemployment closer to the data (exp024); changes the initial state;
    - the paper's Taylor rule (P4): gov. cons. 1.47, invest. 1.14 (exp025); matches the paper;
