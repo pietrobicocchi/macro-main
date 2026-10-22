@@ -97,6 +97,23 @@ posterior (Table `table:prior`) only the χ caps are used.
 - **The paper's posterior** (`table:prior`, estimated on Austria): only the χ caps on target production
   (0.53, 0.03, 0.18; MD19).
 
+**Against the paper's stated values** (`appendix_model_description.tex`, calibration paragraphs; audit 2026-10-22).
+Equal: target inflation 0.02, ω^M = ω^K = 0.85, h^max = 1.5, φ^FM = φ^FK = 0, φ^GM = 2, ρ^CAR = 0.08,
+ρ^RoA = 0.05 (units: M17). Different:
+
+| Parameter | Paper | Code default | Where | Tested |
+| --- | --- | --- | --- | --- |
+| Owners / renters keep their home a quarter (p^OS, p^RS) | 79/80, 7/8 | 0.5, 0.5 | `households.property` | exp034: candidate |
+| Psychological pressure of renting μ^PS | 0.4 | 0.1 | `households.property` | exp034 |
+| Buy-or-rent sensitivity φ^B | 0.001 per euro | 1 per euro (temperature 1, `/ 10000`) | `households.property` | M2 |
+| Rent indexation φ^PIR, lag | 1, 1 | 0 | `households.property` | exp034 |
+| Price and rent cuts of unsold properties p^PM, p^RM | 0.1964, 0.2848 | 0 (off) | `households.property` | formula needs /100 (exp034) |
+| Purchase price and rent rules (φ^HP, β^HP; φ^HR, β^HR) | 42.9 Y^0.789; 17.2 Y^0.346 | 5 Y; 0.2 Y^0 | `households.property` | units of Y unclear (Carro et al.) |
+| Firm loans: debt-to-equity ρ^DtE, return on equity ρ^RoE | 1.0, 0.15 | 0.03, 0.05 | `banks.parameters` | exp019, exp028 (`paper_bank_limits`) |
+| Bank solvency ratio ρ^SR | 0.1 | 0.05 | `banks.functions` | — |
+| Consumer loans ρ^LTI-C | 0.36 | 0.5 | `banks.parameters` | M3 |
+| Mortgages LTV, LTI, DSTI | ESRB national measures | 0.8, 3, 0.3 | `banks.parameters` | — |
+
 ## Modelling decisions
 
 Each departure from today's code or from the paper, with the reason recorded *before*
