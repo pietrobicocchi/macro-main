@@ -88,6 +88,35 @@ def test_property_sold_this_period_is_not_also_rented():
         assert current_sales["property_id"].tolist() == [0]
 
 
+def test_automatic_clearer_matches_no_household_to_a_home_it_would_not_pay_for():
+    """Regression: the cost was |willingness to pay - price|, never negative, so the `cost < 0` guard never fired. Here
+    it sold the 120 home to the household willing to pay 100 and the 80 home to the one willing to pay 50."""
+    housing_data = pd.DataFrame(
+        {
+            "House ID": [0, 1],
+            "Value": [80.0, 120.0],
+            "Rent": [1.0, 1.0],
+            "Sale Price": [80.0, 120.0],
+            "Corresponding Inhabitant Household ID": [-1, -1],
+            "Corresponding Owner Household ID": [2, 2],
+            "Is Owner-Occupied": [0, 0],
+            "Temporarily for Sale": [True, True],
+            "Up for Rent": [False, False],
+        }
+    )
+    clearer = AutomaticHousingMarketClearer(random_assignment_shock_variance=0.0)
+
+    current_sales = clearer.clear(
+        housing_data=housing_data,
+        household_main_residence_tenure_status=np.array([1, 1, 1]),
+        max_price_willing_to_pay=np.array([100.0, 50.0, np.nan]),
+        max_rent_willing_to_pay=np.array([np.nan, np.nan, np.nan]),
+    )
+
+    assert current_sales["buyer_id"].tolist() == [0]
+    assert current_sales["property_id"].tolist() == [0]
+
+
 def test_automatic_clearer_returns_empty_transactions_without_matches():
     """Regression: automatic matching handles empty demand and empty supply."""
     clearer = AutomaticHousingMarketClearer(random_assignment_shock_variance=0.0)

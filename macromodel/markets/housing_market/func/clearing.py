@@ -23,7 +23,6 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-import scipy as sp
 from scipy.optimize import linear_sum_assignment as lsa  # noqa
 
 
@@ -391,25 +390,27 @@ class AutomaticHousingMarketClearer(HousingMarketClearer):
                 }
             )
 
-        # Create a cost matrix
-        cost = sp.spatial.distance_matrix(
-            max_willing_to_pay[households_with_demand][:, None],
-            (
-                (
-                    1
-                    + np.random.normal(
-                        0.0,
-                        self.random_assignment_shock_variance,
-                        property_prices.shape[0],
-                    )
-                )
-                * property_prices
-            )[:, None],
-        )
-        cost[cost < 0] = np.inf
+        # Cost of a match: how far the price is below what the household would pay. A price above the willingness to
+        # pay is not a match; it gets a cost above any feasible assignment's, so the assignment first maximises the
+        # number of affordable matches, and any unaffordable pair it still makes is dropped. (The previous cost was
+        # |willingness - price|, never negative, so households were matched to homes they would not pay for.)
+        offered = (
+            1
+            + np.random.normal(
+                0.0,
+                self.random_assignment_shock_variance,
+                property_prices.shape[0],
+            )
+        ) * property_prices
+        gap = max_willing_to_pay[households_with_demand][:, None] - offered[None, :]
+        affordable = gap >= 0
+        unaffordable_cost = (gap[affordable].max() + 1.0) * min(gap.shape) if affordable.any() else 1.0
+        cost = np.where(affordable, gap, unaffordable_cost)
 
         # Find an optimal assignment and record the outcome
         rel_households, rel_properties = lsa(cost)
+        kept = affordable[rel_households, rel_properties]
+        rel_households, rel_properties = rel_households[kept], rel_properties[kept]
         abs_households, abs_properties = (
             households_with_demand[rel_households],
             property_open_ind[rel_properties],
