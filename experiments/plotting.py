@@ -166,22 +166,38 @@ def mechanism_dashboard(sim: pd.DataFrame, title: str, path: Path) -> None:
     _save(fig, path)
 
 
+SHORT_LABELS = {
+    "Real GDP": "GDP",
+    "Real Household Cons.": "HH cons.",
+    "Real Government Cons.": "Gov. cons.",
+    "Real Investment": "Invest.",
+    "CPI Inflation": "CPI",
+}
+
+
 def ratio_heatmap(summary: pd.DataFrame, title: str, path: Path) -> None:
-    """sim/AR(1) RMSE ratio by step (rows) and aggregate (columns); blue beats AR(1), red loses, log scale."""
+    """sim/AR(1) RMSE ratio by step (rows) and aggregate (columns); blue beats AR(1), red loses, log scale clipped
+    to [0.5, 2]."""
+    from matplotlib.ticker import FixedLocator, FuncFormatter, NullLocator
+
     columns = [c for c in summary.columns if c.endswith("sim/AR1")]
     table = summary[columns].dropna(how="all").astype(float)
-    fig, ax = plt.subplots(figsize=(1.4 * len(columns) + 3, 0.45 * len(table) + 1.5))
-    image = ax.imshow(table.to_numpy(), cmap="RdBu_r", norm=LogNorm(vmin=0.5, vmax=2.0), aspect="auto")
+    norm = LogNorm(vmin=0.5, vmax=2.0)
+    fig, ax = plt.subplots(figsize=(1.1 * len(columns) + 4.5, 0.4 * len(table) + 1.6))
+    image = ax.imshow(table.to_numpy(), cmap="RdBu_r", norm=norm, aspect="auto")
     for (i, j), value in np.ndenumerate(table.to_numpy()):
         if np.isfinite(value):
-            ax.text(j, i, f"{value:.2f}", ha="center", va="center", fontsize=8)
-    ax.set_xticks(
-        range(len(columns)), [LABELS.get(c.replace(" sim/AR1", ""), c).replace(" growth", "") for c in columns]
-    )
+            dark = abs(np.log(np.clip(value, 0.5, 2.0))) > 0.45
+            ax.text(j, i, f"{value:.2f}", ha="center", va="center", fontsize=8, color="white" if dark else "black")
+    ax.set_xticks(range(len(columns)), [SHORT_LABELS.get(c.replace(" sim/AR1", ""), c) for c in columns])
+    ax.xaxis.tick_top()
     ax.set_yticks(range(len(table)), table.index)
     ax.grid(False)
-    fig.colorbar(image, ax=ax, label="sim / AR(1) RMSE (log scale)", ticks=[0.5, 0.75, 1, 1.5, 2], format="%.2g")
-    ax.set_title(title)
+    bar = fig.colorbar(image, ax=ax, label="sim / AR(1) RMSE (log scale; < 1 beats AR(1))", fraction=0.04)
+    bar.ax.yaxis.set_major_locator(FixedLocator([0.5, 0.75, 1.0, 1.5, 2.0]))
+    bar.ax.yaxis.set_minor_locator(NullLocator())
+    bar.ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
+    ax.set_title(title, pad=24)
     _save(fig, path)
 
 

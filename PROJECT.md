@@ -305,20 +305,21 @@ One paragraph per mechanism; each experiment's numbers are in the Experiments ta
 
 ### Next step
 
-Roadmap phases 1 (accounts) and 2 (growth engine) are done, and phase 3 in part (cost pass-through, forecast
-noise decided). Every MD15–MD16 value was chosen while looking at the 2014–16 scores, so the ratios below 1 are
-in-sample until a held-out test (phase 5).
-1. **Intermezzo (phase 2½, I1–I5 in the Roadmap)**: economic-logic audit with the robustness sweep, paper ↔
-   model map, tidy, five figure families, workflow. It ends with the ablation ladder runnable on France.
-2. **Ablation ladder (phase 6, the Question's second half)**: from a Poledna-like model to today's defaults,
-   one decision at a time, scoring each rung (`settings.LADDER` from I3).
-3. **Phase 3 rest**: a Taylor rule by default (P4; constant policy rate now) and inflation that responds to
-   slack (P2).
-4. **Data (D1), blocking phase 5**: the full raw data for 2010–2017 and the real HFCS / Compustat; then
-   calibrate on 2010–2013 (`macrocalib`, untested: R5) and score on held-out start dates and countries.
-   Firms' growth expectations should then learn from volumes (R4; changes the initial state).
-5. **Phase 4 and the rest**: housing, consumer credit, taxes and benefits (F1); S29; MD6 dividends; G9 and
-   G17 (interest rates in spending).
+The intermezzo (phase 2½) is done: audit (I1), runner and figures (I2, I4), model map and ladder (I3), workflow
+(I5); exp022–exp025 ran on the fixed model. Every MD15–MD16 value was chosen in-sample.
+1. **Decisions for Pietro** (each built as an option, default unchanged):
+   - cash social benefits (F6, `cash_social_benefits`): deficit 18% → 6% of GDP, household income 80% → 67%, gov.
+     cons. 1.53 → 1.30, unemployment closer to the data (exp024); changes the initial state;
+   - the paper's Taylor rule (P4): gov. cons. 1.47, invest. 1.14 (exp025); matches the paper;
+   - seasonally adjusted CPI and quarterly unemployment as targets (R7): CPI ratio 0.86 → 0.74; changes the metric;
+   - effective tax rates (F7, not built): revenue 41.5% → about 54% of GDP; changes the initial state;
+   - E1's planned text ("no exogenous TFP") is contradicted by MD12.
+2. **Household side** (S9, S31, G18): unpaid financial income and a 40% saving rate; household consumption drifts
+   up 0.2%/q with no source of growth. Needs the dividend channel (MD6) introduced without a shock.
+3. **Phase 3 rest**: inflation that responds to slack (P2), with the Taylor rule if adopted.
+4. **Data (D1), blocking phase 5**: full raw data for 2010–2017 and real HFCS / Compustat; then calibration on
+   2010–2013 (`macrocalib`, untested: R5) and held-out start dates and countries; the 38-country ladder (E_ATTR).
+5. **Phase 4 and the rest**: rental market (M2), housing turnover (M9), consumer credit, S29, G9, G17, E15.
 
 Every known problem, fixed or open, is in the Issue register below.
 
