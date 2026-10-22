@@ -427,10 +427,10 @@ commit messages (e.g. `G1:`).
 | E4 | No systematic sensitivity analysis of dynamics | Gap | both | CB7: Andrea and Marcela; ablations exp002–004 | partial | P2 |
 | E5 | Upstream fixes not yet merged: #56/#64/#67, `bug/government-expenditure` (#83 and #85 merged) | Infra | ours | `make upstream` | open | P2 |
 | E6 | Scaling effects (1:100 vs 1:100,000) | Question | both | exp001: 10× agents changes nothing, but firms stay at 1 per industry (G5) | partial | P3 |
-| E7 | Standardised outputs, dashboards, reporting to non-coders | Infra | CB7 | scorecard CSV/PNG per experiment | partial | P3 |
+| E7 | Standardised outputs, dashboards, reporting to non-coders | Infra | CB7 | I4: every experiment writes a forecast fan, a mechanism dashboard and a ratio heatmap; `make figures` (model map, baseline, ladder, robustness) | done for France; country small multiples wait for D1 | P3 |
 | E8 | Agent-level reporting; visualising the synthetic population | Gap | CB7 | — | open | P3 |
-| E9 | Report our fixes upstream: rent regression, many-firm crash, data mutation, inventory mapping | Infra | ours | — | open | P3 |
-| E10 | New-user induction; AI workflows not standardised | Infra | CB7 | partial: AGENTS.md, PROJECT.md | partial | P3 |
+| E9 | Report our fixes upstream: rent regression, many-firm crash, data mutation, inventory mapping, capital stock valuation (S30), Poledna layoff count and employee lists (M11, M12), insolvent firms' debt (S28), cost-push pricing (P6), quarterly loan rates (M10) | Infra | ours | — | open: one upstream PR per fix, branched from `upstream/main` | P3 |
+| E10 | New-user induction; AI workflows not standardised | Infra | CB7 | I5: AGENTS.md (runner, lifecycle, figures, paper repo), PROJECT.md (model map, claims → evidence), `make test-fast`, `make figures` | done for this fork | — |
 | E11 | The file merged from #104 is not ruff-formatted | Infra | ours | `credit_market/func/clearing.py` | workaround: excluded from the format check in the Makefile until upstream merges #104 | P3 |
 | E12 | Housing market takes 92% of run time (row-wise pandas loops); blocks finer scales | Infra | ours | profile, 408 firms, 8 quarters: 8.2 of 8.9 s | open | P2 |
 | E13 | Plugging in behaviour means editing closed `Literal` lists and hard-wired argument passing in `country.py`; god objects (`firms.py` 2,256 lines, 196 time series) | Infra | ours | 54 behaviour slots, 27 with alternatives; 3 files use hooks | open | P3 |
