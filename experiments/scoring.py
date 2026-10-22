@@ -98,6 +98,7 @@ def _mechanisms(country) -> dict[str, float]:
         "nominal_wage_per_worker": float(np.sum(firms.current("total_wage"))) / max(employed, 1),
         "cpi": float(economy.current("cpi")[0]),
         "expected_growth": float(economy.current("estimated_growth")[0]),
+        "expected_inflation": float(economy.current("estimated_cpi_inflation")[0]),
         "government_spending_fulfilment": float(np.sum(government.current("consumption_in_lcu")))
         / max(float(np.sum(government.current("desired_consumption_in_lcu"))), 1e-12),
     }
@@ -173,6 +174,7 @@ def simulate(
         "investment_rate",
         "markup",
         "expected_growth",
+        "expected_inflation",
         "government_spending_fulfilment",
     ]:
         out[name.replace("_", " ")] = inside[name].to_numpy()[1:]
@@ -224,6 +226,36 @@ def ar1_forecast(history: pd.Series, horizon: int) -> np.ndarray:
         last = intercept + slope * last
         preds.append(last)
     return np.array(preds)
+
+
+def expectation_wedge(sim: pd.DataFrame, obs: pd.DataFrame, quarters: int = 12) -> pd.DataFrame:
+    """How far the model's realised path is from the expectations its agents hold (revision entry E_AR1, R2.7): for
+    real GDP growth and CPI inflation, the RMSE against the data of the expectation path and of the realised path,
+    both over AR(1)'s, and the correlation between the two paths across quarters and seeds. A model that only
+    replays its AR(1) expectations has realised = expected."""
+    target = obs.loc[obs.index > START].iloc[:quarters]
+    history = obs.loc[(obs.index >= AR1_FIT_START) & (obs.index <= START)]
+    rows = []
+    for realised, expected in [("Real GDP", "expected growth"), ("CPI Inflation", "expected inflation")]:
+        if expected not in sim:
+            continue
+        y = target[realised].to_numpy()
+        ar1 = np.sqrt(np.mean((ar1_forecast(history[realised], len(y)) - y) ** 2))
+
+        def rmse(column: str) -> float:
+            paths = sim.pivot(index="t", columns="seed", values=column).to_numpy()[: len(y)]
+            return np.median(np.sqrt(np.nanmean((paths - y[:, None]) ** 2, axis=0)))
+
+        both = sim[sim["t"] <= quarters][[realised, expected]].dropna()
+        rows.append(
+            {
+                "aggregate": realised,
+                "expectation path / AR(1)": rmse(expected) / ar1,
+                "realised path / AR(1)": rmse(realised) / ar1,
+                "correlation expected-realised": both[realised].corr(both[expected]),
+            }
+        )
+    return pd.DataFrame(rows).set_index("aggregate")
 
 
 def var_forecast(history: pd.DataFrame, horizon: int, maxlags: int = 4) -> pd.DataFrame:
