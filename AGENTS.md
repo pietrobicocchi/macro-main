@@ -87,7 +87,9 @@ Lifecycle: write the question and hypothesis first → `make exp EXP=exp0NN` (sm
 `ARGS="--seeds 1 --quarters 2"`) → look at the fans and the mechanism dashboard, not only the
 ratios → experiments row and a section in PROJECT.md → if a default changes: MD row,
 model-map row, `make baseline`, scorecard-history row. Config changes live in `settings.py`
-(never inline); experiments never import each other; never edit outputs. An experiment
+(never inline); a setting that changes the initial state is a data option (a field of
+`DataConfiguration` or `CountryDataConfiguration`, a `scoring.load_data` keyword, a dict in `settings.py` passed as
+`Step(data=...)`). Experiments never import each other; never edit outputs. An experiment
 reproduces at the commit in its `run.json`; old experiments are not kept in step with new
 defaults. The ablation ladder (`settings.LADDER`, exp023) must end at today's defaults
 (tested): a new default needs a new rung.
@@ -118,9 +120,10 @@ for every bug fixed.
 - Firms start with spare capacity by default (utilisation 0.85, MD15), in both the data and the
   simulation configuration; `scoring.load_data` builds 0.85 unless told otherwise.
 - The rest of the world's forecasts still draw noise (`row_configuration.assume_zero_noise`, M15).
-- Social benefits are SOCX cash spending by default (MD17); the data needs
-  `oecd_econ/SOCX_AGG_BY_TYPE.csv`. Tax rates are statutory, not effective (F7), and households'
-  financial income has no payer (S9): the net-lending panel of the dashboard reflects both.
+- Data defaults that shape the initial state: SOCX cash benefits (MD17, `oecd_econ/SOCX_AGG_BY_TYPE.csv`),
+  the national accounts' return on households' financial assets (MD20, Eurostat `nasa_10_nf_tr`), the investment
+  split by capital compensation (S32). Tax rates are statutory, not effective (F7), and households' financial income
+  (4% of GDP since MD20) still has no payer (S9): the net-lending panel of the dashboard reflects both.
 - Scoring targets are seasonally adjusted (R7): experiments run before 2026-10-22 scored CPI
   against the unadjusted CPI; compare their ratios only within the same experiment.
 - `economy.compute_gdp(always_adjust=True)` forces GDP to balance via imports/exports (S6).
