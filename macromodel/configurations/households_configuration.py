@@ -129,11 +129,13 @@ class PropertyFunction(BaseModel):
     name: Literal["DefaultHouseholdDemandForProperty"] = "DefaultHouseholdDemandForProperty"
     parameters: dict[str, Any] = {
         "cost_comparison_temperature": 1.0,
-        "maximum_price_income_coefficient": 5.0,
+        # MD21: up to 5 years of income for a home (quarterly income x 20), about the paper's rule at the median
+        "maximum_price_income_coefficient": 20.0,
         "maximum_price_income_exponent": 1.0,
         "maximum_price_noise_variance": 0.3,
-        "probability_stay_in_owned_property": 0.5,
-        "probability_stay_in_rented_property": 0.5,
+        # MD21, paper: owners keep their home 20 years on average, renters 2 years
+        "probability_stay_in_owned_property": 79 / 80,
+        "probability_stay_in_rented_property": 7 / 8,
         "psychological_pressure_of_renting": 0.1,
         "price_initial_markup": 0.0,
         "price_decrease_probability": 0.0,
@@ -144,8 +146,9 @@ class PropertyFunction(BaseModel):
         "rent_decrease_mean": 0.0,
         "rent_decrease_variance": 0.0,
         "maximum_price_noise_mean": 0.0,
-        "maximum_rent_income_coefficient": 0.2,
-        "maximum_rent_income_exponent": 0.0,
+        # MD21: rent up to a quarter of income
+        "maximum_rent_income_coefficient": 0.25,
+        "maximum_rent_income_exponent": 1.0,
         "partial_rent_inflation_indexation": 0.0,
         "partial_rent_inflation_delay": 1,
     }

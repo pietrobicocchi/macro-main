@@ -58,9 +58,9 @@ def load_data(
     inventory_fraction: float = 0.0,
     labour_share_from_sea: bool = True,
     cash_social_benefits: bool = True,
-    financial_income_from_national_accounts: bool = False,
+    financial_income_from_national_accounts: bool = True,
     effective_profit_tax: bool = False,
-    investment_shares_from_capital_compensation: bool = False,
+    investment_shares_from_capital_compensation: bool = True,
     payout_from_national_accounts: bool = False,
 ) -> DataWrapper:
     """France 2014 initial state. many_firms uses business-demography firm counts instead of one per industry.
@@ -68,11 +68,12 @@ def load_data(
     labour_share_from_sea sets initial wages from the SEA labour share (S2) instead of value added minus investment.
     utilisation_rate and inventory_fraction size the initial input stocks and inventory. Build the data with the
     values the simulation will use: if they differ, Simulation.from_datawrapper re-runs the initialisation, which
-    re-draws the housing match (S3). financial_income_from_national_accounts sets
-    the return on households' other financial assets from national accounts property income (S9);
-    effective_profit_tax the profit tax from national accounts corporate tax receipts on the model's profits (F7);
-    investment_shares_from_capital_compensation splits firms' investment by capital compensation (S32);
-    payout_from_national_accounts sets firms' dividend payout so dividends equal that property income (F2, MD6).
+    re-draws the housing match (S3). Defaults: financial_income_from_national_accounts sets the return on households'
+    other financial assets from national accounts property income (S9, MD20);
+    investment_shares_from_capital_compensation splits firms' investment by capital compensation (S32, bug fix).
+    Options: effective_profit_tax sets the profit tax from national accounts corporate tax receipts on the model's
+    profits (F7); payout_from_national_accounts sets firms' dividend payout so dividends equal that property income
+    (F2, MD6).
     """
     configuration = default_data_configuration(
         countries=[COUNTRY], seed=0, scale=scale, single_firm_per_industry=not many_firms

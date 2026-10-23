@@ -25,6 +25,14 @@ PHI_STY, CHI_H, CHI_M, CHI_K = 0.10, 0.53, 0.03, 0.18
 # Paper appendix: initial utilisation rates, stock top-up weights
 OMEGA, PHI_STOCK = 0.85, 1.0
 DEFAULTS = CountryConfiguration()
+# Housing parameters before MD21
+_PRE_MD21_HOUSING = {
+    "probability_stay_in_owned_property": 0.5,
+    "probability_stay_in_rented_property": 0.5,
+    "maximum_rent_income_coefficient": 0.2,
+    "maximum_rent_income_exponent": 0.0,
+    "maximum_price_income_coefficient": 5.0,
+}
 
 
 # 1. The ablation ladder ----------------------------------------------------------------------------------------------
@@ -44,7 +52,10 @@ def restore(c: CountryConfiguration, path: str, keys: list[str] | None = None) -
 
 def before_our_decisions(c: CountryConfiguration) -> None:
     """The model as forked, with our accounting fixes (MD2-MD5, MD7, MD8) but none of our behavioural decisions.
-    Build the data with `cash_social_benefits=False` (MD17)."""
+    Build the data with `cash_social_benefits=False` (MD17) and `financial_income_from_national_accounts=False`
+    (MD20)."""
+    pre_md22_bank_limits(c)
+    pre_md21_housing_rules(c)
     pre_md19_target_production(c)
     pre_md18_constant_policy_rate(c)
     pre_md16_government_consumption(c)
@@ -126,6 +137,15 @@ def md19_paper_target_production(c: CountryConfiguration) -> None:
     restore(c, "firms.functions.target_production")
 
 
+def md21_paper_housing_rules(c: CountryConfiguration) -> None:
+    restore(c, "households.functions.property.parameters", list(_PRE_MD21_HOUSING))
+
+
+def md22_paper_firm_bank_limits(c: CountryConfiguration) -> None:
+    restore(c, "banks.parameters.firm_loans_debt_to_equity_ratio")
+    restore(c, "banks.parameters.firm_loans_return_on_equity_ratio")
+
+
 def paper_leontief_production(c: CountryConfiguration) -> None:
     restore(c, "firms.functions.production")
 
@@ -145,7 +165,9 @@ def paper_reservation_wages(c: CountryConfiguration) -> None:
 # Cumulative rungs: (label, change added, data the rung's initial state needs). P-rungs add the paper's innovations
 # over the IIASA model (`table:comp_to_iiasa`) to an IIASA-like model; numbered rungs add our decisions to the model
 # as forked. The last rung is today's defaults.
-_DOUBLE_BENEFITS = {"cash_social_benefits": False}
+# Data built with the survey's return on households' financial assets, as before MD20
+SURVEY_RETURN = {"financial_income_from_national_accounts": False}
+_DOUBLE_BENEFITS = {**SURVEY_RETURN, "cash_social_benefits": False}
 _SEA_WAGES = {**_DOUBLE_BENEFITS, "utilisation_rate": 1.0}
 _FORKED_DATA = {**_SEA_WAGES, "labour_share_from_sea": False}
 _RUNGS = [
@@ -165,9 +187,12 @@ _RUNGS = [
     ("8 + MD13 slack-aware expectations", md13_slack_aware_expectations, _DOUBLE_BENEFITS),
     ("9 + MD15 deterministic forecasts", md15_deterministic_forecasts, _DOUBLE_BENEFITS),
     ("10 + MD16 government plan", md16_government_plan, _DOUBLE_BENEFITS),
-    ("11 + MD17 cash social benefits", None, {}),
-    ("12 + MD18 Taylor rule", md18_taylor_rule, {}),
-    ("13 + MD19 paper's target-production caps (defaults)", md19_paper_target_production, {}),
+    ("11 + MD17 cash social benefits", None, SURVEY_RETURN),
+    ("12 + MD18 Taylor rule", md18_taylor_rule, SURVEY_RETURN),
+    ("13 + MD19 paper's target-production caps", md19_paper_target_production, SURVEY_RETURN),
+    ("14 + MD20 national-accounts return on financial assets", None, {}),
+    ("15 + MD21 paper's housing rules", md21_paper_housing_rules, {}),
+    ("16 + MD22 paper's firm bank limits (defaults)", md22_paper_firm_bank_limits, {}),
 ]
 LADDER = [
     Step(label, [before_our_decisions, poledna_like] + [change for _, change, _ in _RUNGS[: k + 1] if change], data)
@@ -303,6 +328,19 @@ def pre_md16_government_consumption(c: CountryConfiguration) -> None:
 def pre_md18_constant_policy_rate(c: CountryConfiguration) -> None:
     """The default before MD18 (2026-10-22): the policy rate stays at its initial value."""
     c.central_bank.functions.policy_rate.name = "ConstantPolicyRate"
+
+
+def pre_md21_housing_rules(c: CountryConfiguration) -> None:
+    """The defaults before MD21 (2026-10-23): owners and renters reconsider their home with probability 0.5 a quarter,
+    a renter can pay 0.2 money units whatever its income, a buyer 5 times its quarterly income."""
+    p = c.households.functions.property.parameters
+    c.households.functions.property.parameters = {**p, **_PRE_MD21_HOUSING}
+
+
+def pre_md22_bank_limits(c: CountryConfiguration) -> None:
+    """The defaults before MD22 (2026-10-23): firm loans up to 3% of the capital stock's value, return on equity 0.05."""
+    c.banks.parameters.firm_loans_debt_to_equity_ratio = 0.03
+    c.banks.parameters.firm_loans_return_on_equity_ratio = 0.05
 
 
 def pre_md19_target_production(c: CountryConfiguration) -> None:
@@ -585,19 +623,21 @@ def government_no_growth(c: CountryConfiguration) -> None:
     c.government_entities.functions.consumption.parameters = {"consistency": 1.0, "default_growth": 0.0}
 
 
-# Data built with households' financial-income return from national accounts (S9), not the survey
+# Data built with households' financial-income return from national accounts (S9; default since MD20)
 NATIONAL_ACCOUNTS_RETURN = {"financial_income_from_national_accounts": True}
 # Data built with the effective profit tax (F7): corporate tax receipts over the model's initial profits
 EFFECTIVE_PROFIT_TAX = {"effective_profit_tax": True}
-# Data built with firms' investment split by capital compensation (S32), not over investment by product
+# Data built with firms' investment split by capital compensation (S32; default since the bug fix, 2026-10-23)
 INVESTMENT_BY_CAPITAL_COMPENSATION = {"investment_shares_from_capital_compensation": True}
+# The split before the S32 fix: capital compensation over investment in each industry's product
+OLD_INVESTMENT_SPLIT = {"investment_shares_from_capital_compensation": False}
 # Data built with dividends equal to households' property income net of interest (F2, MD6)
 NATIONAL_ACCOUNTS_PAYOUT = {"payout_from_national_accounts": True}
 
 
 def paper_moving_probabilities(c: CountryConfiguration) -> None:
-    """How often households reconsider their home, as in the paper (M9): owners keep it with probability 79/80 a
-    quarter (20 years on average), renters with 7/8 (2 years). The defaults are 0.5 for both."""
+    """How often households reconsider their home, as in the paper (M9; default since MD21): owners keep it with
+    probability 79/80 a quarter (20 years on average), renters with 7/8 (2 years). Before MD21, 0.5 for both."""
     p = c.households.functions.property.parameters
     c.households.functions.property.parameters = {
         **p,
@@ -607,8 +647,8 @@ def paper_moving_probabilities(c: CountryConfiguration) -> None:
 
 
 def rent_affordability(c: CountryConfiguration, share: float = 0.25) -> None:
-    """Households deciding to rent can pay up to `share` of their quarterly income (M2). The default is 0.2 money
-    units whatever the income (coefficient 0.2, exponent 0), so no household that decides to rent finds a home."""
+    """Households deciding to rent can pay up to `share` of their quarterly income (M2; default since MD21 at 0.25).
+    Before MD21, 0.2 money units whatever the income (coefficient 0.2, exponent 0), so no renter found a home."""
     p = c.households.functions.property.parameters
     c.households.functions.property.parameters = {
         **p,
@@ -619,10 +659,19 @@ def rent_affordability(c: CountryConfiguration, share: float = 0.25) -> None:
 
 def purchase_affordability(c: CountryConfiguration, years_of_income: float = 5.0) -> None:
     """Households can pay up to `years_of_income` times their yearly income for a home (M2; the paper's rule, 42.9
-    Y^0.789 in yearly income, gives about 175,000 euros for the median French household). The default is 5 times
-    *quarterly* income, which buys only the cheapest homes (about 47,000 euros against a median of 161,000)."""
+    Y^0.789 in yearly income, gives about 175,000 euros for the median French household; default since MD21 at 5).
+    Before MD21, 5 times *quarterly* income, which bought only the cheapest homes (about 47,000 euros against a median
+    of 161,000)."""
     p = c.households.functions.property.parameters
     c.households.functions.property.parameters = {**p, "maximum_price_income_coefficient": 4 * years_of_income}
+
+
+def paper_housing_rules(c: CountryConfiguration) -> None:
+    """How often households move and what they can pay, at the paper's levels (default since MD21): the paper's
+    moving probabilities, rent up to a quarter of income, purchases up to 5 years of income."""
+    paper_moving_probabilities(c)
+    rent_affordability(c)
+    purchase_affordability(c)
 
 
 def paper_buy_or_rent_sensitivity(c: CountryConfiguration) -> None:
@@ -651,12 +700,19 @@ def rents_indexed_to_cpi(c: CountryConfiguration, indexation: float = 1.0) -> No
 
 
 def paper_bank_limits(c: CountryConfiguration) -> None:
-    """Paper appendix bank parameters (G9)."""
+    """Paper appendix bank parameters (G9): the firm limits (default since MD22) and consumer loans up to 0.36 of
+    income (default 0.5; M3)."""
+    paper_firm_bank_limits(c)
+    c.banks.parameters.household_consumption_loans_loan_to_income_ratio = 0.36
+
+
+def paper_firm_bank_limits(c: CountryConfiguration) -> None:
+    """Paper appendix firm-loan limits (G9, default since MD22): debt up to the capital stock's value, return on
+    equity 0.15, return on assets 0.05."""
     b = c.banks.parameters
     b.firm_loans_debt_to_equity_ratio = 1.0
     b.firm_loans_return_on_equity_ratio = 0.15
     b.firm_loans_return_on_assets_ratio = 0.05
-    b.household_consumption_loans_loan_to_income_ratio = 0.36
 
 
 def paper_bank_solvency(c: CountryConfiguration) -> None:

@@ -180,9 +180,10 @@ class CountryDataConfiguration(BaseModel):
     # A mortgage is secured on a property: cap each household's mortgages at the value of the properties they finance.
     # Spoofed survey data breaks that link (S24); real HFCS data rarely binds.
     cap_mortgages_at_property_value: bool = True
-    # S9: calibrate the return on households' other financial assets so their income matches national accounts
-    # property income net of interest (Eurostat D4 - D41, households) instead of the survey's own ratio
-    financial_income_from_national_accounts: bool = False
+    # S9, MD20: calibrate the return on households' other financial assets so their income matches national accounts
+    # property income other than interest (Eurostat D4 - D41, households) instead of the survey's own ratio. When
+    # False, the survey's ratio (1.9% a quarter on the spoofed HFCS, against 0.4% in France's accounts)
+    financial_income_from_national_accounts: bool = True
     # F7: replace the statutory profit tax with the effective rate that raises the national accounts' corporate tax
     # receipts (gov_10a_taxag D51B_C2) on the model's own initial profits of firms and banks
     effective_profit_tax: bool = False
@@ -265,10 +266,10 @@ class DataConfiguration(BaseModel):
     # False, SOCX total public social spending, whose in-kind part (health, care) is also government consumption, so
     # it is counted twice.
     cash_social_benefits: bool = True
-    # S32: firms' investment split across industries by their share of SEA capital compensation. When False, by capital
-    # compensation over the investment in each industry's *product*, which loads utilities, mining and accommodation
-    # with capital costs of about 93% of value added and starts them loss-making.
-    investment_shares_from_capital_compensation: bool = False
+    # S32 (bug fix): firms' investment split across industries by their share of SEA capital compensation. When False,
+    # the old split, by capital compensation over the investment in each industry's *product*, which loads utilities,
+    # mining and accommodation with capital costs of about 93% of value added and starts them loss-making.
+    investment_shares_from_capital_compensation: bool = True
 
     def model_post_init(self, __context: Any) -> None:
         """

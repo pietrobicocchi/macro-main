@@ -34,8 +34,9 @@ class BankParameters(BaseModel):
     """
 
     capital_adequacy_ratio: float = Field(ge=0, le=1, default=0.08)
-    firm_loans_debt_to_equity_ratio: float = Field(ge=0, le=1, default=0.03)
-    firm_loans_return_on_equity_ratio: float = Field(ge=0, le=1, default=0.05)
+    # MD22: the paper's values
+    firm_loans_debt_to_equity_ratio: float = Field(ge=0, le=1, default=1.0)
+    firm_loans_return_on_equity_ratio: float = Field(ge=0, le=1, default=0.15)
     firm_loans_return_on_assets_ratio: float = Field(ge=0, le=1, default=0.05)
     household_consumption_loans_loan_to_income_ratio: float = Field(ge=0, le=1, default=0.5)
     mortgage_loan_to_income_ratio: float = Field(ge=0, le=10, default=3)
